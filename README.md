@@ -36,3 +36,4 @@
    ```
 
    g. **Access the Project:** The project will be running on [http://127.0.0.1:8000](http://127.0.0.1:8000).
+   h. **Access the Project:** frontend for this project is at:https://github.com/luisarevalo21/cirrostrats-frontend
