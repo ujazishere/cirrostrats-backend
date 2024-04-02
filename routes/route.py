@@ -31,11 +31,16 @@ async def get_airports():
 
 # airport requested data by id
 # the id can be used to search for a specific airport
-# using findById method
+# data returned is a dictionary wiht the id,name and code of the airport
 @router.get('/airports/{airportId}')
 async def get_airport_data(airportId):
-    result = list_serial(collection.find({"_id": ObjectId(airportId)}))
-    return result
+
+    res = collection.find_one(
+        {"_id": ObjectId(airportId)})
+
+    return individual_serial(res)
+
+
 # print('airport', airport)
 # result = collection.find({})
 # return list_serial(result)
