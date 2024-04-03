@@ -7,4 +7,5 @@ win_local.bat
 /fast-api/__pycache__
 
 **/__pycache__/ 
-./config/
+/config/database.py
+database.py
