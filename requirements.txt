@@ -1,5 +1,5 @@
 fastapi >=  0.65.1
-certif >= 2021.5.30
+certifi >= 2021.5.30
 uvicorn >=  0.14.0
 certifi >= 2021.5.30
 pymongo >= 3.11.4
