@@ -24,7 +24,7 @@ router = APIRouter()
 
 @router.get('/airports')
 async def get_airports():
-    result = collection.find({}).limit(5)
+    result = collection.find({})
     return list_serial(result)
 
 
