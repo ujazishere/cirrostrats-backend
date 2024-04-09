@@ -243,8 +243,7 @@ def flight_aware_data_pull(airline_code=None, flt_num=None, pre_process=None):
                     for i in rs:
                         rh.append(f"%20{rs[rs.index(i)]}")
                     rh = ''.join(rh)
-                sv = f"https://skyvector.com/?fpl=%20{
-                    origin}{rh}%20{destination}"
+                sv = f"https://skyvector.com/?fpl=%20{origin}{rh}%20{destination}"
 
                 # sv = f"https://skyvector.comi/api/lchart?fpl=%20{origin}{rh}%20{destination}"     # This is for api
 

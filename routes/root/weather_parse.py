@@ -17,11 +17,11 @@ from datetime import datetime
 class Weather_parse:
     def __init__(self) -> None:
         # Variables to be used for static html injection that feeds to explicitly show pertinent information like lower visibility and ceilings, windshear, runway use and so on.
-        self.pink_text_color = r'<span class="pink_text_color">\1\2</span>'
-        self.red_text_color = r'<span class="red_text_color">\1\2</span>'
-        self.yellow_highlight = r'<span class="yellow_highlight">\1\2</span>'
-        self.box_around_text = r'<span class="box_around_text">\1\2</span>'         # Change name to `box_around_text`
-        self.yellow_warning = r'<span class="yellow_warning">\1\2</span>' 
+        self.pink_text_color = r''
+        self.red_text_color = r''
+        self.yellow_highlight = r''
+        self.box_around_text = r''         # Change name to `box_around_text`
+        self.yellow_warning = r'' 
 
 
         # first digit between 1-2 then space all of it optional. Then digit and fwrd slash optional then digit then SM
