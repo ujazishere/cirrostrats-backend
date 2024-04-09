@@ -10,7 +10,7 @@ from .root.root_class import Root_class, Pull_class, Source_links_and_api
 from .root.gate_scrape import Gate_scrape_thread
 from .root.weather_parse import Weather_parse
 from .root.dep_des import Pull_flight_info
-from .root.flight_deets_pre_processor import resp_initial_returns,resp_sec_returns,response_filter
+from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter
 from time import sleep
 import os
 
@@ -37,45 +37,38 @@ async def get_airports():
 # airport requested data by id
 # the id can be used to search for a specific airport
 # data returned is a dictionary with the id,name and code of the airport
-@router.get('/airports/{airportId}')
-async def get_airport_data(airportId, search: str = None):
-    # if search == "UA414"
-    # print('HERE WE ARE', search)
-    res = None
-    if (airportId == "airport"):
-        # print("aiprotId is None")
-        # print("inside if statement ")
-        
+@router.get('/airports/{airport_id}')
+async def get_airport_data(airport_id, search: str = None):
 
+    res = None
+    if (airport_id == "airport"):
 
         res = collection.find({
             "name": {"$regex": search}
         })
         return serialize_airport_input_data(res)
-    print("HERE IS MY airportid",airportId)
-    # if search =="KSFO":
-        # resp = weather_stuff(airport_ID=search)
-    # print(resp)
+
     res = collection.find_one(
-        {"_id": ObjectId(airportId)})
-    airport_code= "K" + res['code']
+        {"_id": ObjectId(airport_id)})
+    airport_code = "K" + res['code']
 
     weather_info = weather_stuff(airport_code)
-    
-    print("HERE IS THE WEATHER",weather_info)
-    
-    return individual_serial(res)
 
-def weather_stuff(airportID):
+    parsed_data = individual_serial(res)
+
+    return {**parsed_data, **weather_info}
+
+
+def weather_stuff(airport_id):
 
     weather = Weather_parse()
     # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
     # weather = weather.scrape(weather_query, datis_arr=True)
-    weather = weather.processed_weather(query=airportID, )
+    weather = weather.processed_weather(query=airport_id, )
 
     weather_page_data = {}
 
-    weather_page_data['airport'] = airportID
+    weather_page_data['airport'] = airport_id
 
     weather_page_data['D_ATIS'] = weather['D-ATIS']
     weather_page_data['METAR'] = weather['METAR']
@@ -122,7 +115,7 @@ try:        # TODO: Find a better way other than try and except
         gc_thread.start()
     print('found Switch_n_auth. Using bool from run_lenghty_web_scrape to gate scrape')
 except Exception as e:
-    print('Couldnt find swithc_n_auth! ERROR:',e)
+    print('Couldnt find swithc_n_auth! ERROR:', e)
     run_lengthy_web_scrape = False
 
 # This section will perform the gate scrape every 30 mins and save it in pickle file `gate_query_database`
@@ -131,11 +124,11 @@ current_time = Gate_checker().date_time()
 
 
 @router.get("/home/{query}")
-async def root(query:str = None):
+async def root(query: str = None):
     print('in here')
     # Root_class().send_email(body_to_send=query)
-    
-    gate_data_returns = await parse_query(None,query)
+
+    gate_data_returns = await parse_query(None, query)
     return gate_data_returns
 
 
@@ -226,10 +219,10 @@ def gate_info(main_query):
     # This is a list full of dictionararies returned by err_UA_gate depending on what user requested..
     # Each dictionary has 4 key value pair.eg. gate:c10,flight_number:UA4433,scheduled:20:34 and so on
     gate_data_table = Gate_checker().ewr_UA_gate(gate)
-    
 
     # This can be a json to be delivered to the frontend
-    data_out = {'gate_data_table': gate_data_table, 'gate': gate, 'current_time': current_time}
+    data_out = {'gate_data_table': gate_data_table,
+                'gate': gate, 'current_time': current_time}
 
     # showing info if the info is found else it falls back to `No flights found for {{gate}}`on flight_info.html
     if gate_data_table:
@@ -240,15 +233,13 @@ def gate_info(main_query):
 
 
 async def flight_deets(airline_code=None, flight_number_query=None, ):
-    
-    
+
     # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
     if run_lengthy_web_scrape:
         # to restrict fa api use: for local use keep it False.
         bypass_fa = False
     else:
-        bypass_fa = True        
-
+        bypass_fa = True
 
     bulk_flight_deets = {}
 
@@ -264,89 +255,98 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
     '''
 
     sl = Source_links_and_api()
-    pc = Pull_class(airline_code=airline_code,flt_num=flight_number_query)
+    pc = Pull_class(airline_code=airline_code, flt_num=flight_number_query)
     if bypass_fa:
 
-        resp_dict:dict = await pc.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
+        resp_dict: dict = await pc.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
                                               sl.flight_stats_url(flight_number_query),])
         # """
         # This is just for testing
         # fa_test_path = r"C:\Users\ujasv\OneDrive\Desktop\codes\Cirrostrats\dj\fa_test.pkl"
         # with open(fa_test_path, 'rb') as f:
-            # resp = pickle.load(f)
-            # fa_resp = json.loads(resp)
+        # resp = pickle.load(f)
+        # fa_resp = json.loads(resp)
         # resp_dict.update({'https://aeroapi.flightaware.com/aeroapi/flights/UAL4433':fa_resp})
         # """
     else:
-        resp_dict:dict = await pc.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
-                                              sl.flight_stats_url(flight_number_query),
-                                              sl.flight_aware_w_auth(airline_code,flight_number_query),
-                                              ])
+        resp_dict: dict = await pc.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
+                                              sl.flight_stats_url(
+                                                  flight_number_query),
+                                              sl.flight_aware_w_auth(
+                                                  airline_code, flight_number_query),
+                                               ])
     # /// End of the first async await, next one is for weather and nas ///.
 
     # flight_deet preprocessing. fetched initial raw data gets fed into their respective pre_processors through this function that iterates through the dict
-    resp_initial = resp_initial_returns(resp_dict=resp_dict,airline_code=airline_code,flight_number_query=flight_number_query)
+    resp_initial = resp_initial_returns(
+        resp_dict=resp_dict, airline_code=airline_code, flight_number_query=flight_number_query)
     # assigning the resp_initial to their respective variables that will be fed into bulk_flight_deets and..
     # the departure and destination gets used for weather and nas pulls in the second half of the response pu
 
-    united_dep_dest, flight_stats_arr_dep_time_zone, fa_data= resp_initial
+    united_dep_dest, flight_stats_arr_dep_time_zone, fa_data = resp_initial
     # united_dep_dest,flight_stats_arr_dep_time_zone,flight_aware_data,aviation_stack_data = resp_initial
 
     # This will init the flight_view for gate info
-    if fa_data['origin']:           # Flightaware data is prefered as source for other data.
-        pc = Pull_class(flight_number_query,fa_data['origin'],fa_data['destination'])
-        wl_dict = pc.weather_links(fa_data['origin'],fa_data['destination'])
+    # Flightaware data is prefered as source for other data.
+    if fa_data['origin']:
+        pc = Pull_class(flight_number_query,
+                        fa_data['origin'], fa_data['destination'])
+        wl_dict = pc.weather_links(fa_data['origin'], fa_data['destination'])
         # OR get the flightaware data for origin and destination airport ID as primary then united's info.
         # also get flight-stats data. Compare them all for information.
 
         # fetching weather, nas and gate info since those required departure, destination
         # TODO: Probably take out nas_data from here and put it in the initial pulls.
-        resp_dict:dict = await pc.async_pull(list(wl_dict.values())+[sl.nas(),])
+        resp_dict: dict = await pc.async_pull(list(wl_dict.values())+[sl.nas(),])
 
         # /// End of the second and last async await.
 
-        
         # Weather and nas information processing
-        resp_sec = resp_sec_returns(resp_dict,fa_data['origin'],fa_data['destination']) 
+        resp_sec = resp_sec_returns(
+            resp_dict, fa_data['origin'], fa_data['destination'])
 
         weather_dict = resp_sec
-        
+
         # This gate stuff is a not async because async is throwig errors when doing async
-        gate_returns = Pull_flight_info().flight_view_gate_info(flt_num=flight_number_query,airport=fa_data['origin'])
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone, 
-                            **weather_dict, **fa_data, **gate_returns}
-    elif united_dep_dest['departure_ID']:       # If flightaware data is not available use this scraped data. Very unstable. TODO: Change this. Have 3 sources for redundencies
-        pc = Pull_class(flight_number_query,united_dep_dest['departure_ID'],united_dep_dest['destination_ID'])
-        wl_dict = pc.weather_links(united_dep_dest['departure_ID'],united_dep_dest['destination_ID'])
+        gate_returns = Pull_flight_info().flight_view_gate_info(
+            flt_num=flight_number_query, airport=fa_data['origin'])
+        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
+                             **weather_dict, **fa_data, **gate_returns}
+    # If flightaware data is not available use this scraped data. Very unstable. TODO: Change this. Have 3 sources for redundencies
+    elif united_dep_dest['departure_ID']:
+        pc = Pull_class(
+            flight_number_query, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
+        wl_dict = pc.weather_links(
+            united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
         # OR get the flightaware data for origin and destination airport ID as primary then united's info.
         # also get flight-stats data. Compare them all for information.
 
         # fetching weather, nas and gate info since those required departure, destination
         # TODO: Probably take out nas_data from here and put it in the initial pulls.
-        resp_dict:dict = await pc.async_pull(list(wl_dict.values())+[sl.nas()])
+        resp_dict: dict = await pc.async_pull(list(wl_dict.values())+[sl.nas()])
 
         # /// End of the second and last async await.
         # /// End of the second and last async await.
 
-        
         # Weather and nas information processing
-        resp_sec = resp_sec_returns(resp_dict,united_dep_dest['departure_ID'],united_dep_dest['destination_ID']) 
-        
+        resp_sec = resp_sec_returns(
+            resp_dict, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
+
         # Weather and nas information processing
-        resp_sec = resp_sec_returns(resp_dict,united_dep_dest['departure_ID'],united_dep_dest['destination_ID']) 
+        resp_sec = resp_sec_returns(
+            resp_dict, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
 
         weather_dict = resp_sec
-        gate_returns = Pull_flight_info().flight_view_gate_info(flt_num=flight_number_query,airport=united_dep_dest['departure_ID'])
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone, 
-                            **weather_dict, **fa_data, **gate_returns}
+        gate_returns = Pull_flight_info().flight_view_gate_info(
+            flt_num=flight_number_query, airport=united_dep_dest['departure_ID'])
+        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
+                             **weather_dict, **fa_data, **gate_returns}
 
     else:
         print('No Departure/Destination ID')
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone, 
-                            **fa_data, }
+        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
+                             **fa_data, }
     # More streamlined to merge dict than just the typical update method of dict. update wont take multiple dictionaries
-
-
 
     # If youre looking for without_futures() that was used prior to the async implementation..
         #  you fan find it in Async milestone on hash dd7ebd0efa3b5a62798c88bcfe77cc43f8c0048c
@@ -356,16 +356,18 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 
 
 @router.get("/DepartureDestination/{flight_number}")
-async def ua_dep_dest_flight_status(flight_number):     # dep and destination id pull
+# dep and destination id pull
+async def ua_dep_dest_flight_status(flight_number):
     pc = Pull_class(flt_num=flight_number)
     sl = Source_links_and_api()
     flt_info = Pull_flight_info()
-    
-    link = sl.ua_dep_dest_flight_status(flight_number)
-    resp_dict:dict = await pc.async_pull([link])
 
-    resp = response_filter(resp_dict,"flight-status.com")
-    united_dep_dest = flt_info.united_departure_destination_scrape(pre_process=resp)
+    link = sl.ua_dep_dest_flight_status(flight_number)
+    resp_dict: dict = await pc.async_pull([link])
+
+    resp = response_filter(resp_dict, "flight-status.com")
+    united_dep_dest = flt_info.united_departure_destination_scrape(
+        pre_process=resp)
 
     return united_dep_dest
 
@@ -376,30 +378,31 @@ async def flight_stats_url(flight_number):      # time zone pull
     pc = Pull_class(flt_num=flight_number)
     sl = Source_links_and_api()
     flt_info = Pull_flight_info()
-    
-    link = sl.flight_stats_url(flight_number)
-    resp_dict:dict = await pc.async_pull([link])
 
-    resp = response_filter(resp_dict,"flightstats.com")
-    fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(flt_num_query=flight_number,pre_process=resp)
+    link = sl.flight_stats_url(flight_number)
+    resp_dict: dict = await pc.async_pull([link])
+
+    resp = response_filter(resp_dict, "flightstats.com")
+    fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
+        flt_num_query=flight_number, pre_process=resp)
 
     return fs_departure_arr_time_zone
 
-    
+
 @router.get("/flightAware/{airline_code}/{flight_number}")
-async def flight_aware_w_auth(airline_code,flight_number):
+async def flight_aware_w_auth(airline_code, flight_number):
     # sl.flight_stats_url(flight_number_query),])
     pc = Pull_class(flt_num=flight_number)
     sl = Source_links_and_api()
     flt_info = Pull_flight_info()
-    
-    
-    link = sl.flight_aware_w_auth(airline_code,flight_number)
-    resp_dict:dict = await pc.async_pull([link])
 
-    resp = response_filter(resp_dict,"json",)
+    link = sl.flight_aware_w_auth(airline_code, flight_number)
+    resp_dict: dict = await pc.async_pull([link])
+
+    resp = response_filter(resp_dict, "json",)
     fa_return = resp['flights']
-    flight_aware_data = flt_info.fa_data_pull(airline_code=airline_code, flt_num=flight_number,pre_process=fa_return)
+    flight_aware_data = flt_info.fa_data_pull(
+        airline_code=airline_code, flt_num=flight_number, pre_process=fa_return)
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
@@ -409,7 +412,7 @@ async def flight_aware_w_auth(airline_code,flight_number):
 
 
 @router.get("/AWCandNAS/{departure_id}/{destination_id}")
-async def awc_and_nas(departure_id,destination_id):
+async def awc_and_nas(departure_id, destination_id):
     # Only for use on fastapi w react. Temporary! read below
     # this is a temporary fix to not change resp_sec_returns. clean that codebase when able
     # the separated funcs nas and awc are the ones that need to be done.
@@ -417,60 +420,57 @@ async def awc_and_nas(departure_id,destination_id):
     pc = Pull_class()
     sl = Source_links_and_api()
     wp = Weather_parse()
-    
+
     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
     # resp = response_filter(resp_dict,"awc",)
 
+    wl_dict = sl.weather_links(departure_id, destination_id)
 
-    wl_dict = sl.weather_links(departure_id,destination_id)
-
-    resp_dict:dict = await pc.async_pull(list(wl_dict.values()))
-    resp_sec = resp_sec_returns(resp_dict,departure_id,destination_id) 
+    resp_dict: dict = await pc.async_pull(list(wl_dict.values()))
+    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     weather_dict = resp_sec
 
     return weather_dict
 
 
-async def awc_weather(request, departure_id,destination_id):
+async def awc_weather(request, departure_id, destination_id):
 
     pc = Pull_class()
     sl = Source_links_and_api()
     wp = Weather_parse()
-    
+
     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
     # resp = response_filter(resp_dict,"awc",)
 
+    wl_dict = sl.weather_links(departure_id, destination_id)
 
-    wl_dict = sl.weather_links(departure_id,destination_id)
-
-    resp_dict:dict = await pc.async_pull(list(wl_dict.values()))
-    resp_sec = resp_sec_returns(resp_dict,departure_id,destination_id) 
+    resp_dict: dict = await pc.async_pull(list(wl_dict.values()))
+    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     weather_dict = resp_sec
 
     return weather_dict
 
 
-async def nas(request, departure_id,destination_id):
+async def nas(request, departure_id, destination_id):
 
     # Probably wont work. If it doesnt its probably because of the reesp_sec_returns
     # does not account for just nas instead going whole mile to get and process weather(unnecessary)
     pc = Pull_class()
     sl = Source_links_and_api()
-    
-    resp_dict:dict = await pc.async_pull([sl.nas])
-    resp_sec = resp_sec_returns(resp_dict,departure_id,destination_id) 
+
+    resp_dict: dict = await pc.async_pull([sl.nas])
+    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     nas_returns = resp_sec
 
     return nas_returns
 
 
-
 # TODO: GET RID OF THIS!! ITS NOT NECESSARY. ITS NOT USING ASYN CAPABILITY. ACCOUNT FOR WEATHER PULL THROUGH ONE FUNCTION
-            # REDUCE CODE DUPLICATION. THIS IS FEEDING INTO ITS OWN WEATHER.HTML FILE
-            # RATHER, HAVE IT SUCH THAT IT wewatherData.js takes this function.
-            # 
+    # REDUCE CODE DUPLICATION. THIS IS FEEDING INTO ITS OWN WEATHER.HTML FILE
+    # RATHER, HAVE IT SUCH THAT IT wewatherData.js takes this function.
+    #
 
 def dummy():
     dummy_imports_tuple = dummy_imports()
