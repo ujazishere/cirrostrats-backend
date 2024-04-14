@@ -14,14 +14,14 @@ from datetime import datetime
         # should have ability to return both raw(for externam use) and highlighted data for use in web.
 
 
-class Weather_parse:
+class WeatherParse:
     def __init__(self) -> None:
         # Variables to be used for static html injection that feeds to explicitly show pertinent information like lower visibility and ceilings, windshear, runway use and so on.
-        self.pink_text_color = r''
-        self.red_text_color = r''
-        self.yellow_highlight = r''
-        self.box_around_text = r''         # Change name to `box_around_text`
-        self.yellow_warning = r'' 
+        self.pink_text_color = r'<span class="pink_text_color">\1\2</span>'
+        self.red_text_color = r'<span class="red_text_color">\1\2</span>'
+        self.yellow_highlight = r'<span class="yellow_highlight">\1\2</span>'
+        self.box_around_text = r'<span class="box_around_text">\1\2</span>'
+        self.yellow_warning = r'<span class="yellow_warning">\1\2</span>' 
 
 
         # first digit between 1-2 then space all of it optional. Then digit and fwrd slash optional then digit then SM
@@ -116,6 +116,7 @@ class Weather_parse:
         datis = requests.get(datis_api)
         datis = datis.json()
         datis_raw = self.datis_processing(datis_raw_fetch=datis,datis_arr=datis_arr)
+
         return dict({ 'datis': datis_raw,
                         'metar': metar_raw, 
                         'taf': taf_raw,
@@ -126,20 +127,11 @@ class Weather_parse:
                           weather_raw=None,
                           ):
         if dummy:
-            
             datis_raw = dummy['D-ATIS']
             metar_raw = dummy['METAR']
-            taf_raw = dummy['TAF']
-            # print('RAW DUMMY WEATHER', dummy)
-            vis1 = 'FM030500 09004KT 00SM -RA BR OVC004'
-            vis_frac = 'FM031300 19005KT 1 1/2SM BR OVC004'
-            
-            datis_raw = datis_raw + vis1 + vis_frac 
-            datis_raw = r"DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L."
+            taf_raw = dummy['TAF']            
 
-            # taf_raw = metar_raw + sfc_vis + vis_half
-            taf_raw = 'KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015 FM030300 00000KT 1SM -SHRA FG OVC002 FM031300 19005KT 3/4SM BR OVC004 FM031500 23008KT 1/26SM OVC005 FM031800 25010KT 1/4SM OVC015 FM032100 25010KT M1/4SM BKN040'
-        
+
         elif weather_raw:
             raw_return = weather_raw        # This wont do the datis processing.
             datis_raw = self.datis_processing(datis_raw_fetch=raw_return['datis'],datis_arr=datis_arr)
@@ -209,6 +201,10 @@ class Weather_parse:
             # print(f"DUMPING RAW WEATHER DATA")
             # pickle.dump(raw_weather_dummy_data, f)
 
+
+
+        print('HEREXXXXXX', metar_raw)
+
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
         low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
         # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
@@ -238,7 +234,9 @@ class Weather_parse:
 
         # original taf alternate for ceilings text color
         highlighted_taf = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_taf_visibility)
-        highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM")   # line break for FM section in TAF for HTML
+
+        # TODO: return as an array instead of inserting the break.
+        # highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM")   # line break for FM section in TAF for HTML
         highlighted_datis = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_datis_visibility)
 
         highlighted_datis = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis)
@@ -249,6 +247,7 @@ class Weather_parse:
         highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar)
 
         return dict({ 'D-ATIS': highlighted_datis,
+                    #   'D-ATIS-Highlights': highlight_array
                       'D-ATIS_zt': zulu_extracts(datis_raw,datis=True),
                       
                       'METAR': highlighted_metar, 
@@ -257,6 +256,25 @@ class Weather_parse:
                       'TAF': highlighted_taf,
                       'TAF_zt': zulu_extracts(taf_raw,taf=True),
                       })
+
+
+    def weather_highlight_array(self,example_data):
+        datis_raw = example_data['D-ATIS']
+        metar_raw = example_data['METAR']
+        taf_raw = example_data['TAF']            
+        highlighted_datis = []
+        
+        rw_in_use = re.search(self.RW_IN_USE,datis_raw).group()
+        if rw_in_use:
+            highlighted_datis.append(rw_in_use)
+        
+        
+        # TODO: Work in progress make these same as the above groups and return array of strings that need to be highlighted.
+        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
+        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
+        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw)
+
+
 
 
     def nested_weather_dict_explosion(self,incoming_weather:dict):

@@ -1,6 +1,6 @@
 import pickle
 import os
-from .weather_parse import Weather_parse
+from .weather_parse import WeatherParse
 
 def getting_the_path_right():
     
@@ -47,10 +47,10 @@ def dummy_imports():
             dest_weather = pickle.load(f)
 
         # Injesting the html/css for highlighting here.
-        weather = Weather_parse()
+        weather = WeatherParse()
         bulk_flight_deets['dep_weather'] = weather.processed_weather(
             dummy=dep_weather)
-        weather = Weather_parse()
+        weather = WeatherParse()
         bulk_flight_deets['dest_weather'] = weather.processed_weather(
             dummy=dest_weather)
 

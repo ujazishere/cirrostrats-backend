@@ -1,14 +1,15 @@
 from fastapi import APIRouter
-from models.model import Flight, Airport
+from pydantic import BaseModel
+from models.model import FlightNumber, Airport
 from config.database import collection
 from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
-
+import pickle
 from .root.dummy_files_call import dummy_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Pull_class, Source_links_and_api
 from .root.gate_scrape import Gate_scrape_thread
-from .root.weather_parse import Weather_parse
+from .root.weather_parse import WeatherParse
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter
 from time import sleep
@@ -26,6 +27,37 @@ router = APIRouter()
 # async def add_flight(flight: Flight):
 #     response = collection.insert_one(dict(flight))
 #     return {"id": str(response.inserted_id)}
+
+class Airport(BaseModel):
+    name: str
+    code: str
+
+# with open(r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\mdb_compatible_new_id.json', 'rb') as f:
+    # xx= pickle.load(f)
+# test_set = xx[:30]
+
+
+# collection.insert_one({'name':'Chicago','code':'ORD', 'weather':'Some_weather'})
+# collection.insert_many(
+    # icao airports (2000ish)
+    # xx
+# )
+# collection.delete_one({'_id':ObjectId(id)})
+
+# mdb = (list_serial(collection.find({})))
+# for i in mdb[:5]:
+    # id = i['id']
+    # print(i)
+    # collection.delete_one({'_id':ObjectId(id)})
+# print("This is the data type", type(mdb), "Total items", len(mdb),"Sample:", mdb[:3])
+
+
+def create_airport(airport: Airport):
+
+    result = collection.insert_one({})
+    return {'id': str(result.inserted_id)}
+
+
 
 
 @router.get('/airports')
@@ -52,16 +84,33 @@ async def get_airport_data(airport_id, search: str = None):
         {"_id": ObjectId(airport_id)})
     airport_code = "K" + res['code']
 
-    weather_info = weather_stuff(airport_code)
+    # This will call the actual aviationweather.gov and datis.clowd.io api and return the processed weather.
+    # weather_info = weather_stuff(airport_code)
+
+    # This is an example weather return that contains 'D_ATIS', 'METAR' and 'TAF' and their associated highlights array
+    weather_info = loading_example_weather()
 
     parsed_data = individual_serial(res)
-
     return {**parsed_data, **weather_info}
+
+
+def loading_example_weather():
+    file_path = r'example_flight_deet_full_packet.pkl'
+    with open(file_path, 'rb') as f:
+        example_flight_deet = pickle.load(f)
+    weather_info = example_flight_deet['dep_weather']
+
+    wp = WeatherParse()
+    # TODO: work in progress. The array needs to be supplied 
+    highlighted_weather = wp.weather_highlight_array(example_data=weather_info)
+
+    weather_info['D_ATIS'] = weather_info['D-ATIS']
+    return weather_info
 
 
 def weather_stuff(airport_id):
 
-    weather = Weather_parse()
+    weather = WeatherParse()
     # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
     # weather = weather.scrape(weather_query, datis_arr=True)
     weather = weather.processed_weather(query=airport_id, )
@@ -71,6 +120,7 @@ def weather_stuff(airport_id):
     weather_page_data['airport'] = airport_id
 
     weather_page_data['D_ATIS'] = weather['D-ATIS']
+
     weather_page_data['METAR'] = weather['METAR']
     weather_page_data['TAF'] = weather['TAF']
 
@@ -86,7 +136,7 @@ def weather_display(airportID):
     # remove leading and trailing spaces. Seems precautionary.
     airportID = airportID
 
-    weather = Weather_parse()
+    weather = WeatherParse()
     # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
     # weather = weather.scrape(weather_query, datis_arr=True)
     weather = weather.processed_weather(query=airportID, )
@@ -233,7 +283,6 @@ def gate_info(main_query):
 
 
 async def flight_deets(airline_code=None, flight_number_query=None, ):
-
     # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
     if run_lengthy_web_scrape:
         # to restrict fa api use: for local use keep it False.
@@ -419,8 +468,7 @@ async def awc_and_nas(departure_id, destination_id):
 
     pc = Pull_class()
     sl = Source_links_and_api()
-    wp = Weather_parse()
-
+    wp = WeatherParse()
     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
     # resp = response_filter(resp_dict,"awc",)
@@ -438,8 +486,7 @@ async def awc_weather(request, departure_id, destination_id):
 
     pc = Pull_class()
     sl = Source_links_and_api()
-    wp = Weather_parse()
-
+    wp = WeatherParse()
     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
     # resp = response_filter(resp_dict,"awc",)
