@@ -82,6 +82,12 @@ class WeatherParse:
     FM032100 25010KT M1/4SM BKN040
                         """
 
+        self.taf_top_body = """KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015"""
+        self.taf_FM_group = """FM030300 00000KT 1SM -SHRA FG OVC002
+FM031300 19005KT 3/4SM BR OVC004
+FM031500 23008KT 1/26SM OVC005
+FM031800 25010KT 1/4SM OVC015
+FM032100 25010KT M1/4SM BKN040"""
 
     def visibility_color_code(self,react=None,incoming_weather_data=None):
 
@@ -289,11 +295,11 @@ class WeatherParse:
         # ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in betwee. SCA had this in TAF and its not accounted for.
 
         # LIFR PAttern for visibility >>> Anything below 5 to pink METAR
-        lifr_ifr_metar_visibility = self.visibility_color_code(ifr_metar_ceilings)
+        lifr_ifr_metar_visibility = self.visibility_color_code(incoming_weather_data=ifr_metar_ceilings)
         # LIFR pattern for visibility >>> anything below 5 to pink TAF 
-        lifr_ifr_taf_visibility = self.visibility_color_code(ifr_taf_ceilings)
+        lifr_ifr_taf_visibility = self.visibility_color_code(incoming_weather_data=ifr_taf_ceilings)
         # LIFR pattern for visibility >>> anything below 5 to pink DATIS 
-        lifr_ifr_datis_visibility = self.visibility_color_code(ifr_datis_ceilings)
+        lifr_ifr_datis_visibility = self.visibility_color_code(incoming_weather_data=ifr_datis_ceilings)
 
         # original metar alternate for ceilings text color >> NEED HIGHLIGHT FOR ANYTHING BELOW 20
         highlighted_metar = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_metar_visibility)
@@ -406,7 +412,10 @@ class WeatherParse:
         return {
             "D_ATIS":self.test_datis,
             "METAR": self.test_metar,
-            "TAF": self.test_taf,
+            "TAF": [{
+                "TopBody":self.taf_top_body,
+                "FMGroup": self.taf_FM_group,
+        }],
             "D_ATISHighlights": datis_highs,
             "METARHighlights": metar_highs,
             "TAFHighlights": taf_highs,

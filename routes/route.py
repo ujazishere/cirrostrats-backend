@@ -149,7 +149,7 @@ def weather_stuff_react(airport_id):
     else:
         weather_page_data = get_test_data_with_highlights()
     
-    print(weather_page_data)
+    print(weather_page_data['TAF'][0])
     return weather_page_data
 
 
