@@ -71,24 +71,27 @@ async def get_airports():
 # data returned is a dictionary with the id,name and code of the airport
 @router.get('/airports/{airport_id}')
 async def get_airport_data(airport_id, search: str = None):
-
+    print("SEARCHING",search)
     res = None
+    
+    # As user types inthe search bar this if statement gets triggered.
     if (airport_id == "airport"):
 
         res = collection.find({
             "name": {"$regex": search}
         })
+        print("STILL LOOKING FOR THE AIRPORT IN MDB")
         return serialize_airport_input_data(res)
-
+    print('AIRPORT FOUND')
     res = collection.find_one(
         {"_id": ObjectId(airport_id)})
     airport_code = "K" + res['code']
 
     # This will call the actual aviationweather.gov and datis.clowd.io api and return the processed weather.
-    # weather_info = weather_stuff(airport_code)
+    weather_info = weather_stuff_react(airport_code)
 
     # This is an example weather return that contains 'D_ATIS', 'METAR' and 'TAF' and their associated highlights array
-    weather_info = loading_example_weather()
+    # weather_info = loading_example_weather()
 
     parsed_data = individual_serial(res)
     return {**parsed_data, **weather_info}
@@ -108,26 +111,45 @@ def loading_example_weather():
     return weather_info
 
 
-def weather_stuff(airport_id):
+def weather_stuff_react(airport_id):
 
-    weather = WeatherParse()
+    wp = WeatherParse()
     # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
-    # weather = weather.scrape(weather_query, datis_arr=True)
-    weather = weather.processed_weather(query=airport_id, )
+    # weather = wp.scrape(weather_query, datis_arr=True)
 
-    weather_page_data = {}
+    # Dont get actual data yet. It wont work. use the test/example data for now to get the highlights to work.
+    actual_weather = False
 
-    weather_page_data['airport'] = airport_id
+    # Gets the actual weather wihtout the highlight
+    def get_actual_weather():
+        weather = wp.processed_weather(query=airport_id,)
+        weather_page_data = {}
+    
+        weather_page_data['airport'] = airport_id
+    
+        weather_page_data['D_ATIS'] = weather['D-ATIS']
+    
+        weather_page_data['METAR'] = weather['METAR']
+        weather_page_data['TAF'] = weather['TAF']
+    
+        weather_page_data['datis_zt'] = weather['D-ATIS_zt']
+        weather_page_data['metar_zt'] = weather['METAR_zt']
+        weather_page_data['taf_zt'] = weather['TAF_zt']
+        return weather_page_data
 
-    weather_page_data['D_ATIS'] = weather['D-ATIS']
+    def get_test_data_with_highlights():
+        array_returns  = wp.weather_highlight_array(
+                    {'D-ATIS':wp.test_datis,'METAR':wp.test_metar,'TAF':wp.test_taf}
+                    )
 
-    weather_page_data['METAR'] = weather['METAR']
-    weather_page_data['TAF'] = weather['TAF']
+        return array_returns
 
-    weather_page_data['datis_zt'] = weather['D-ATIS_zt']
-    weather_page_data['metar_zt'] = weather['METAR_zt']
-    weather_page_data['taf_zt'] = weather['TAF_zt']
-    # weather_page_data['trr'] = weather_page_data
+    if actual_weather:
+        weather_page_data = get_actual_weather()
+    else:
+        weather_page_data = get_test_data_with_highlights()
+    
+    print(weather_page_data)
     return weather_page_data
 
 

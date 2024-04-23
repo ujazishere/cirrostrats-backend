@@ -1,3 +1,25 @@
+# # This is for Jupyter
+# 
+# datis ="""2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015
+#     FM030300 00000KT 1SM -SHRA FG OVC002
+#     FM031300 19005KT 3/4SM BR OVC004
+#     FM031500 23008KT 1/26SM OVC005
+#     FM031800 25010KT 1/4SM OVC015
+#     FM032100 25010KT M1/4SM BKN040"> KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015
+#     FM030300 00000KT 1SM -SHRA FG OVC002
+#     FM031300 19005KT 3/4SM BR OVC004
+#     FM031500 23008KT 1/26SM OVC005
+#     FM031800 25010KT 1/4SM OVC015
+#     FM032100 25010KT M1/4SM BKN040"""
+
+# import re
+# from routes.root.weather_parse import WeatherParse
+# wp = WeatherParse()
+# wp.visibility_color_code(react=True,incoming_weather_data=wp.test_datis)
+# wp.weather_highlight_array(
+#     {'D-ATIS':wp.test_datis,'METAR':wp.test_metar,'TAF':wp.test_taf}
+# )
+
 import re
 import pickle
 from bs4 import BeautifulSoup as bs4
@@ -49,24 +71,69 @@ class WeatherParse:
         self.RW_IN_USE = r'()((SIMUL([A-Z]*)?,?|VISUAL (AP(P)?(ROA)?CH(E)?(S)?)|(ILS(/VA|,)?|(ARRIVALS )?EXPECT|RNAV|((ARVNG|LNDG) AND )?DEPG|LANDING)) (.*?)(IN USE\.|((RWY|RY|RUNWAY|APCH|ILS|DEP|VIS) )(\d{1,2}(R|L|C)?)\.))'
         # self.RW_IN_US = r'(ARRIVALS EXPECT|SIMUL|RUNWAYS|VISUAL|RNAV|ILS(,|RY|))(.*?)\.'
 
+        self.test_datis = "DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L."
+        self.test_metar = "KIND 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006"
+        self.test_taf = """
+                        KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015
+    FM030300 00000KT 1SM -SHRA FG OVC002
+    FM031300 19005KT 3/4SM BR OVC004
+    FM031500 23008KT 1/26SM OVC005
+    FM031800 25010KT 1/4SM OVC015
+    FM032100 25010KT M1/4SM BKN040
+                        """
 
-    def visibility_color_code(self,incoming_weather_data):
 
-        # Surrounds the matched pattern with the html declared during initialization(the __init__ method).
-        lifr_frac = re.sub(self.lifr_fractional_patt, self.pink_text_color,incoming_weather_data)
-        ifr_frac = re.sub(self.ifr_fractional_patt, self.red_text_color,lifr_frac)
-        lifr_digits = re.sub(self.lifr_single_or_douple,self.pink_text_color,ifr_frac)
-        ifr_digits = re.sub(self.ifr_single_or_douple,self.red_text_color,lifr_digits)
-        processed_incoming_data = ifr_digits
+    def visibility_color_code(self,react=None,incoming_weather_data=None):
 
+        if react:
+            vis_patterns_to_be_matched=[
+                self.lifr_fractional_patt,
+                self.ifr_fractional_patt,
+                self.lifr_single_or_douple,
+                self.ifr_single_or_douple
+            ]
+            highlight_returns = [
+                match
+                for each_pattern in vis_patterns_to_be_matched
+                # ':=' is a walrus operator that assigns the match to the variable.
+                if (match := re.findall(each_pattern,incoming_weather_data))
+            ]
 
+            highlight_returns = [y[1] for i in highlight_returns for y in i]
 
-
-        if processed_incoming_data:
-            return processed_incoming_data
+            return highlight_returns
+        
+            # This is the old and tedious way of accomplishing the above.
+            # highlight_returns = []
+            # aa = re.search(self.lifr_fractional_patt,incoming_weather_data)
+            # bb = re.search(self.ifr_fractional_patt,incoming_weather_data)
+            # cc = re.search(self.lifr_single_or_douple,incoming_weather_data)
+            # dd = re.search(self.ifr_single_or_douple,incoming_weather_data)
+            # if aa:
+            #     highlight_returns.append(aa.group())
+            # if bb:
+            #     highlight_returns.append(bb.group())
+            # if cc:
+            #     highlight_returns.append(cc.group())
+            # if dd:
+            #     highlight_returns.append(dd.group())
+            # return highlight_returns
         else:
-            print('Nothing to process in visibility_color_code func')
-            return incoming_weather_data
+            # Surrounds the matched pattern with the html declared during initialization(the __init__ method).
+            lifr_frac = re.sub(self.lifr_fractional_patt, self.pink_text_color,incoming_weather_data)
+            ifr_frac = re.sub(self.ifr_fractional_patt, self.red_text_color,lifr_frac)
+            lifr_digits = re.sub(self.lifr_single_or_douple,self.pink_text_color,ifr_frac)
+            ifr_digits = re.sub(self.ifr_single_or_douple,self.red_text_color,lifr_digits)
+            processed_incoming_data = ifr_digits
+
+
+
+
+            if processed_incoming_data:
+                return processed_incoming_data
+            else:
+                print('Nothing to process in visibility_color_code func')
+                return incoming_weather_data
         
 
     def datis_processing(self,datis_raw_fetch,datis_arr=None):
@@ -203,7 +270,6 @@ class WeatherParse:
 
 
 
-        print('HEREXXXXXX', metar_raw)
 
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
         low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
@@ -258,25 +324,6 @@ class WeatherParse:
                       })
 
 
-    def weather_highlight_array(self,example_data):
-        datis_raw = example_data['D-ATIS']
-        metar_raw = example_data['METAR']
-        taf_raw = example_data['TAF']            
-        highlighted_datis = []
-        
-        rw_in_use = re.search(self.RW_IN_USE,datis_raw).group()
-        if rw_in_use:
-            highlighted_datis.append(rw_in_use)
-        
-        
-        # TODO: Work in progress make these same as the above groups and return array of strings that need to be highlighted.
-        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
-        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
-        re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw)
-
-
-
-
     def nested_weather_dict_explosion(self,incoming_weather:dict):
         # Departure weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
         
@@ -311,3 +358,58 @@ class WeatherParse:
         weather_returns['dest_taf_zt'] = dest_taf_zt
 
         return weather_returns
+
+
+    def weather_highlight_array(self,example_data):
+        datis_raw = example_data['D-ATIS']
+        metar_raw = example_data['METAR']
+        taf_raw = example_data['TAF']            
+        
+        def get_highlights(weather_raw):
+            highlights = []
+            # rw_in_use = re.search(self.RW_IN_USE,datis_raw)
+            # if rw_in_use:
+            #     highlighted_datis.append(rw_in_use.group())
+            
+            ifr_datis_vis = self.visibility_color_code(react=True,incoming_weather_data=weather_raw)
+            highlights.extend(ifr_datis_vis)
+            datis_patts = [self.BKN_OVC_PATTERN_alternate,
+            self.ATIS_INFO,
+            self.ALTIMETER_PATTERN,
+            self.LLWS,
+            self.RW_IN_USE,
+            self.BKN_OVC_PATTERN_IFR,
+            self.BKN_OVC_PATTERN_LIFR,
+            ]
+    
+            find_all_highllights = [
+                match
+                for each_pattern in datis_patts
+                if (match := re.findall(each_pattern,weather_raw))
+            ]
+            
+            join_mechanism = ["".join(i[0]) for i in find_all_highllights]
+            highlights.extend(join_mechanism)
+
+            return highlights
+        
+        datis_highs,metar_highs,taf_highs = [None]*3
+        if datis_raw:
+            datis_highs = get_highlights(datis_raw)
+        if metar_raw: 
+            metar_highs = get_highlights(metar_raw)
+        if taf_raw:
+            taf_highs = get_highlights(taf_raw)
+            
+
+
+        return {
+            "D_ATIS":self.test_datis,
+            "METAR": self.test_metar,
+            "TAF": self.test_taf,
+            "D_ATISHighlights": datis_highs,
+            "METARHighlights": metar_highs,
+            "TAFHighlights": taf_highs,
+        }
+
+
