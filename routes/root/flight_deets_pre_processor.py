@@ -1,6 +1,6 @@
 import pickle
 import pickle
-from .weather_parse import Weather_parse
+from .weather_parse import WeatherParse
 from .root_class import Root_class, Pull_class
 from .dep_des import Pull_flight_info
 import json
@@ -100,7 +100,7 @@ def resp_sec_returns(resp_dict,dep_airport_id,dest_airport_id):
     
     
     if dep_metar:
-        wp = Weather_parse()            
+        wp = WeatherParse()            
 
         dep_weather = {"datis":dep_datis,"metar":dep_metar,"taf":dep_taf}
         dep_weather = wp.processed_weather(weather_raw=dep_weather)
