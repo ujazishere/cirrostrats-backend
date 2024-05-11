@@ -544,10 +544,15 @@ async def nas(request, departure_id, destination_id):
 def dummy():
     dummy_imports_tuple = dummy_imports()
 
-    bulk_flight_deets = dummy_imports_tuple[0]
+    # bulk_flight_deets = dummy_imports_tuple[0]
+    bulk_flight_deets = dummy_imports_tuple
     print(bulk_flight_deets.keys())
 
     # within dummy
     print('Going to flight_deet.html through dummy() function in views.py')
 
     return bulk_flight_deets
+
+@router.get('/dummy')
+async def get_airports():
+    return dummy()

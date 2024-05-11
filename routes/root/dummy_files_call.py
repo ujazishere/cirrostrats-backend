@@ -34,8 +34,9 @@ def dummy_imports():
     def pickle_imports_and_processing():
         # TODO: Need to account for titles for dep and dest that has time gate and airport id.
 
-        bulk_flight_deets_path = dummy_path_to_be_used + r"latest_bulk_11_30.pkl"
+        bulk_flight_deets_path = dummy_path_to_be_used + r"example_flight_deet_full_packet.pkl"
         bulk_flight_deets = pickle.load(open(bulk_flight_deets_path, 'rb'))
+        return bulk_flight_deets
 
         # IFR and LIFR weather for departure and destination.
         # TODO: investigate: Just metars for dep and destination are KIND and KORD others are different. Why?
