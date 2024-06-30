@@ -1,0 +1,6 @@
+Need to setup CORS middleware for Fastapi. it usses `app` and the logic uses router. Check for compatibility.
+configure vite.config.js in frontend to reflect what is on AWS.
+
+The problem probably lies in the frontend trying to gain access from nginx IP or rather the public IP of the instance and
+the code is configured for only local access that works on only local machine with localhost and 127.0.0.1 since the public ip wont
+have access to those local IP ports.

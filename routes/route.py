@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter,FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models.model import FlightNumber, Airport
 from config.database import collection
@@ -14,6 +15,24 @@ from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter
 from time import sleep
 import os
+
+app = FastAPI()
+
+# Define the origins that are allowed to access the backend
+origins = [
+    "http://localhost",
+    "http://localhost:5173",
+    "http://18.224.64.51",
+    # Add any other origins that should be allowed
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 router = APIRouter()
 
