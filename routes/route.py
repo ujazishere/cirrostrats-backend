@@ -36,6 +36,34 @@ app.add_middleware(
 
 router = APIRouter()
 
+
+
+"""
+if you look up http://127.0.0.1:8000/test this following function will be called.
+It is calling the /test route which automatically calls the async function get_airports()
+it looks up the database through `collection` from the config/database.py file
+collection has these crud operation methods like find(), insert_one(), insert_many() and delete_one()
+The return from the collection is a type - <class 'pymongo.cursor.Cursor'>
+it gets sent to list serial through individual_serial to convert the database into python readble format.
+This list_serial return is a list type with each item a dict. Check individual_serial to see the dict format.
+"""
+
+@router.get('/test')
+async def get_airports():
+
+    # list_serial only returns id
+    mdb = (list_serial(collection.find({})))
+    print(mdb[:2])
+    for i in mdb[:2]:
+        id = i['id']
+        name = i['name']
+        code = i['code']
+        # print(1,id,name,code)
+
+
+    result = collection.find({})
+
+    return list_serial(result)
 # @router.get('/flight')
 # async def get_flights():
 #     flights = list_serial(collection.find())
@@ -71,12 +99,11 @@ class Airport(BaseModel):
 # print("This is the data type", type(mdb), "Total items", len(mdb),"Sample:", mdb[:3])
 
 
+# This function creates data within the datbase. Currently/previously only used to feed data into database through
+    # Python rather than having manually create  items on the mongoDB server through browser.
 def create_airport(airport: Airport):
-
     result = collection.insert_one({})
     return {'id': str(result.inserted_id)}
-
-
 
 
 @router.get('/airports')
@@ -90,21 +117,20 @@ async def get_airports():
 # data returned is a dictionary with the id,name and code of the airport
 @router.get('/airports/{airport_id}')
 async def get_airport_data(airport_id, search: str = None):
-    print("SEARCHING",search)
     res = None
-    
-    # As user types inthe search bar this if statement gets triggered.
+    print("Within @router.get(/airports/{airportid})")
+    # As user types in the search bar this if statement gets triggered.
     if (airport_id == "airport"):
-
+        print("SEARCHING as user initiates typing",search)
         res = collection.find({
             "name": {"$regex": search}
         })
         print("STILL LOOKING FOR THE AIRPORT IN MDB")
         return serialize_airport_input_data(res)
-    print('AIRPORT FOUND')
     res = collection.find_one(
         {"_id": ObjectId(airport_id)})
     airport_code = "K" + res['code']
+    print('AIRPORT FOUND', res['code'])
 
     # This will call the actual aviationweather.gov and datis.clowd.io api and return the processed weather.
     weather_info = weather_stuff_react(airport_code)

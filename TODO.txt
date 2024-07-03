@@ -1,3 +1,8 @@
+TODO: UJ
+    Use .env file rather than the switch and auth. Move contents over.
+
+
+    
 Need to setup CORS middleware for Fastapi. it usses `app` and the logic uses router. Check for compatibility.
 configure vite.config.js in frontend to reflect what is on AWS.
 
