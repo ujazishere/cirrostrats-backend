@@ -10,6 +10,11 @@ import certifi
 # Try using command promt window or terminal window outside of VS code instead of using the vs code terminal.
 client = MongoClient(config('connection_string'), tlsCAFile=certifi.where())
 # client = MongoClient(config('connection_string'))
+import certifi
+
+
+client = MongoClient(config('connection_string'), tlsCAFile=certifi.where())
+
 
 # database name
 db = client.cirrostrats
