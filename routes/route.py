@@ -115,21 +115,29 @@ async def get_airports():
 # airport requested data by id
 # the id can be used to search for a specific airport
 # data returned is a dictionary with the id,name and code of the airport
-@router.get('/airports/{airport_id}')
+@router.get('/airports/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here
 async def get_airport_data(airport_id, search: str = None):
+    # The variable `search`` stores all the key strokes as they are typed in the searchbar.
+    # This function runs on every single key stroke on and after the 3d key stroke in the search bar.
+
     res = None
-    print("Within @router.get(/airports/{airportid})")
+    print(f"Within @router.get(/airports/{airport_id})")
     # As user types in the search bar this if statement gets triggered.
     if (airport_id == "airport"):
+        # airport_id is always `airport` unless the search is initiated with an actual airport, at which point it is replaced by a id. 
         res = collection.find({
             "name": {"$regex": search}
         })
-        print("SEARCHING as user initiates typing",search, "airport_id =", airport_id)
+        print("SEARCHING as user initiates typing...")
+        print(search, "; airport_id =", airport_id)
+
         serialized_return = serialize_airport_input_data(res)
         print("Serialized return:",serialized_return)
+        
+        # This seems to be an impossible return since if airport_id is not airport it will skip this if statement anyway.
         return serialized_return
-    else:
-        print("airport_id =! airport", airport_id)
+    else:       # airport gets replaced with the serial_id
+        print("airport_id =! airport, it is:", airport_id)
     res = collection.find_one(
         {"_id": ObjectId(airport_id)})
     airport_code = "K" + res['code']
@@ -189,7 +197,7 @@ def weather_stuff_react(airport_id):
         array_returns  = wp.weather_highlight_array(
                     {'D-ATIS':wp.test_datis,'METAR':wp.test_metar,'TAF':wp.test_taf}
                     )
-        print(array_returns)
+        # print(array_returns)
         return array_returns
 
 
