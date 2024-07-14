@@ -44,7 +44,7 @@ It is calling the /test route which automatically calls the async function get_a
 it looks up the database through `collection` from the config/database.py file
 collection has these crud operation methods like find(), insert_one(), insert_many() and delete_one()
 The return from the collection is a type - <class 'pymongo.cursor.Cursor'>
-it gets sent to list serial through individual_serial to convert the database into python readble format.
+it gets sent to list serial and in turn through individual_serial to convert the database into python readble format.
 This list_serial return is a list type with each item a dict. Check individual_serial to see the dict format.
 """
 
@@ -121,12 +121,15 @@ async def get_airport_data(airport_id, search: str = None):
     print("Within @router.get(/airports/{airportid})")
     # As user types in the search bar this if statement gets triggered.
     if (airport_id == "airport"):
-        print("SEARCHING as user initiates typing",search)
         res = collection.find({
             "name": {"$regex": search}
         })
-        print("STILL LOOKING FOR THE AIRPORT IN MDB")
-        return serialize_airport_input_data(res)
+        print("SEARCHING as user initiates typing",search, "airport_id =", airport_id)
+        serialized_return = serialize_airport_input_data(res)
+        print("Serialized return:",serialized_return)
+        return serialized_return
+    else:
+        print("airport_id =! airport", airport_id)
     res = collection.find_one(
         {"_id": ObjectId(airport_id)})
     airport_code = "K" + res['code']
@@ -186,15 +189,15 @@ def weather_stuff_react(airport_id):
         array_returns  = wp.weather_highlight_array(
                     {'D-ATIS':wp.test_datis,'METAR':wp.test_metar,'TAF':wp.test_taf}
                     )
-
+        print(array_returns)
         return array_returns
+
 
     if actual_weather:
         weather_page_data = get_actual_weather()
     else:
         weather_page_data = get_test_data_with_highlights()
     
-    print(weather_page_data['TAF'][0])
     return weather_page_data
 
 
