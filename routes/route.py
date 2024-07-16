@@ -115,13 +115,14 @@ async def get_airports():
 # airport requested data by id
 # the id can be used to search for a specific airport
 # data returned is a dictionary with the id,name and code of the airport
-@router.get('/airports/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here
+@router.get('/search/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here
+# The only reason I have left airport_id here is for future use of similar variable case. otherwise it serves no good purpose in this code.
 async def get_airport_data(airport_id, search: str = None):
-    # The variable `search`` stores all the key strokes as they are typed in the searchbar.
+    # The variable `search` stores all the key strokes as they are typed in the searchbar.
     # This function runs on every single key stroke on and after the 3d key stroke in the search bar.
 
     res = None
-    print(f"Within @router.get(/airports/{airport_id})")
+    print(f"Within @router.get(/search/{airport_id})")
     # As user types in the search bar this if statement gets triggered.
     if (airport_id == "airport"):
         # airport_id is always `airport` unless the search is initiated with an actual airport, at which point it is replaced by a id. 
