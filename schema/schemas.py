@@ -2,7 +2,7 @@
 # so python needs to serialize the data
 # this is why we use pydantic
 
-# first we conect our todo object to connect  to dict
+# collection returns a dict type database in a pymongo format but is then serialized to use it as dict in python.
 def individual_serial(airport) -> dict:
     return {
         "id": str(airport['_id']),
@@ -17,6 +17,8 @@ def individual_serial(airport) -> dict:
 # retrive all the data from the database
 # returns a list/array of all the data
 def list_serial(airports) -> list:
+    # This individual serial is probably not necessary you can just use [airport for airport in airports]
+    # The reason for this use case is probably to read into the database as to what the keys are and they are reflected in the individual_serial.
     return [individual_serial(airport) for airport in airports]
 
 

@@ -1,11 +1,27 @@
 TODO: UJ
-    Use .env file rather than the switch and auth. Move contents over.
+    clean up code. clean up the mess: separate scraping, add notes all along
+    Use .env file rather than the switch and auth. Move django contents over.
 
-
-    
 Need to setup CORS middleware for Fastapi. it usses `app` and the logic uses router. Check for compatibility.
 configure vite.config.js in frontend to reflect what is on AWS.
 
-The problem probably lies in the frontend trying to gain access from nginx IP or rather the public IP of the instance and
-the code is configured for only local access that works on only local machine with localhost and 127.0.0.1 since the public ip wont
-have access to those local IP ports.
+implement continuous weather extractor twice a month and send email.
+    store typical searches server side for quick access and use celery for event update checks:
+        for gates scrapes, weather updates for most used airports, 
+        implement async for parrallel/multi level processing of tasks instead of typical syncronous,series wise, step by step operation.
+    Implement ML and NN. X vs ground truth vals.
+
+fix massive bug on flight_aware route date time conflict with real scheduled_time.
+    maybe include search with date, time or display info with date as zulu time
+    currently it senses the most recent route that is not None type probs giving future date
+    use: if scheduled_out is current_utc and route is not none:
+        but current utc date_time has source latency.   
+Extract all airports D-Atis info during all weather conditinos for analyses and classification
+    Add thunderstorm, freezing and such symbols on title.
+    Add departure/approach runways in use.
+integrate EDCT info  from https://www.fly.faa.gov/edct/jsp/edctLookUp.jsp
+    ask then faa guys you have been reaching out to for jms issue
+
+Remove sql database and create own for seamless lightweight version.
+Fix up weather page and include ability to pull multiple airports
+Understand and configure mongoDB

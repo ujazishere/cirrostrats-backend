@@ -1,3 +1,11 @@
+"""
+MongoDB database can contain multiple collections and each collection contains multiple documents.
+These documents are the key value pairs. Each document is essentially a key value pair. Simpl put, its a dictionary in python lingo.
+For e.g there can be a bookstore database within which books can be one collection, authors can be another collection and so on.
+a key value pair can be interchangably be reffered to as field or property or just attribute.
+"""
+
+
 from pymongo import MongoClient
 # import motor.motor_asyncio
 from decouple import config
@@ -16,3 +24,4 @@ db = client.cirrostrats
 
 # collection name
 collection = db['airports']
+collection_gates = db['us-gates']
