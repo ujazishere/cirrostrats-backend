@@ -16,10 +16,10 @@ class Gate_checker(Root_class):
             # It filters per users query, sorts by date then returns as list. A list of dicts.
             # Check gate scrape for actual data fetch and filter mechanish
 
-        # TODO: Update actual more frequently and scheduled less frequently. maybe couple times a day for scheduled.
+        # TODO: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
+            # Scheduled ones are usually very much planned. One drawback:-repo and non-scheduled ones wont show up as promptly.
             # Highlight late ones in red
         master = self.load_master()
-
 
         flights = []
         for flt_num, values in master.items():

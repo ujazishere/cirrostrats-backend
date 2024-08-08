@@ -1,4 +1,16 @@
 TODO: UJ
+    logic to consistently pull 
+        current weather based on airports in the database, Save them in the mdb collection `Weather` for access into
+            Also account for test data in the collection.
+            If there  is one server that consistently pulls weather there wont be a need to have another one for testing instance. It would automatically fetch from the legacy server.
+            
+        current flight numbers and their details.
+        some sort of ping and save to databse to access in the frontend.
+
+
+
+
+
     clean up code. clean up the mess: separate scraping, add notes all along
     Use .env file rather than the switch and auth. Move django contents over.
 

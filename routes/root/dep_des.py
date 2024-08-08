@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup as bs4
 from .root_class import Root_class
 from .flight_aware_data_pull import flight_aware_data_pull
 import xml.etree.ElementTree as ET
+import re
 import pickle
 
 '''
@@ -32,11 +33,11 @@ class Pull_flight_info(Root_class):
             
             #  TODO: pull information on flight numners from the info web and use that to pull info through flightview.
             # attempt to only pull departure and destination from the united from the info web.
-            # TODO: Use Flightstats for scheduled times conversion
             flight_stats_url = f"https://www.flightstats.com/v2/flight-tracker/UA/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
             soup_fs = self.request(flight_stats_url)
 
         # fs_juice = soup_fs.select('[class*="TicketContainer"]')     # This is the whole packet not needed now
+        
         fs_time_zone = soup_fs.select('[class*="TimeGroupContainer"]')
         if fs_time_zone:
             departure_time_zone = fs_time_zone[0].get_text()        #  format is HH:MM XXX timezone(eg.EST)
@@ -48,16 +49,17 @@ class Pull_flight_info(Root_class):
         else:
             departure_time_zone,arrival_time_zone = [None]*2
 
-        print('Success at flightstats.com for scheduled_dep and arr local time stating what time zone it is.')
+        print('dep_des.py fs_dep_arr_timezone_pull - SUCCESS at flightstats.com for scheduled_dep and arr local time stating what time zone it is.')
+        # TODO: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
         bulk_flight_deet = {'flight_number': f'UA{flt_num}',            # This flt_num is probably misleading since the UA attached manually. Try pulling it from the flightstats web
                             'scheduled_departure_time': departure_time_zone,
                             'scheduled_arrival_time': arrival_time_zone,
                                             }
-
         return bulk_flight_deet
 
 
     def united_departure_destination_scrape(self, flt_num=None,pre_process=None):
+        departure_scheduled_time,destination_scheduled_time = [None]*2
         if pre_process:
             soup = pre_process
         else:
@@ -71,16 +73,28 @@ class Pull_flight_info(Root_class):
             airport_id = [i.text for i in airport_id if 'ICAO' in i.text]
             departure_ID = airport_id[0].split()[2]
             destination_ID = airport_id[1].split()[2]
-            print('Success at united_flight_stat scrape for dep and des ID')
-        except:
+            # TODO: WIP for getting scheduled times since the flight stats one is unreliable
+            scheduled_times = soup.find_all('div', {'class': 'tb2'})
+            scheduled_times = [i.text for i in scheduled_times]
+            scheduled_times = [i for i in scheduled_times if 'Scheduled' in i]
+            scheduled_times = [match.group() for i in scheduled_times if (match := re.search(r'\d\d:\d\d',i))]
+            if scheduled_times: 
+                departure_scheduled_time = scheduled_times[0]
+                destination_scheduled_time = scheduled_times[1]
+                print('dep_des.py united_departure_destination_scrape. Found scheduled times using flight_stats.')
+        except Exception as e:
             departure_ID, destination_ID = [None]*2
-        print('united_flight_stat for departure and destination', departure_ID, destination_ID)
+            print('dep_des.py Unable united_departure_destination_scrape', e)
+        print('dep_des.py united_departure_destination_scrape for departure and destination: ', departure_ID, destination_ID)
         return {'departure_ID': departure_ID,
-                'destination_ID': destination_ID}
+                'destination_ID': destination_ID,
+                'departure_scheduled_time': departure_scheduled_time,
+                'destination_scheduled_time': destination_scheduled_time
+                }
 
 
-    def nas_final_packet(self,dep_ID, dest_ID):
-        # TODO: airport closures remaining
+    def nas_final_packet(self,dep_ID, dest_ID=None):
+        # TODO: airport closures remaining. Also, Add NAS to the airport ID lookup on tge homepage.
         departure_ID = dep_ID[1:]       # Stripping off the 'K' since NAS uses 3 letter airport ID
         destination_ID = dest_ID[1:]
 
@@ -182,7 +196,7 @@ class Pull_flight_info(Root_class):
                                                 'Maximum': max_delay,
                                                 'Trend': trend}})
 
-        print('Providing NAS final packet dict through nas_final_packet')
+        print('dep_des.py nas_final_packer. Providing NAS final packet dict.')
         return {'nas_departure_affected': departure_affected,
                 'nas_destination_affected': destination_affected}
 
@@ -192,6 +206,7 @@ class Pull_flight_info(Root_class):
         response = requests.get(nas)
         xml_data = response.content
         return xml_data
+
 
     def nas_pre_processing(self):
 
@@ -203,7 +218,7 @@ class Pull_flight_info(Root_class):
         affected_airports = [i.text for i in root.iter('ARPT')]
         affected_airports = list(set(affected_airports))
         affected_airports.sort()
-        print('NAS affected airports:', affected_airports)
+        print('dep_des.py nas_pre_processing. NAS affected airports:', affected_airports)
 
         airport_closures = []
         closure = root.iter('Airport_Closure_List')
@@ -237,7 +252,7 @@ class Pull_flight_info(Root_class):
                     for a in x:
                         arr_dep_del_list.append([a.tag, a.text])
         
-        print('Done NAS pull through nas_packet_pull')
+        print('dep_des.py Done NAS pull through nas_packet_pull')
         return {'update_time': update_time,
                 'affected_airports': affected_airports,
                 'ground_stop_packet': ground_stop_packet, 
@@ -259,12 +274,12 @@ class Pull_flight_info(Root_class):
                 date = 20230505
             else:
                 date = str(self.date_time(raw=True))     # Root_class inheritance format yyyymmdd
-            print(flt_num,airport,date)
+            print("dep_des.py flight_view_gate_info",flt_num,airport,date)
             try:        # the airport coming in initially wouldnt take airport as arg since it lacks the initial info, hence sec rep info will have this airport ID
                 flight_view = f"https://www.flightview.com/flight-tracker/UA/{flt_num}?date={date}&depapt={airport[1:]}"
             except:
                 pass
-            print('Standard synchronoys fetch for gate info from:', flight_view)
+            print('dep_des.py flight_view_gate_info. Standard synchronoys fetch for gate info from:', flight_view)
             
             self.soup = self.request(flight_view)
             soup = self.soup
@@ -274,7 +289,6 @@ class Pull_flight_info(Root_class):
             # departure_gate = departure_gate[26:-1]
             arrival_gate = leg_data[0].find_all('tr', class_='even')[4].text[17:]
             # arrival_gate = arrival_gate[26:-1]
-            print('were in try stat')
             if 'Terminal' in departure_gate:
                 departure_gate = departure_gate.replace('Terminal', '')
             if 'Terminal' in arrival_gate:
@@ -285,6 +299,7 @@ class Pull_flight_info(Root_class):
                 # looks up text 'var sdepapt' which is associated with departure airport.
                     # then splits all lines into list form then just splits the departure and destination in string form (")
                 # TODO: It is important to get airport names along with identifiers to seperate international flights for metar view.
+                        # Since the whole of html is being supplied might as well get the city and state in.
                 if 'var sdepapt' in script.get_text():
                     departure = script.get_text().split('\n')[1].split('\"')[1]
                     destination = script.get_text().split('\n')[2].split('\"')[1]
@@ -296,7 +311,7 @@ class Pull_flight_info(Root_class):
                 departure_gate = None
             if 'min' in arrival_gate:
                 arrival_gate = None
-            print('Success at pull_dep_des for gate info')
+            print('dep_des.py SUCCESS at pull_dep_des for gate info')
             return {'departure_gate': departure_gate,
                     'arrival_gate': arrival_gate,
                     }
@@ -304,7 +319,7 @@ class Pull_flight_info(Root_class):
         except Exception as e:
             empty_soup = {'departure_gate': 'None',
                           'arrival_gate': 'None'} 
-            print('!!!UNSUCCESSFUL at flight_view_gate_info for gate info, Error:',e)
+            print('dep_des !!!UNSUCCESSFUL at flight_view_gate_info for gate info, Error:',e)
             return empty_soup
 
         # typically 9th index of scripts is where departure and destination is.
@@ -314,4 +329,17 @@ class Pull_flight_info(Root_class):
 
     
     def fa_data_pull(self, airline_code=None,flt_num=None,pre_process=None):
-        return flight_aware_data_pull(airline_code=airline_code,flt_num=flt_num,pre_process=pre_process)
+        # """
+        # This is just for testing
+        # fa_test_path = r"C:\Users\ujasv\OneDrive\Desktop\codes\Cirrostrats\dj\fa_test.pkl"
+        # with open(fa_test_path, 'rb') as f:
+            # resp = pickle.load(f)
+            # fa_resp = json.loads(resp)
+        # resp_dict.update({'https://aeroapi.flightaware.com/aeroapi/flights/UAL4433':fa_resp})
+        # """
+        fa_returns = flight_aware_data_pull(airline_code=airline_code, flt_num=flt_num, pre_process=pre_process)
+        return fa_returns
+
+
+    def aviation_stack_pull(self,):
+        return None

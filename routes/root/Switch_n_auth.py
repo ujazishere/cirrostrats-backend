@@ -1,8 +1,6 @@
-EC2_location = "Test Server"
+EC2_location = "Local"
 
 run_lengthy_web_scrape = False
-bypass_fa = True
-
 
 public_email = 'publicuj@gmail.com'
 smtp_password = "dsxi rywz jmxn qwiz"

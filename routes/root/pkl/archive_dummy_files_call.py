@@ -1,3 +1,6 @@
+"""
+This file is the predecessor to the test_data_imports.py
+"""
 import pickle
 import os
 from .weather_parse import WeatherParse
