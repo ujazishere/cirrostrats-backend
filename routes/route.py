@@ -41,6 +41,8 @@ origins = [
     "http://localhost",
     "http://localhost:5173",
     "http://18.224.64.51",
+    "http://127.0.0.1:8000/",
+    ""
     # Add any other origins that should be allowed
 ]
 app.add_middleware(
@@ -65,47 +67,22 @@ it gets sent to list serial and in turn through individual_serial to convert the
 This list_serial return is a list type with each item a dict. Check individual_serial to see the dict format.
 """
 
-@router.get('/test')
-async def get_airports():
-
-    # list_serial only returns id
-    mdb = (list_serial(collection.find({})))
-    print(mdb[:2])
-    for i in mdb[:2]:
-        id = i['id']
-        name = i['name']
-        code = i['code']
-        # print(1,id,name,code)
-
-
-    result = collection.find({})
-
-    return list_serial(result)
-
-
-# with open(r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\mdb_compatible_new_id.json', 'rb') as f:
-    # xx= pickle.load(f)
-# test_set = xx[:30]
-
-
 @router.get('/airports')
 async def get_airports():
     # Returns _id,name and code as document field keys.
+    print("FUNC TRIGGERED")
     all_results = collection.find({})
     return list_serial(all_results)
 
 
 
-# 
 # data returned is a dictionary with the id,name and code of the airport
 # The only reason I have left airport_id here is for future use of similar variable case. It does serves any good purpose in this code otherwise.
 @router.get('/query/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def initial_query_processing_react(initial_query, search: str = None):
     # The variable `search` stores all the key strokes as they are typed in the searchbar.
     # This function runs on every single key stroke on and after the 3d key stroke in the search bar.
-    print(initial_query)
     res = None
-    print(f"Within @router.get(/query/{initial_query})")
     # As user types in the search bar this if statement gets triggered.
     if (initial_query == "airport"):
         # airport_id is always `airport` unless the search is initiated with an actual airport, at which point it is replaced by a id. 
@@ -123,19 +100,11 @@ async def initial_query_processing_react(initial_query, search: str = None):
         return serialized_return
     else:       # airport gets replaced with the serial_id
         print("airport_id =! airport, it is:", initial_query)
-    res = collection.find_one(
+    res = collection_weather.find_one(
         {"_id": ObjectId(initial_query)})
-    airport_code = "K" + res['code']
-    print('AIRPORT FOUND', res['code'])
-
-    # This will call the actual aviationweather.gov and datis.clowd.io api and return the processed weather.
-    # weather_info = weather_stuff_react(airport_code)
-
-    # This is an example weather return that contains 'D_ATIS', 'METAR' and 'TAF' and their associated highlights array
-    # weather_info = loading_example_weather()
+    print('AIRPORT FOUND', res)
 
     parsed_data = individual_serial(res)
-    # return {**parsed_data, **weather_info}
     return {**parsed_data, }        # Add any other dict to send to react
 
 # TODO: VHP Use these to save and retrive flight data from and to the mongoDB.
@@ -148,9 +117,13 @@ async def initial_query_processing_react(initial_query, search: str = None):
 #     flights = list_serial(collection.find())
 #     return flights
 
-@router.get('/airport/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
-async def get_airport_data(initial_query, search: str = None):
-    return None
+@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
+async def get_airport_data(airport_id, search: str = None):
+    print("NEW FUNCTION;", search)
+    res = collection_weather.find_one(
+        {"airport_id": ObjectId(airport_id)})
+    print("single document from mongoDB",res)
+    return res
 
 def loading_example_weather():
     file_path = r'example_flight_deet_full_packet.pkl'
@@ -592,3 +565,20 @@ def test_flight_deet_data():
 @router.get('/dummy')
 async def get_airports():
     return test_flight_deet_data()
+
+@router.get('/test')
+async def get_airports():
+
+    # list_serial only returns id
+    mdb = (list_serial(collection.find({})))
+    print(mdb[:2])
+    for i in mdb[:2]:
+        id = i['id']
+        name = i['name']
+        code = i['code']
+        # print(1,id,name,code)
+
+
+    result = collection.find({})
+
+    return list_serial(result)

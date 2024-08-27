@@ -37,9 +37,10 @@ These keys are called fields. They maybe nested fields and those are called sub-
 # TODO: HP Similar to the weather colleciton. Need to add the others
 # collection name
 collection = db['airports']
+collection_weather = db['Weather']
+
 collection_gates = db['us-gates']
 collection_flights = db['Flights']
-collection_weather = db['Weather']
 
 # From here on its all custom code for database crud operation.
 
