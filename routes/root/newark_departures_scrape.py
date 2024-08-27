@@ -28,6 +28,9 @@ class Newark_departures_scrape(Root_class):
             raw_bs4_all_EWR_deps = soup.find_all('div', class_="flight-col flight-col__flight")[1:]
             # raw_bs4_html_ele = soup.find_all('div', class_="flight-row")[1:]
 
+            # TODO: Perform health checks here. verify these are flight numbers with regex, 
+                    # notification should be sent when encountered with low confidence fetching event
+
             for index in range(len(raw_bs4_all_EWR_deps)):
                 for i in raw_bs4_all_EWR_deps[index]:
                     if i != '\n':

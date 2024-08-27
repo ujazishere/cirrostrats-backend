@@ -8,9 +8,10 @@ with open(airports, 'rb') as f:
 
 xx = []
 for a,b in x.items():
+    US_state = a
     cities = b[1]
-    for y in cities:
-        xx.append(y)
+    for each_city in cities:
+        xx.append(each_city)
 
 airport_dict = {}
 for i in xx:

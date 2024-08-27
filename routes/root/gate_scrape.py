@@ -136,6 +136,9 @@ class Gate_Scrape(Root_class):
         # Extracting all United flight numbers in list form to dump into the exec func
         ewr_departures_UA = Newark_departures_scrape().united_departures()
 
+        ewr_departures = Newark_departures_scrape().all_newark_departures()
+        
+
         # Dmping all flight numbers for newark united departures.
         # with open('ewr_departures_UA.pkl', 'wb') as f:
             # pickle.dump(ewr_departures_UA, f)
@@ -164,9 +167,10 @@ class Gate_Scrape(Root_class):
         
         
 # Mind the threading. Inheriting the thread that makes the code run concurrently
-# TODO: Investigate and master this .Thread sorcery
+# TODO: Investigate and master this Thread sorcery
 class Gate_scrape_thread(threading.Thread):
     def __init__(self):
+        # Super method inherits the init method of the superclass. In this case`Root_class`.
         super().__init__()
         self.gate_scrape = Gate_Scrape()
 

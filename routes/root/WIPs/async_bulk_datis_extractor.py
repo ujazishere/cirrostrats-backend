@@ -1,7 +1,9 @@
 # from dj.dj_app.root.root_class import Root_class      # this works in jupyter interactive
-from root_class import Root_class
 import pickle
 import asyncio,aiohttp
+import datetime
+from datetime import datetime as dt
+
 # this function pulls all datis and returns them in list form
 all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 with open(all_datis_airports_path, 'rb') as f:
@@ -40,7 +42,9 @@ if __name__ == "__main__":
 
 
 # extract datis with dates in the filename
-yyyymmddhhmm = Root_class().date_time(raw_utc='HM')
+yyyymmddhhmm = dt.now(datetime.UTC).strftime("%Y%m%d%H%M")
+# yyyymmddhhmm = datetime.utcnow().strftime("%Y%m%d%H%M")
+# yyyymmddhhmm = Root_class().date_time(raw_utc='HM')
 path = rf'c:\users\ujasv\onedrive\desktop\pickles\datis_info_stack_{yyyymmddhhmm}.pkl'
 print('totals:', len(all_76_datis),)
 print('saving it here:', path,)

@@ -203,7 +203,7 @@ all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\al
 with open(all_datis_airports_path, 'rb') as f:
     all_datis_airports = pickle.load(f)
 
-# old synchronous series wise ineficient pull. New one is async_datis_extracts
+# old synchronous series wise ineficient pull. New one is async_bulk_datis_extractor.py
 def datis_scrape():
 
     def datis_raw_data(airport_id):

@@ -2,7 +2,7 @@ from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models.model import FlightNumber, Airport
-from config.database import collection
+from config.database import collection, collection_weather
 from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
@@ -17,6 +17,7 @@ import os
 import pickle
 
 
+# This section will perform the gate scrape every 30 mins and save it in pickle file `gate_query_database`
 # Section responsible for switching on Gate lengthy scrape and flight aware api fetch.
 try:        # TODO: Find a better way other than try and except
     from .root.Switch_n_auth import run_lengthy_web_scrape
@@ -29,7 +30,6 @@ except Exception as e:
     print('Couldnt find swithc_n_auth! ERROR:', e)
     run_lengthy_web_scrape = False
 
-# This section will perform the gate scrape every 30 mins and save it in pickle file `gate_query_database`
 
 current_time = Gate_checker().date_time()
 
@@ -90,29 +90,30 @@ async def get_airports():
 
 @router.get('/airports')
 async def get_airports():
+    # Returns _id,name and code as document field keys.
     all_results = collection.find({})
     return list_serial(all_results)
 
 
-# airport requested data by id
-# the id can be used to search for a specific airport
+
+# 
 # data returned is a dictionary with the id,name and code of the airport
-# The only reason I have left airport_id here is for future use of similar variable case. It does serves no good purpose in this code otherwise.
-@router.get('/query/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here
-async def get_airport_data(airport_id, search: str = None):
+# The only reason I have left airport_id here is for future use of similar variable case. It does serves any good purpose in this code otherwise.
+@router.get('/query/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
+async def initial_query_processing_react(initial_query, search: str = None):
     # The variable `search` stores all the key strokes as they are typed in the searchbar.
     # This function runs on every single key stroke on and after the 3d key stroke in the search bar.
-
+    print(initial_query)
     res = None
-    print(f"Within @router.get(/search/{airport_id})")
+    print(f"Within @router.get(/query/{initial_query})")
     # As user types in the search bar this if statement gets triggered.
-    if (airport_id == "airport"):
+    if (initial_query == "airport"):
         # airport_id is always `airport` unless the search is initiated with an actual airport, at which point it is replaced by a id. 
         res = collection.find({
             "name": {"$regex": search}
         })
         print("SEARCHING as user initiates typing...")
-        print(search, "; airport_id =", airport_id)
+        print(search, "; airport_id =", initial_query)
 
         serialized_return = serialize_airport_input_data(res)
         print("Serialized return:",serialized_return)
@@ -121,20 +122,21 @@ async def get_airport_data(airport_id, search: str = None):
         # This seems to be an impossible return since if airport_id is not airport it will skip this if statement anyway.
         return serialized_return
     else:       # airport gets replaced with the serial_id
-        print("airport_id =! airport, it is:", airport_id)
+        print("airport_id =! airport, it is:", initial_query)
     res = collection.find_one(
-        {"_id": ObjectId(airport_id)})
+        {"_id": ObjectId(initial_query)})
     airport_code = "K" + res['code']
     print('AIRPORT FOUND', res['code'])
 
     # This will call the actual aviationweather.gov and datis.clowd.io api and return the processed weather.
-    weather_info = weather_stuff_react(airport_code)
+    # weather_info = weather_stuff_react(airport_code)
 
     # This is an example weather return that contains 'D_ATIS', 'METAR' and 'TAF' and their associated highlights array
     # weather_info = loading_example_weather()
 
     parsed_data = individual_serial(res)
-    return {**parsed_data, **weather_info}
+    # return {**parsed_data, **weather_info}
+    return {**parsed_data, }        # Add any other dict to send to react
 
 # TODO: VHP Use these to save and retrive flight data from and to the mongoDB.
 # @router.post('/flight')
@@ -146,6 +148,9 @@ async def get_airport_data(airport_id, search: str = None):
 #     flights = list_serial(collection.find())
 #     return flights
 
+@router.get('/airport/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
+async def get_airport_data(initial_query, search: str = None):
+    return None
 
 def loading_example_weather():
     file_path = r'example_flight_deet_full_packet.pkl'

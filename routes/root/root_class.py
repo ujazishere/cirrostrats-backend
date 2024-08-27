@@ -350,7 +350,9 @@ class Fetching_Mechanism(Root_class):           # TODO: Change this name to Fetc
         async def get_tasks(session):
             tasks = []
             for url in list_of_links:
-                if type(url)==dict:
+                # TODO: Aviation stack maybe possible here through the auth_headers. Previously auth headers were passed with api might have caused it to not work.
+                            # Separate the auth and pass as a dict. 
+                if type(url)==dict:         # This is probs for flight aware
                     url,auth_headers = list(url.keys())[0], list(url.values())[0]
                     tasks.append(asyncio.create_task(session.get(url, headers=auth_headers)))
                 else:

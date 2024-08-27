@@ -12,20 +12,33 @@ from pydantic import BaseModel
 from decouple import config
 import certifi
 
-# print('CONNECTION STRING',config('connection_string'))
 
-# When getting key=value pair error, one of the reason is because the VS code terminal is truncating the connection string
-# Updating VS code to the latest buil should fix the issue. If it doesn't,
-# Try using command promt window or terminal window outside of VS code instead of using the vs code terminal.
+
+"""
+When getting key=value pair error, one of the reason is because the VS code terminal is truncating the connection string
+Updating VS code to the latest build should fix the issue. If it doesn't,
+Try using command promt window or terminal window outside of VS code instead of using the vs code terminal.
+"""
+# print('CONNECTION STRING',config('connection_string'))
 client = MongoClient(config('connection_string'), tlsCAFile=certifi.where())
 # client = MongoClient(config('connection_string'))
+
+
 
 # database name
 db = client.cirrostrats
 
+
+"""
+mongodb collections are databaases. Document are set of key value pairs within collections.
+These keys are called fields. They maybe nested fields and those are called sub-documents. 
+"""
+
+# TODO: HP Similar to the weather colleciton. Need to add the others
 # collection name
 collection = db['airports']
 collection_gates = db['us-gates']
+collection_flights = db['Flights']
 collection_weather = db['Weather']
 
 # From here on its all custom code for database crud operation.
@@ -33,6 +46,7 @@ collection_weather = db['Weather']
 
 # This function creates data within the datbase. Currently/previously only used to feed data into database through
     # Python rather than having to manually create items on the mongoDB server through browser.
+# TODO: investigate this class. Its supposedely a `type` of the object thing that feeds into mdb.
 class Airport(BaseModel):
     name: str
     code: str
@@ -42,24 +56,5 @@ def create_airport(airport: Airport):
 
 # This will add info based on object id and refer to it.
 """
-from config.database import collection, collection_weather
-from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
-from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-from bson import ObjectId
-for i in collection.find({}):
-    airport_code = i['code']
-
-    collection_weather.insert_one({'airport':ObjectId(i['_id]),
-                                    'metar':'some val',
-                                    'taf':'some extra'})
-Delete:
-# collection_weather.delete_one({'_id':ObjectId(i['_id'])})
-Insert one:
-# collection.insert_one({'name':'Chicago','code':'ORD', 'weather':'Some_weather'})
-Insert many:
-# collection.insert_many(
-    # icao airports (2000ish)
-    # xx
-# )
 
 """
