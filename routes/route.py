@@ -117,12 +117,16 @@ async def get_airport_data(airport_id, search: str = None):
     return res
 
 
-@router.get('/FetchAndStore/')
-async def get_airport_data():
-
+@router.get('/fetchandstore')
+async def fetch_weather_data():
+    # TODO: This needs to scheduled every 55 mins past the hour.
     Wf = Weather_fetch()
     print('Starting the big fetch')
-    x = await Wf.fetch_and_store()
+
+#     To fetch live weather uncomment these two lines and access http://127.0.0.1:8000/fetchandstore from the browser. It will automatically fetch and save weather data into the mongodb
+#     Check docker terminal logs for progress on  the fetch.
+#     x = await Wf.fetch_and_store()
+#     print("finished fetching")
 
     return None
 

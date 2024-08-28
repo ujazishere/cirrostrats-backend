@@ -29,12 +29,18 @@ class Weather_fetch:
 
         self.all_mdb_airport_codes = [i['code'] for i in collection.find({})]
 
+        import os
+        cwd = (os.getcwd())
         # TODO: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
-        all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+        all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
+        print('PATHHHH:', all_datis_airports_path)
+        # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
         with open(all_datis_airports_path, 'rb') as f:
             self.all_datis_airport_codes = pickle.load(f)
 
-        with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
+        taf_positive_path = fr'{cwd}/routes/root/pkl/taf_positive_airports.pkl'
+        # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'
+        with open(taf_positive_path, 'rb') as f:
             self.taf_positive_airport_codes = pickle.load(f)
 
         #  All airport codes from mongo db
@@ -60,15 +66,15 @@ class Weather_fetch:
         for url, weather in resp_dict.items():
             airport_code_trailing = str(url)[-3:]
             
-            update_operations.append({
+            update_operations.append(
                 UpdateOne({'code': airport_code_trailing},
                           {'$set': {f'weather.{weather_type}': weather}})
-            })
-        
+            )
+
         result = collection_weather.bulk_write(update_operations)
         print(result)
-        
-    
+
+
     def datis_processing(self, resp_dict:dict):
         print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
@@ -87,6 +93,7 @@ class Weather_fetch:
         for weather_type, weather_links in self.weather_links_dict.items():
             # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
             # Check datis bulk extract and bulk weather extract for help on this.
+            print(f'For {weather_type}...')
             resp_dict: dict = await self.fm.async_pull(list(weather_links))
             
             # Datis needs special processing before you put into collection. This bit accomplishes it
