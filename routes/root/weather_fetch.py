@@ -9,7 +9,9 @@ import datetime as dt
 import asyncio
 import requests
 import json
-
+import pickle
+from pymongo import UpdateOne
+from routes.root.weather_parse import Weather_parse
 
 """
  Check test_weather.py for set and unset operation.
@@ -20,84 +22,77 @@ class Weather_fetch:
 
 
     def __init__(self) -> None:
-        # all_airport_codes = [i['code'] for i in collection.find({})]
+        self.rc = Root_class()
+        self.sl = Source_links_and_api()
+        self.fm = Fetching_Mechanism()
+        self.rsl = Root_source_links
+
+        self.all_mdb_airport_codes = [i['code'] for i in collection.find({})]
+
+        # TODO: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
+        all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+        with open(all_datis_airports_path, 'rb') as f:
+            self.all_datis_airport_codes = pickle.load(f)
+
+        with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
+            self.taf_positive_airport_codes = pickle.load(f)
+
+        #  All airport codes from mongo db
+        self.weather_links_dict = {
+            "datis": self.list_of_weather_links('datis',self.all_datis_airport_codes),
+            "metar": self.list_of_weather_links('metar',self.all_mdb_airport_codes),
+            "taf": self.list_of_weather_links('taf',self.taf_positive_airport_codes),
+        }
+        
         pass
 
 
-    async def all_weather_fetch(self,):
-        rc = Root_class()
-        sl = Source_links_and_api()
-        fm = Fetching_Mechanism()
+    def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
+        return [self.rsl.weather(weather_type=type_of_weather,airport_id="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
 
 
-        rsl = Root_source_links
-
-        # TODO: Works. Just need to make this run every 5 mins. finallu created weather field. 
-        for each_d in collection_weather.find():
-            weather = {}
-            airport_id = "K"+each_d['code']
-            # resp_dict: dict = await fm.async_pull(list(weather_links))
-            weather = {}
-            for weather_type in ['metar', 'taf', 'datis']:
-                fetch_link = rsl.weather(weather_type=weather_type,airport_id=airport_id)
-                weather_return = requests.get(fetch_link)
-
-                # if its metar or taf it doesn't need json processing, datis does. 
-                if weather_type == 'metar' or weather_type =='taf':
-                    weather_return = weather_return.content.decode("utf-8")
-                    # if fetch is the same as old then keep the og one.
-                    # TODO: need to account for new null fetch as well. if new is null keep the og.
-                    # TODO: use collections - weather.metar if there  is a achange.
-                    if weather_return == each_d['weather'][weather_type]:   
-                        weather_return = each_d['weather'][weather_type]
-
-                elif weather_type =='datis':
-                    weather_return = json.loads(weather_return.content)
-                    if weather_return['error']:
-                        weather_return = {}
-                    if weather_return == each_d['weather'][weather_type]:
-                        weather_return = each_d['weather'][weather_type]
-
-                if weather_return:
-                    weather[weather_type] = weather_return
-                    print('within here')
-
-
-            print('final',weather)
-            collection_weather.update_one(
-                {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
-                {'$set': {'weather':weather}},
-                upsert=True
-                )
-
-
-                # utc_now = dt.datetime.now(dt.UTC)
-                # yyyymmddhhmm = utc_now.strftime("%Y%m%d%H%M")
-
-
-
-    async def all_weather_fetch_async(self,):
-        rsl = Root_source_links
-        fm = Fetching_Mechanism()
-        all_airport_codes = [i['code'] for i in collection.find({})]
-        # weather_links = [rsl.weather(weather_type="metar",airport_id="K"+each_airport_code) for each_airport_code in all_airport_codes]
-        # resp_dict: dict = await fm.async_pull(list(weather_links))
+    def mdb_updates(self,resp_dict: dict, weather_type):
+        # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
+        # TODO: Now need to account for new airport codes, maybe upsert or maybe just none for now.
+        print('Updating mdb')
+        update_operations = []
+    
+        for url, weather in resp_dict.items():
+            airport_code_trailing = str(url)[-3:]
+            
+            update_operations.append({
+                UpdateOne({'code': airport_code_trailing},
+                          {'$set': {f'weather.{weather_type}': weather}})
+            })
         
-        test_airports = all_airport_codes[:10]       
-        test_weather_links = [rsl.weather(weather_type="metar",airport_id="K"+each_airport_code) for each_airport_code in test_airports]
-        resp_dict: dict = await fm.async_pull(list(test_weather_links))
-        for a, b in resp_dict.items():
-            print(str(a)[-3:])
+        result = collection_weather.bulk_write(update_operations)
+        print(result)
         
-
-
-        
-
-        # This code iters through the airports database and refers the airports to the weeather document. 
-        for i in collection.find({}):
-            airport_code = i['code']
-
-            collection_weather.insert_one({'airport':ObjectId(i['_id']),
-                                            'metar':'some val',
-                                            'taf':'some extra'})
+    
+    def datis_processing(self, resp_dict:dict):
+        print('Processing Datis')
+        # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
+        # This function processess the raw list and returns just the pure datis
+        for url,datis in resp_dict.items():
+            if not 'error' in datis:
+                raw_datis_from_api = json.loads(datis)
+                raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
+                resp_dict[url]=raw_datis
+    
         return resp_dict
+
+
+    async def fetch_and_store(self,):
+        print('Initiating the weather fetch.')
+        for weather_type, weather_links in self.weather_links_dict.items():
+            # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
+            # Check datis bulk extract and bulk weather extract for help on this.
+            resp_dict: dict = await self.fm.async_pull(list(weather_links))
+            
+            # Datis needs special processing before you put into collection. This bit accomplishes it
+            if weather_type == 'datis':
+                resp_dict = self.datis_processing(resp_dict)
+            
+            self.mdb_updates(resp_dict,weather_type)
+            # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
+    

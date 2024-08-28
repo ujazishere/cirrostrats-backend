@@ -10,6 +10,7 @@ from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from .root.gate_scrape import Gate_scrape_thread
 from .root.weather_parse import Weather_parse
+from .root.weather_fetch import Weather_fetch
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter
 from time import sleep
@@ -70,42 +71,29 @@ This list_serial return is a list type with each item a dict. Check individual_s
 @router.get('/airports')
 async def get_airports():
     # Returns _id,name and code as document field keys.
-    print("FUNC TRIGGERED")
     all_results = collection.find({})
     return list_serial(all_results)
 
 
 
-# data returned is a dictionary with the id,name and code of the airport
 # The only reason I have left airport_id here is for future use of similar variable case. It does serves any good purpose in this code otherwise.
 @router.get('/query/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def initial_query_processing_react(initial_query, search: str = None):
-    # The variable `search` stores all the key strokes as they are typed in the searchbar.
-    # This function runs on every single key stroke on and after the 3d key stroke in the search bar.
+    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
     res = None
+    print('init_query =', initial_query,)
+    print('search =', search)
     # As user types in the search bar this if statement gets triggered.
+
+    # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists.
+        # Find a way to schedule this either through a dedicated route via react or just python multi threading.
+    # Wf = Weather_fetch()
+    # print('Starting the big fetch')
+    # x = await Wf.fetch_and_store()
+
     if (initial_query == "airport"):
-        # airport_id is always `airport` unless the search is initiated with an actual airport, at which point it is replaced by a id. 
-        res = collection.find({
-            "name": {"$regex": search}
-        })
-        print("SEARCHING as user initiates typing...")
-        print(search, "; airport_id =", initial_query)
-
-        serialized_return = serialize_airport_input_data(res)
-        print("Serialized return:",serialized_return)
-        
-        # case sensetive. Will return matched results.
-        # This seems to be an impossible return since if airport_id is not airport it will skip this if statement anyway.
-        return serialized_return
-    else:       # airport gets replaced with the serial_id
-        print("airport_id =! airport, it is:", initial_query)
-    res = collection_weather.find_one(
-        {"_id": ObjectId(initial_query)})
-    print('AIRPORT FOUND', res)
-
-    parsed_data = individual_serial(res)
-    return {**parsed_data, }        # Add any other dict to send to react
+        print('Initial_query =', initial_query)
+        return None
 
 # TODO: VHP Use these to save and retrive flight data from and to the mongoDB.
 # @router.post('/flight')
@@ -120,10 +108,36 @@ async def initial_query_processing_react(initial_query, search: str = None):
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def get_airport_data(airport_id, search: str = None):
     print("NEW FUNCTION;", search)
+    print("airport_id", search)
+    # serialized_return = serialize_airport_input_data(res)
     res = collection_weather.find_one(
         {"airport_id": ObjectId(airport_id)})
+    res = res['weather']
     print("single document from mongoDB",res)
     return res
+
+
+@router.get('/FetchAndStore/')
+async def get_airport_data():
+
+    Wf = Weather_fetch()
+    print('Starting the big fetch')
+    x = await Wf.fetch_and_store()
+
+    return None
+
+
+def loading_example_weather():
+    file_path = r'example_flight_deet_full_packet.pkl'
+    with open(file_path, 'rb') as f:
+        example_flight_deet = pickle.load(f)
+    weather_info = example_flight_deet['dep_weather']
+
+    wp = Weather_parse()
+    # TODO: work in progress. The array needs to be supplied 
+    highlighted_weather = wp.weather_highlight_array(example_data=weather_info)
+
+
 
 def loading_example_weather():
     file_path = r'example_flight_deet_full_packet.pkl'

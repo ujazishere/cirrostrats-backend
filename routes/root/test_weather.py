@@ -93,6 +93,7 @@ with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 
         # TODO HP: also account for - contruct a checking mechanism to check the validity of the data if it makes sense using regex. Setup notification if it doesn't match
             # This can be easily accomplished with regex or use sentences and frequently occouring bits to disregard them and ones that stand out need to be looked at.
 
+    # TODO: TAF positive airports need to be checked at in the all mdb airports if they exist.
     taf_positive_airport_codes = pickle.load(f)
 
 #  All airport codes from mongo db
@@ -144,7 +145,6 @@ def datis_processing(resp_dict:dict):
             raw_datis_from_api = json.loads(datis)
             raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
             resp_dict[url]=raw_datis
-
     return resp_dict
 
 # TODO: This needs to be put in a scheduler like celery.
