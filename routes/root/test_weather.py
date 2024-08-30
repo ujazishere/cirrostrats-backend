@@ -129,6 +129,7 @@ def mdb_updates(resp_dict: dict, weather_type):
     for url, weather in resp_dict.items():
         airport_code_trailing = str(url)[-3:]
         
+        # For using within container or terminal use UpdateOne as arg without the curly braces.
         update_operations.append({
             UpdateOne({'code': airport_code_trailing},
                       {'$set': {f'weather.{weather_type}': weather}})
@@ -266,7 +267,15 @@ def x():
     # Delete a document:
     collection_weather.delete_one({'_id':ObjectId(doc_id)})
 
+    # Count documents that match certain crit.
+    collection_weather.count_documents({'weather.datis':{}}, )
 
+    # This only returns the docs that have subfield datis of a sub document.
+    [i for i in collection_weather.find({'weather.datis':{'$exists':True}}, )]
+
+    # return all docs where datis is not empty `$ne` and only return the subdocument weather's datis field's sub.
+    # This will return the _id and the datis of all the matched documents.
+    [i for i in collection_weather.find({'weather.datis':{'$ne':{}}}, {'weather.datis':1})]
 
     # `More on find mdb`
     # This will request the id item only of the requested document. It is more efficient than [i['_id'] for i in collection.find({'code':'OZR'})]
@@ -310,6 +319,34 @@ def x():
             upsert=True
             )
 
+    # This is a working version of updating, you can use set or unset.
+    update_operations = []
+    for url, weather in resp_dict.items():
+        airport_code_trailing = str(url)[-3:]
+        
+        update_operations.append(
+            UpdateOne({'code': airport_code_trailing},
+                      {'$set': {f'weather.{weather_type}': weather}})
+        )
+    result = collection_weather.bulk_write(update_operations)
+    print(result)
+
+
+    # This is a lengthy extensive operation to remove empty tafs fields all together
+    [collection_weather.update_one({'_id':i['_id']}, {'$unset':{'weather.taf':''}}) for i in collection_weather.find({'weather.taf':{}},)]
+
+    # Better to do it this way:
+    empty_taf_ids = [i for i in collection_weather.find({'weather.taf':{}},{'_id':1})]
+    update_operations = []
+    for i in empty_taf_ids:
+        update_operations.append(
+            UpdateOne(
+                {'_id':i['_id']},
+                {'$unset':{'weather.taf':''}}
+            )
+        )
+
+    result = collection_weather.bulk_write(update_operations)
 
     # This is the corrected way of deleting the contents of the weather field rather than deleting the whole weather key field instead.
     weather_fields = {

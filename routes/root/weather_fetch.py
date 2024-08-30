@@ -49,13 +49,34 @@ class Weather_fetch:
             "metar": self.list_of_weather_links('metar',self.all_mdb_airport_codes),
             "taf": self.list_of_weather_links('taf',self.taf_positive_airport_codes),
         }
-        
-        pass
 
 
     def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
-        return [self.rsl.weather(weather_type=type_of_weather,airport_id="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
+        prepend = ""
+        if type_of_weather == 'metar':
+            prepend = "K"
+        
+        return [self.rsl.weather(weather_type=type_of_weather,airport_id=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
 
+
+    def mdb_unset(self,):
+        # Attempt to update the document. In this case remove a field(key value pair).
+        weather = {             # This weather dict wouldnt be necessary since the unset operator is removing the whole weather field itself.
+            'metar':'',
+            'taf':'',
+            'datis':''
+        }
+        for each_d in collection_weather.find():
+            airport_id = "K"+each_d['code']
+        
+            collection_weather.update_one(
+                {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
+                
+                {'$unset': {'weather':weather}},
+                # When you use $unset with the key weather, it removes the entire weather field, not just the contents inside it.
+                upsert=True
+                )
+    
 
     def mdb_updates(self,resp_dict: dict, weather_type):
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
@@ -84,7 +105,7 @@ class Weather_fetch:
                 raw_datis_from_api = json.loads(datis)
                 raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
                 resp_dict[url]=raw_datis
-    
+   
         return resp_dict
 
 
@@ -93,13 +114,15 @@ class Weather_fetch:
         for weather_type, weather_links in self.weather_links_dict.items():
             # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
             # Check datis bulk extract and bulk weather extract for help on this.
-            print(f'For {weather_type}...')
-            resp_dict: dict = await self.fm.async_pull(list(weather_links))
-            
-            # Datis needs special processing before you put into collection. This bit accomplishes it
-            if weather_type == 'datis':
-                resp_dict = self.datis_processing(resp_dict)
-            
-            self.mdb_updates(resp_dict,weather_type)
-            # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
-    
+            print(weather_type)
+            if weather_type == 'taf':
+                print(f'For {weather_type}...')
+                resp_dict: dict = await self.fm.async_pull(list(weather_links))
+                
+                # Datis needs special processing before you put into collection. This bit accomplishes it
+                if weather_type == 'datis':
+                    resp_dict = self.datis_processing(resp_dict)
+                
+                self.mdb_updates(resp_dict,weather_type)
+                # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
+        

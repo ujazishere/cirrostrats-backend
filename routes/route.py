@@ -107,8 +107,7 @@ async def initial_query_processing_react(initial_query, search: str = None):
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def get_airport_data(airport_id, search: str = None):
-    print("NEW FUNCTION;", search)
-    print("airport_id", search)
+    print("airport_id", airport_id)
     # serialized_return = serialize_airport_input_data(res)
     res = collection_weather.find_one(
         {"airport_id": ObjectId(airport_id)})
@@ -125,7 +124,7 @@ async def fetch_weather_data():
 
 #     To fetch live weather uncomment these two lines and access http://127.0.0.1:8000/fetchandstore from the browser. It will automatically fetch and save weather data into the mongodb
 #     Check docker terminal logs for progress on  the fetch.
-#     x = await Wf.fetch_and_store()
+    x = await Wf.fetch_and_store()
 #     print("finished fetching")
 
     return None
@@ -223,13 +222,13 @@ def weather_display(airportID):
     # weather_page_data['trr'] = weather_page_data
     return weather_page_data
 
-@router.get("/home/{query}")
+@router.get("/rawQuery/{query}")
 async def root(query: str = None):
     print('in here')
     # Root_class().send_email(body_to_send=query)
 
-    gate_data_returns = await parse_query(None, query)
-    return gate_data_returns
+    bulk_flight_deet_returns = await parse_query(None, query)
+    return bulk_flight_deet_returns
 
 
 async def parse_query(request, main_query):
@@ -265,8 +264,13 @@ async def parse_query(request, main_query):
                     # Its GJS
                     airline_code, flt_digits = query[:3], query[3:]
                 else:
+                    flt_digits = query[2:]
                     airline_code = None
-                    flt_digits = query[2:]       # Its UA
+                    if query[:3] ==  'UAL':
+                        airline_code = 'UAL'
+                        flt_digits = query[3:]
+                    elif query[:2] == 'UA':
+                        airline_code = 'UA'
                 print('\nSearching for:', airline_code, flt_digits)
                 return await flight_deets(airline_code=airline_code, flight_number_query=flt_digits)
 
@@ -278,6 +282,7 @@ async def parse_query(request, main_query):
                     if 1 <= query <= 35 or 40 <= query <= 136:              # Accounting for EWR gates for gate query
                         return gate_info(main_query=str(query))
                     else:                                                   # Accounting for fligh number
+                        print("INITIATING flight_deets FUNCTION.")
                         return await flight_deets(airline_code=None, flight_number_query=query)
                 else:
                     if len(query) == 4 and query[0] == 'K':
