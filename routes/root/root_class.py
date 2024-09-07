@@ -236,7 +236,7 @@ class Source_links_and_api:
 
 
 
-class Fetching_Mechanism(Root_class):           # TODO: Change this name to Fetch_class
+class Fetching_Mechanism(Root_class):
     # TODO:first rest should account for airline code and flight number, next init of this class needs dep_id
     def __init__(self,airline_code=None,flt_num=None,
                  dep_airport_id=None,dest_airport_id=None):

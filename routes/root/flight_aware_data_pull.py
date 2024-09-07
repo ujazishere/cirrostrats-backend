@@ -10,7 +10,6 @@ import re
 
 # TODO: Fix wrong flights showing up. One way is to make the flight aware data prominent
         # But that will cause utc and local time clashes.  redundancies to cross check and verify and use reliable sources.
-        # State it to the user when information maybe unreliable.
         # Maybe crosscheck it with other source as primary rathar than other  way around.
 
 class Flight_aware_pull(Root_class):
@@ -292,8 +291,6 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
                     pass
                 
                 # TODO: use the Cirrostrats\dj\dummy_flight_aware_packet.pkl to get the `flights` section then do the pre-processing on this.
-                        # Need to highlight estimated out as red if delayed.
-                        # convert to date time object and use if statement to determine if its delayed and inject html through here.
                 # print("scheduled out Z: ", scheduled_out_raw_fa)
                 scheduled_out = re.search(r"T(\d{2}:\d{2})", scheduled_out_raw_fa).group(1).replace(":","") + "Z"
                 estimated_out = flights[i]['estimated_out']     # Rename this to date or time or both 

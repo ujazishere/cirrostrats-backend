@@ -6,9 +6,7 @@ TODO: UJ
         Current weather based on airports in the database, Save them in the mdb collection `Weather` for access into the main collection and create index.
             Also account for test data in the collection.
             If there  is one server that consistently pulls weather there wont be a need to have another one for testing instance. It would automatically fetch from the legacy server.
-            #TODO: Planning on constructing a mass fetch similar to bulk extracts.
-                # get all airport codes, get all links to those airports and create tasks.
-                # Then use these tasks to fetch concurrently and save in the database as it becomes available.
+            weather scheduler:
                 # implement health checks such that  if things are not updating I get notified or health check gets pushed out to devops
                 # inefficiency:- Airports that return null consistently should be fetched less frequently.
                 # Track airports that are trending frequent updates and update them frequently and ones that dont update much should be fetched less fequently. This will be a milestone in efficiency.

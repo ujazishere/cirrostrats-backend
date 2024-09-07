@@ -23,6 +23,7 @@ def departures_EWR_UA():
     soup = Req.request(EWR_deps_url)
     raw_bs4_all_EWR_deps = soup.find_all('div', class_="flight-col flight-col__flight")[1:]
     # TODO: raw_bs4_html_ele contains delay info. Get delayed flight numbers to show on gate_info.
+        # convert to date time object and use if statement to determine if its delayed and inject html through here.
     # raw_bs4_html_ele = soup.find_all('div', class_="flight-row")[1:]
 
     #  This code pulls out all the flight numbers departing out of EWR

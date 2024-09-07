@@ -76,7 +76,7 @@ async def get_airports():
 
 
 
-# The only reason I have left airport_id here is for future use of similar variable case. It does serves any good purpose in this code otherwise.
+# The only reason I have left initial_query here is for future use of similar variable case.
 @router.get('/query/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def initial_query_processing_react(initial_query, search: str = None):
     # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
@@ -85,25 +85,9 @@ async def initial_query_processing_react(initial_query, search: str = None):
     print('search =', search)
     # As user types in the search bar this if statement gets triggered.
 
-    # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists.
-        # Find a way to schedule this either through a dedicated route via react or just python multi threading.
-    # Wf = Weather_fetch()
-    # print('Starting the big fetch')
-    # x = await Wf.fetch_and_store()
-
     if (initial_query == "airport"):
         print('Initial_query =', initial_query)
         return None
-
-# TODO: VHP Use these to save and retrive flight data from and to the mongoDB.
-# @router.post('/flight')
-# async def add_flight(flight: Flight):
-#     response = collection.insert_one(dict(flight))
-#     return {"id": str(response.inserted_id)}
-# @router.get('/flight')
-# async def get_flights():
-#     flights = list_serial(collection.find())
-#     return flights
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
 async def get_airport_data(airport_id, search: str = None):
@@ -118,14 +102,15 @@ async def get_airport_data(airport_id, search: str = None):
 
 @router.get('/fetchandstore')
 async def fetch_weather_data():
-    # TODO: This needs to scheduled every 55 mins past the hour.
+    # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists. Needs to be schedudled every 55 mins for metar and datis, 4 hours for taf,
+        # Find a way to schedule this either through a dedicated route via react or just python multi threading.
     Wf = Weather_fetch()
     print('Starting the big fetch')
 
-#     To fetch live weather uncomment these two lines and access http://127.0.0.1:8000/fetchandstore from the browser. It will automatically fetch and save weather data into the mongodb
+#     To fetch live weather use the x line and access http://127.0.0.1:8000/fetchandstore from the browser. It will automatically fetch and save all weather data into the mongodb
 #     Check docker terminal logs for progress on  the fetch.
     x = await Wf.fetch_and_store()
-#     print("finished fetching")
+    print("finished fetching")
 
     return None
 
@@ -149,7 +134,6 @@ def loading_example_weather():
     weather_info = example_flight_deet['dep_weather']
 
     wp = Weather_parse()
-    # TODO: work in progress. The array needs to be supplied 
     highlighted_weather = wp.weather_highlight_array(example_data=weather_info)
 
     weather_info['D_ATIS'] = weather_info['D-ATIS']
@@ -159,7 +143,6 @@ def loading_example_weather():
 def weather_stuff_react(airport_id):
 
     wp = Weather_parse()
-    # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
     # weather = wp.scrape(weather_query, datis_arr=True)
 
     # Dont get actual data yet. It wont work. use the test/example data for now to get the highlights to work.
@@ -224,14 +207,17 @@ def weather_display(airportID):
 
 @router.get("/rawQuery/{query}")
 async def root(query: str = None):
-    print('in here')
+    print('Within rawQuery')
     # Root_class().send_email(body_to_send=query)
+    print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
+    temp_test_flight_data = test_flight_deet_data()
+    bulk_flight_deet_returns = temp_test_flight_data
+    # bulk_flight_deet_returns = await parse_query(None, query)
 
-    bulk_flight_deet_returns = await parse_query(None, query)
     return bulk_flight_deet_returns
 
 
-async def parse_query(request, main_query):
+async def parse_query(main_query):
     """
     Checkout note `unit testing seems crucial.txt` for the parsing logic
     """

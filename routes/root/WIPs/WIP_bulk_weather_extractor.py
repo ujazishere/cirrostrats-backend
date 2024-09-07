@@ -1,7 +1,41 @@
-# from dj.dj_app.root.WIP_bulk_weather_extractor import Bulk_weather_extractor
+"""
+# Safe to copy all this commented code and paste for bullk metar, taf and datis fetch and save
+
+from routes.root.WIPs.WIP_bulk_weather_extractor import Bulk_weather_extractor
+
+# For use in Jupyter
+we = Bulk_weather_extractor()
+x = we.airport_ID_separator()
+len(we.ids_without_digit_with_no_mets_excluded)
+
+# Do the test first to init necessary items
+metar_pull_test = we.scraper(test=True,)
+
+
+
+# shows syntax error but works on jupyter. Pulls bulk metar for last 15 days. Takes about 15-20 Seconds
+async_pull_metar = await we.parallel_scrape()
+
+# Automatically saves bulk_metar file name with current UTC YYYYMMDDHHMM 
+we.hard_write_dumper("bulk_metar",we.bulky_metar)
+
+# taf_pull_test = we.scraper(test=True,)
+
+# Pulls taf for last 17 days
+async_pull_taf = await we.parallel_scrape(taf_pull=True)
+
+# Automatically saves bulk_taf file name with current UTC YYYYMMDDHHMM 
+we.hard_write_dumper("bulk_taf",we.bulky_taf)
+
+# DATIS Extractor: Use in jupyter interactive. For use in terminal just change it to False 
+a = await we.datis_extractor(jupyter=True)
+
+
+"""
+
 import asyncio
 import aiohttp
-from datetime import datetime
+import datetime as dt
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pickle
@@ -56,14 +90,14 @@ class Bulk_weather_extractor:
         else:
             # 20,296 airport ID in list form. eg ['DAB', 'EWR', 'X50', 'AL44']
             # Load airport ID
-            with open(r'dj/dj_app/root/pkl/airport_identifiers_US.pkl', 'rb') as f:
+            with open(r'routes/root/pkl/airport_identifiers_US.pkl', 'rb') as f:
                 id = pickle.load(f)
                 return id
     
 
     def airport_ID_separator(self, ):
         new_id = []
-        id = self.loader()  # Loads all airport id eg. ['DAB', 'EWR', 'X50', 'AL44']
+        id = self.loader()  # Loads all 20k airport ids eg. ['DAB', 'EWR', 'X50', 'AL44']
 
         # Prepending K to 3 leter codes 
         for i in id:    # Using all airport ID's
@@ -175,6 +209,7 @@ class Bulk_weather_extractor:
         async def get_tasks(session):
             # async def classification(session,ids_to_pull, type_of_weather, airport_id, time_in_hours):
             if taf_pull:
+                print('TAF pull in progress...')
                 ids_to_pull = self.loader(taf_positive_airports=True)
                 type_of_weather,time_in_hours="taf","408"
             else:
@@ -196,6 +231,7 @@ class Bulk_weather_extractor:
             return tasks
 
         async def main():
+            print("Initiating the fetch now...")
             async with aiohttp.ClientSession() as session:
                 tasks = await get_tasks(session)
                 weather_resp = []
@@ -218,7 +254,8 @@ class Bulk_weather_extractor:
                     except:
                         nd.append(str(resp.url)[-14:-10])
                 self.nd, self.done = nd,done
-                print("done/nd: ", done,nd)
+                print("done totals, saved in self.done", len(done))
+                print("Nd totals saved in self.nd",len(nd))
                 return weather_resp
         self.weather = await asyncio.ensure_future(main())
         print('saved raw bulky weather return to self.weather')
@@ -248,45 +285,70 @@ class Bulk_weather_extractor:
 
             
     def hard_write_dumper(self,file_name, bulky_weather):
-        currently = datetime.utcnow().strftime("%Y%m%d%H%M")
+        import datetime as dt
+        currently = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
+
+        # currently = datetime.utcnow().strftime("%Y%m%d%H%M")      # This is old and depricated
         # Double slash here because it causes syntax error regardless of r string above since `\` is used as escape char 
         file_name = self.export_path + "\\" + file_name + currently     
         with open(file_name, 'wb') as f:
             pickle.dump(bulky_weather, f)
         print('exported as:', file_name)
         
-"""
 
+    async def datis_extractor(self, jupyter):
+        print('Initiating DATIS extractor')
+        all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+        with open(all_datis_airports_path, 'rb') as f:
+            all_datis_airports = pickle.load(f)
+        
+        # Read this for async chat https://chat.openai.com/share/24a00dc6-1293-4263-9c11-0c2b188c0f7a
+        async def get_tasks(session):
+            tasks = []
+            for airport_id in all_datis_airports:
+                url = f"https://datis.clowd.io/api/{airport_id}"
+                tasks.append(asyncio.create_task(session.get(url)))
+            return tasks
+        
+        async def main():
+            async with aiohttp.ClientSession() as session:
+                tasks = await get_tasks(session)
+                # Upto here the tasks are created which is very light.
+        
+                # Actual pull work is done using as_completed 
+                datis_resp = []
+                for resp in asyncio.as_completed(tasks):        # use .gather() instead of .as_completed for background completion
+                    resp = await resp           # Necessary operation. Have to await it to get results.
+                    jj = await resp.json()
+                    datis_raw = 'n/a'
+                    if type(jj) == list and 'datis' in jj[0].keys():
+                        datis_raw = jj[0]['datis']
+                    datis_resp.append(datis_raw)
+                return datis_resp
+        
+        if jupyter:
+            # This will work on jupyter interactive. Use .ensure_future instead of .run and await it:
+            all_76_datis = await asyncio.ensure_future(main()) 
+        elif __name__ == "__main__":
+            # This .run() works when calling the file from terminal but wont work in jupyter interactive. 
+            all_76_datis = asyncio.run(main())
 
-we = Bulk_weather_extractor()
-x = we.airport_ID_separator()
-len(we.ids_without_digit_with_no_mets_excluded)
-
-# Do the test first to init necessary items
-metar_pull_test = we.scraper(test=True,)
-
-
-
-# shows syntax error but works on jupyter. Pulls bulkt metar for last 15 days
-async_pull_metar = await we.parallel_scrape()
-
-# Automatically saves bulk_metar file name with current UTC YYYYMMDDHHMM 
-we.hard_write_dumper("bulk_metar",we.bulky_metar)
-
-# taf_pull_test = we.scraper(test=True,)
-# Pulls taf for last 17 days
-async_pull_taf = await we.parallel_scrape(taf_pull=True)
-
-# Automatically saves bulk_taf file name with current UTC YYYYMMDDHHMM 
-we.hard_write_dumper("bulk_taf",we.bulky_taf)
-
-
-
-# we.hard_write_dumper(we.export_path,we.bulky_metar)
-
-
-"""
-
+        
+        
+        
+        # extract datis with dates in the filename
+        yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
+        path = rf'c:\users\ujasv\onedrive\desktop\pickles\datis_info_stack_{yyyymmddhhmm}.pkl'
+        print('Total extracted:', len(all_76_datis),)
+        print('Saved:', path,)
+        print('Example at index 0:', all_76_datis[0])
+        
+        # **********CAUTION!!! HARD WRITE***************
+        with open(path, 'wb') as f:
+            pickle.dump(all_76_datis,f)
+        
+        # return all_76_datis
+        
 
 
 """

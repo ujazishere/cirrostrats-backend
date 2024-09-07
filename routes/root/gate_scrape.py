@@ -55,7 +55,7 @@ class Gate_Scrape(Root_class):
                 
                 return {flt_num: [gate, scheduled, actual]}
             else:
-                print('g',gate, 'f', flt_num)
+                print('unreliable matches:','g',gate, 'f', flt_num)
                 # TODO: Have to deal with these outlaws and feed it back into the system.
                     # Sometimes gate goes into scheduled or actual. Beware of that kind of data.
                 self.outlaws_reliable.update({

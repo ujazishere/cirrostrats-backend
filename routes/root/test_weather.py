@@ -123,7 +123,7 @@ async def resp_dict_returns(weather_links):
 
 def mdb_updates(resp_dict: dict, weather_type):
     # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
-    # TODO: Now need to account for new airport codes, maybe upsert or maybe just none for now.
+    # TODO: Now need to account for new airport codes, maybe upsert or maybe just none for now. Also consider storing data client side as cache.
     update_operations = []
 
     for url, weather in resp_dict.items():
@@ -184,6 +184,16 @@ def weather_field_metar_returns():
 
 
 
+
+# TODO: Use these to save and retrive flight data from and to the mongoDB. Use it within route
+# @router.post('/flight')
+# async def add_flight(flight: Flight):
+#     response = collection.insert_one(dict(flight))
+#     return {"id": str(response.inserted_id)}
+# @router.get('/flight')
+# async def get_flights():
+#     flights = list_serial(collection.find())
+#     return flights
 
 
 
