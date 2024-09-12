@@ -205,6 +205,20 @@ def weather_display(airportID):
     # weather_page_data['trr'] = weather_page_data
     return weather_page_data
 
+
+@router.get("/rawQueryTest/{query}")
+async def root(query: str = None):
+    # Root_class().send_email(body_to_send=query)
+    print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
+    # TODO: This needs to be a parse query first then goes to the flight_deets.
+                # WIP: separation of concern for flight deets
+                # First get departure and arrival from the flightstats or  ua_dep and arrival and return it back to react.
+                # As soon as setLoading is false send that data back top the
+    bulk_flight_deet_returns = await flight_deets(None, query)
+
+    return bulk_flight_deet_returns
+
+
 @router.get("/rawQuery/{query}")
 async def root(query: str = None):
     print('Within rawQuery')
@@ -212,6 +226,15 @@ async def root(query: str = None):
     print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
     temp_test_flight_data = test_flight_deet_data()
     bulk_flight_deet_returns = temp_test_flight_data
+
+    bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
+    bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
+    bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
+    bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
+    bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
+    bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
+
+    print(bulk_flight_deet_returns['dep_weather'])
     # bulk_flight_deet_returns = await parse_query(None, query)
 
     return bulk_flight_deet_returns
@@ -333,7 +356,7 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 
     bulk_flight_deets = {}
 
-    # TODO: Priority: Each individual scrape should be separate function. Also separate scrape from api fetch
+    # TODO: Priority: Consider Separation of concern. Each individual scrape should be separate function . Also separate scrape from api fetch
     ''' *****VVI******  
     Logic: resp_dict gets all information fetched from root_class.Fetching_Mechanism().async_pull(). Look it up and come back.
     pre-processes it using resp_initial_returns and resp_sec_returns for inclusion in the bulk_flight_deets..
