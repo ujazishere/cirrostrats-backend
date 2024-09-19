@@ -55,7 +55,7 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 # Create a proof of concept. Details can be worked on later with cleaning and improving efficiency.
 
 from config.database import collection, collection_weather
-from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
+from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 from bson import ObjectId
 import requests

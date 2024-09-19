@@ -96,6 +96,23 @@ class Weather_fetch:
         print(result)
 
 
+    def flight_mdb_updates(self, flightNumbers, scheduledDeparture, scheduledArrival,):
+        # TODO: Now need to account for new airport codes for scheduled departure/arriva, maybe upsert or maybe just none for now.
+        print('Updating flights mdb')
+        update_operations = []
+    
+        for flightNumber in  flightNumbers:
+            
+            update_operations.append(
+                UpdateOne({'flightNumber': flightNumber},
+                          {'$set': {'flightNumber': flightNumber}}
+                          )
+            )
+
+        result = collection_weather.bulk_write(update_operations)
+        print(result)
+
+
     def datis_processing(self, resp_dict:dict):
         print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.

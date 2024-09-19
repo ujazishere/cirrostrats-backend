@@ -39,7 +39,7 @@ These keys are called fields. They maybe nested fields and those are called sub-
 collection = db['airports']
 collection_weather = db['Weather']
 
-collection_gates = db['us-gates']
+collection_gates = db['US-gates']
 collection_flights = db['Flights']
 
 # From here on its all custom code for database crud operation.

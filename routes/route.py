@@ -2,8 +2,8 @@ from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models.model import FlightNumber, Airport
-from config.database import collection, collection_weather
-from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
+from config.database import collection, collection_weather, collection_flights, collection_gates
+from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
@@ -72,21 +72,39 @@ This list_serial return is a list type with each item a dict. Check individual_s
 async def get_airports():
     # Returns _id,name and code as document field keys.
     all_results = collection.find({})
-    return list_serial(all_results)
+    return serialize_document_list(all_results)
+
+
+@router.get('/flightNumbers')
+async def get_flight_numbers():
+    # Returns _id,name and code as document field keys.
+    all_results = collection_flights.find({})
+    return serialize_document_list(all_results)
+    return None
+
+
+@router.get('/gates')
+async def get_us_concourses():
+    # Returns _id,name and code as document field keys.
+    all_results = collection_gates.find({})
+    return serialize_document_list(all_results)
 
 
 
-# The only reason I have left initial_query here is for future use of similar variable case.
-@router.get('/query/{initial_query}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
+@router.get('/query/{initial_query}')       
 async def initial_query_processing_react(initial_query, search: str = None):
     # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
+    # This code is present in the react as last resort when dropdown is exhausted.
+    # The only reason I have left initial_query here is for future use of similar variable case.
+    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
     res = None
-    print('init_query =', initial_query,)
-    print('search =', search)
+    print('Last resort since auto suggestion is exhausted. inittial_query:', initial_query,)
+    print('search value:', search)
     # As user types in the search bar this if statement gets triggered.
 
-    if (initial_query == "airport"):
-        print('Initial_query =', initial_query)
+    if (initial_query != "airport"):
+        print('initial_query is not airport. It is:', initial_query)
+        # TODO: Do something here to process the raw search query and return it to the frontend.
         return None
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
@@ -113,18 +131,6 @@ async def fetch_weather_data():
     print("finished fetching")
 
     return None
-
-
-def loading_example_weather():
-    file_path = r'example_flight_deet_full_packet.pkl'
-    with open(file_path, 'rb') as f:
-        example_flight_deet = pickle.load(f)
-    weather_info = example_flight_deet['dep_weather']
-
-    wp = Weather_parse()
-    # TODO: work in progress. The array needs to be supplied 
-    highlighted_weather = wp.weather_highlight_array(example_data=weather_info)
-
 
 
 def loading_example_weather():
@@ -206,6 +212,7 @@ def weather_display(airportID):
     return weather_page_data
 
 
+# Do not need this
 @router.get("/rawQueryTest/{query}")
 async def root(query: str = None):
     # Root_class().send_email(body_to_send=query)
@@ -214,7 +221,8 @@ async def root(query: str = None):
                 # WIP: separation of concern for flight deets
                 # First get departure and arrival from the flightstats or  ua_dep and arrival and return it back to react.
                 # As soon as setLoading is false send that data back top the
-    bulk_flight_deet_returns = await flight_deets(None, query)
+    bulk_flight_deet_returns = await ua_dep_dest_flight_status(query)
+    print(bulk_flight_deet_returns)
 
     return bulk_flight_deet_returns
 
@@ -227,6 +235,7 @@ async def root(query: str = None):
     temp_test_flight_data = test_flight_deet_data()
     bulk_flight_deet_returns = temp_test_flight_data
 
+    # This is only so that the weather can be 
     bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
     bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
     bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
@@ -234,7 +243,7 @@ async def root(query: str = None):
     bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
     bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
 
-    print(bulk_flight_deet_returns['dep_weather'])
+    print(bulk_flight_deet_returns.keys())
     # bulk_flight_deet_returns = await parse_query(None, query)
 
     return bulk_flight_deet_returns
@@ -602,7 +611,7 @@ async def get_airports():
 async def get_airports():
 
     # list_serial only returns id
-    mdb = (list_serial(collection.find({})))
+    mdb = (serialize_document_list(collection.find({})))
     print(mdb[:2])
     for i in mdb[:2]:
         id = i['id']
@@ -613,4 +622,4 @@ async def get_airports():
 
     result = collection.find({})
 
-    return list_serial(result)
+    return serialize_document_list(result)
