@@ -7,16 +7,17 @@ from collections import Counter
 # CONCLUSION: Majors:
 
 # use METAR DECODER on https://e6bx.com/metar-decoder/
-# TODO: Attempt to derive the Typical_met pattern on the metar and the taf to determine prominent info:
+# TODO: Attempt to derive the Typical_met pattern on the metar and the taf to determine prominent outstanding info and get notification for those outlaws:
          # VFR/IFR/LIFR; Freezing conditions, icing, stronger winds with gusts, reduce font size of less important information.
          # give ability to decode individual complex items.  
-# POA: determine each item for typicality in the metar list form and put them all together in a seperate container.
+# TODO: determine each item for typicality in the metar list form and put them all together in a seperate container.
     # Once that is done, sort the non-typical ones for typicality.
         # Repeat the process until exhaustion. sort these by most typical to the least typical.
         # The goal is to make use of the most typical metar items then color code by them
 
 # Be careful these paths. Shortened path is only local to the vs code terminal but doesnt work on the main cmd terminal
 metar_stack_pkl_path = r"C:\Users\ujasv\OneDrive\Desktop\codes\Cirrostrats\dj\dj_app\root\pkl\METAR_stack.pkl"
+even_bulkier_metar_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles\BULK_METAR_NOV_2023_.pkl"
 even_bulkier_metar_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles\BULK_METAR_NOV_2023_.pkl"
 with open(even_bulkier_metar_path, 'rb') as f:         
     met = pickle.load(f)
@@ -26,7 +27,80 @@ heavy_met_key = list(met.keys())[0]
 heavy_metar = met[heavy_met_key]
 shortened = heavy_metar[:5000]
 
-# WIP
+import pickle
+import re
+taf_heavy_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles\BULK_TAF_JAN_2024.pkl"
+with open(taf_heavy_path, 'rb') as f:         
+    taf_heavy = pickle.load(f)
+taf_shortened = taf_heavy_path[:5000]
+
+# This pattern will match
+taf_pattern = {
+    'airport_id': r'K[A-Z]{3}',
+    'time_issued': r'\d{6}Z',
+    'valid_period': r'\d{4}/\d{4}',
+    'wind': r'(\d{5}(G\d{2})?KT|VRB\d{2}KT)',
+    'variable_wind': r'(VRB|VBR)?\d{2,3}(G\d\d)?KT',
+    'visibility': r'(?:(?:\d )?(?:\d{1,2}/)?)?\d{1,2}SM',
+    # -+ is light or heavy, VC is vicinity,mist/partial,patches
+    # 'weather': r'([-+]?(?:VC)?(?:MI|PR|BC|DR|BL|SH|TS|FZ)?(?:DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|PY)+ ?)*',
+    'weather': r'([-+]?(?:VC)?(?:TS|SH|MI)?(?:DZ|RA|SN|BR|FG|HZ|FZ))',
+    # 'sky_condition': r'((?:VV|SKC|CLR|FEW|SCT|BKN|OVC)\d{3}(?:CB|TCU)? ?)*',
+    'sky_condition_layer': r'((VV|FEW|SCT|BKN|OVC)(\d{3})|(\d{6}))',
+    'temperature': r'T(?:M)?\d{2}/(?:M)?\d{2}',
+    'pressure': r'QNH(\d{2,4})INS',
+    # 'probability': r'(PROB\d{2} )?',
+    # 'time_group': r'(?:FM|BECMG|TEMPO) \d{4}/\d{4}',
+    'fm_group': r'(FM)\d{6}',
+    'variable_factor': r'\d{3}V\d{3}',
+    # 'remarks': r'(RMK .*)?'
+
+
+
+    'temp_forecast': r'T(X|N)M?\d{2,3}/\d{4}Z',
+    'four_digit_code': r'\d{4}',
+}
+
+def fix_taf(bulky_taf):
+    fixed = []
+    bt = bulky_taf
+    for i in range(len(bt)):
+        initial_two = bt[i][:2]
+        trailing = bt[i][-1]
+        if initial_two != '  ':      # main bod
+            if trailing == ' ':      # last index empty: taf with forecast
+                new_line_break = bt[i][:-1] + '\n'
+            elif trailing != ' ':    # main bod wo taf
+                fixed.append(bt[i])
+        elif initial_two == '  ' and trailing == ' ':    # associated forecast that continues
+            new_line_break += bt[i][:-1] + '\n'
+        elif initial_two == '  ' and trailing != ' ':   # forecast ends
+            new_line_break += bt[i]
+            fixed.append(new_line_break)
+    return fixed
+
+fixed_taf = fix_taf(taf_heavy)
+flattend_taf = ' '.join(fixed_taf)
+x = flattend_taf.split()
+
+# Counting the occourance of each item in the taf
+tots = {}
+for i in x:
+    tots[i] = tots.get(i,0) + 1
+
+outlaws = {}
+for k,v in tots.items():
+    if any(re.search(pattern, k) for pattern in taf_pattern.values()):
+        pass
+        # print(f"Found pattern: {k}")
+    else:
+        outlaws[k] = v
+counter = Counter({k: v for k, v in Counter(outlaws).items() if v < 6000})
+
+
+
+# WIP Machine learning model to predict weather
+
 N = torch.zeros((3000,35),dtype=float)
 P = torch.zeros((3000,35),dtype=float)
 mm = heavy_metar
@@ -108,6 +182,23 @@ for k,v in tots.items():
     if v<200:
         manageable_ones.append(k)
 
+datis_pattern = {'airport_id': r'[A-Z]{1,3} ',
+'atis_info': r'(ATIS|ARR/DEP|DEP|ARR) INFO [A-Z] ',
+'time_in_zulu': r'(\d{1,4}Z(\.| ))',        #4 digits followed by `Z`
+'special_or_not': r'(SPECIAL\.)? ',    #SPECIAL then `.` or just `.`
+'winds': r'((\d{5}(G|KT)(\d{2}KT)?)|VRB\d\dKT) ',    # winds that account for regular, variable and gusts
+'variable_wind_direction': r'(\d{3}V\d{3} )?',
+'SM': r'(M?((\d )?\d{1,2}/)?\d{1,2}SM )?',            # DOESNT ACCOUNT FOR FRACTIONALS
+'TSRA_kind': r'(-|\+)?(RA|SN|TSRA|HZ|DZ)?(( )?BR)?( )?',
+'vertical_visibility': r'',
+# Right after SM there are light or heavy RA SN DR BR and vertical visibilities that need to be accounted for
+'sky_condition': r'(((VV|FEW|CLR|BKN|OVC|SCT)(\d{3})?(CB)? ){1,10})?',       
+'temperature': r'(M?\d\d/M?\d\d )',
+'altimeter': r'A\d{4} \(([A-Z]{3,5}( |\))){1,4}(\. | )',      # Accounts for dictated bracs and trailing `. ` or just ` `
+'RMK': r'(RMK(.*?)\. )?',
+# 'trailing_atis': r'\.\.\.ADVS YOU HAVE INFO [A-Z]\.'
+# 'simul_app': r'(SIMUL([A-Z]*)? )(([A-Z])* )*USE. ?',          # no digits SIMUL
+                    }
 
 
 fancy_match = r"(?<= )(\d\dSM)(?= )"        # This matches preceding and next. essentially look forward and look back

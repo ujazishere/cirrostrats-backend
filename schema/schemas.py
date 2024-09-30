@@ -26,9 +26,7 @@ def serialize_document(doc: Dict[str, Any]) -> Dict[str, Any]:
     return {k: serialize_value(v) for k, v in doc.items()}
 
 def serialize_document_list(docs: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
-    """
-    Serialize a list of MongoDB documents.
-    """
+    # Serialize a list of MongoDB documents.
     return (serialize_document(doc) for doc in docs)
 
 

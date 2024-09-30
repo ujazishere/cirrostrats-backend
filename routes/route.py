@@ -77,18 +77,16 @@ async def get_airports():
 
 @router.get('/flightNumbers')
 async def get_flight_numbers():
-    # Returns _id,name and code as document field keys.
+    # TODO: Need to add associated details in this collection-dep/des, STD's, gates, weather. Setup celery scheduler to constantly updatae this data. once sent, look for updated info. 
+        # Might want to exclude the gates since it can be delayed.
     all_results = collection_flights.find({})
     return serialize_document_list(all_results)
-    return None
 
 
 @router.get('/gates')
 async def get_us_concourses():
-    # Returns _id,name and code as document field keys.
     all_results = collection_gates.find({})
     return serialize_document_list(all_results)
-
 
 
 @router.get('/query/{initial_query}')       
@@ -97,8 +95,7 @@ async def initial_query_processing_react(initial_query, search: str = None):
     # This code is present in the react as last resort when dropdown is exhausted.
     # The only reason I have left initial_query here is for future use of similar variable case.
     # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
-    res = None
-    print('Last resort since auto suggestion is exhausted. inittial_query:', initial_query,)
+    print('Last resort since auto suggestion is exhausted. initial_query:', initial_query,)
     print('search value:', search)
     # As user types in the search bar this if statement gets triggered.
 
@@ -216,7 +213,6 @@ def weather_display(airportID):
 @router.get("/rawQueryTest/{query}")
 async def root(query: str = None):
     # Root_class().send_email(body_to_send=query)
-    print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
     # TODO: This needs to be a parse query first then goes to the flight_deets.
                 # WIP: separation of concern for flight deets
                 # First get departure and arrival from the flightstats or  ua_dep and arrival and return it back to react.
@@ -482,39 +478,28 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 @router.get("/DepartureDestination/{flight_number}")
 # dep and destination id pull
 async def ua_dep_dest_flight_status(flight_number):
-    fm = Fetching_Mechanism(flt_num=flight_number)
-    sl = Source_links_and_api()
     flt_info = Pull_flight_info()
 
-    link = sl.ua_dep_dest_flight_status(flight_number)
-    resp_dict: dict = await fm.async_pull([link])
 
-    resp = response_filter(resp_dict, "flight-status.com")
-    united_dep_dest = flt_info.united_departure_destination_scrape(
-        pre_process=resp)
+    united_dep_dest = flt_info.united_departure_destination_scrape(flt_num=flight_number, pre_process=None)
 
     return united_dep_dest
 
 
+
 @router.get("/DepartureDestinationTZ/{flight_number}")
 async def flight_stats_url(flight_number):      # time zone pull
-    # sl.flight_stats_url(flight_number_query),])
-    fm = Fetching_Mechanism(flt_num=flight_number)
-    sl = Source_links_and_api()
     flt_info = Pull_flight_info()
 
-    link = sl.flight_stats_url(flight_number)
-    resp_dict: dict = await fm.async_pull([link])
-
-    resp = response_filter(resp_dict, "flightstats.com")
     fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
-        flt_num_query=flight_number, pre_process=resp)
+        flt_num_query=flight_number,)
 
     return fs_departure_arr_time_zone
 
 
 @router.get("/flightAware/{airline_code}/{flight_number}")
 async def flight_aware_w_auth(airline_code, flight_number):
+    return None
     # sl.flight_stats_url(flight_number_query),])
     fm = Fetching_Mechanism(flt_num=flight_number)
     sl = Source_links_and_api()
@@ -535,8 +520,8 @@ async def flight_aware_w_auth(airline_code, flight_number):
 # TODO: Need to account for aviation stack
 
 
-@router.get("/AWCandNAS/{departure_id}/{destination_id}")
-async def awc_and_nas(departure_id, destination_id):
+@router.get("/Weather/{departure_id}/{destination_id}")
+async def Weather(departure_id, destination_id):
     # Only for use on fastapi w react. Temporary! read below
     # this is a temporary fix to not change resp_sec_returns. clean that codebase when able
     # the separated funcs nas and awc are the ones that need to be done.
@@ -557,33 +542,18 @@ async def awc_and_nas(departure_id, destination_id):
     return weather_dict
 
 
-async def awc_weather(request, departure_id, destination_id):
-
-    fm = Fetching_Mechanism()
-    sl = Source_links_and_api()
-    wp = Weather_parse()
-    # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
-    # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
-    # resp = response_filter(resp_dict,"awc",)
-
-    wl_dict = sl.weather_links(departure_id, destination_id)
-
-    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
-    weather_dict = resp_sec
-
-    return weather_dict
-
-
-async def nas(request, departure_id, destination_id):
+@router.get("/NAS/{departure_id}/{destination_id}")
+async def nas(departure_id, destination_id):
 
     # Probably wont work. If it doesnt its probably because of the reesp_sec_returns
     # does not account for just nas instead going whole mile to get and process weather(unnecessary)
     fm = Fetching_Mechanism()
     sl = Source_links_and_api()
-
-    resp_dict: dict = await fm.async_pull([sl.nas])
+    
+    resp_dict: dict = await fm.async_pull([sl.nas()])
+    print('AWEIFBDSVVN',resp_dict)
     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
+    
     nas_returns = resp_sec
 
     return nas_returns

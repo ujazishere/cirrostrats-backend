@@ -17,7 +17,7 @@ from routes.root.weather_parse import Weather_parse
  Check test_weather.py for set and unset operation.
 # TODO: user collections - weather.metar if there  is a achange.
 """
-
+# TODO: bandaid - quick fix for path. find better and clean this.
 class Weather_fetch:
 
 
@@ -80,7 +80,7 @@ class Weather_fetch:
 
     def mdb_updates(self,resp_dict: dict, weather_type):
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
-        # TODO: Now need to account for new airport codes, maybe upsert or maybe just none for now.
+        # TODO: account for new airport codes, maybe upsert or maybe just none for now.
         print('Updating mdb')
         update_operations = []
     
@@ -97,7 +97,7 @@ class Weather_fetch:
 
 
     def flight_mdb_updates(self, flightNumbers, scheduledDeparture, scheduledArrival,):
-        # TODO: Now need to account for new airport codes for scheduled departure/arriva, maybe upsert or maybe just none for now.
+        # TODO: account for new airport codes for scheduled departure/arriva, maybe upsert or maybe just none for now.
         print('Updating flights mdb')
         update_operations = []
     

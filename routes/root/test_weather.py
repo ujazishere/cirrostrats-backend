@@ -89,8 +89,9 @@ with open(all_datis_airports_path, 'rb') as f:
     all_datis_airport_codes = pickle.load(f)
 
 with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
-    # TODO: These airport codes are speciafically selected to fetch taf data. Add scheduler to fetch data from all airports for taf everyonce a while and see what airports have been returned.
-        # TODO HP: also account for - contruct a checking mechanism to check the validity of the data if it makes sense using regex. Setup notification if it doesn't match
+    # TODO: These airport codes are speciafically selected to fetch taf data. 
+        # TODO HP:Add scheduler to fetch data from all airports for taf everyonce a while and see what airports have been returned.
+        #  also contruct a checking mechanism to check the validity of the data if it makes sense using regex. Setup notification if it doesn't match
             # This can be easily accomplished with regex or use sentences and frequently occouring bits to disregard them and ones that stand out need to be looked at.
 
     # TODO: TAF positive airports need to be checked at in the all mdb airports if they exist.

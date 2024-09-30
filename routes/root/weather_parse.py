@@ -7,7 +7,7 @@ from .root_class import Root_class,Fetching_Mechanism
 from datetime import datetime
 
 
-# TODO: Need to be able to add the ability to see the departure as well as the arrival datis
+# TODO: add the ability to see the departure as well as the arrival datis
 # TODO: extract all airpoirts METAR and TAF  in the airport database
             # compare all unique values and group identical ones
             # analyze data for format patterns to make a template for output

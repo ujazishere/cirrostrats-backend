@@ -2,6 +2,8 @@ TODO: UJ
     Indexing with mongo: https://www.youtube.com/watch?v=D14wWW9EEx8&t=19s
                             https://www.youtube.com/watch?v=nkSjhL40CTs
                             https://www.youtube.com/watch?v=ZoxmVjc4Xdg
+    When searched UA4186 followup with `flight status`, `EDCT`, or `weather` or `datis` for auto completion and suggestions. use 3 flight status, maybe show delay info, grou
+    
     logic to consistently pull 
         Current weather based on airports in the database, Save them in the mdb collection `Weather` for access into the main collection and create index.
             Also account for test data in the collection.
