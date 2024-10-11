@@ -290,7 +290,7 @@ class Bulk_weather_extractor:
 
         # currently = datetime.utcnow().strftime("%Y%m%d%H%M")      # This is old and depricated
         # Double slash here because it causes syntax error regardless of r string above since `\` is used as escape char 
-        file_name = self.export_path + "\\" + file_name + currently     
+        file_name = self.export_path + "\\" + file_name + currently + ".pkl"
         with open(file_name, 'wb') as f:
             pickle.dump(bulky_weather, f)
         print('exported as:', file_name)

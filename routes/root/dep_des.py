@@ -68,18 +68,21 @@ class Pull_flight_info(Root_class):
                                             }
         return bulk_flight_deet
 
-    def united_departure_destination_scrape(self, flt_num=None,pre_process=None):
+    def united_departure_destination_scrape(self,airline_code=None, flt_num=None,pre_process=None):
         departure_scheduled_time,destination_scheduled_time = [None]*2
+        if not airline_code:
+            airline_code = 'UA'
         if pre_process:
             soup = pre_process
         else:
-            info = f"https://united-airlines.flight-status.info/ua-{flt_num}"               # This web probably contains incorrect information.
+            info = f"https://united-airlines.flight-status.info/{airline_code}-{flt_num}"               # This web probably contains incorrect information.
             soup = self.request(info)
         # Airport distance and duration can be misleading. Be careful with using these. 
 
         # table = soup.find('div', {'class': 'a2'})
         try: 
             # TODO: This is prone to throwing list index out of range errors. add if statement on airport_id befor processing departure_ID and destination_ID since airport_ID can be None.
+            print('Trying dep_des')
             airport_id = soup.find_all('div', {'class': 'a2_ak'})
             airport_id = [i.text for i in airport_id if 'ICAO' in i.text]
             if airport_id:

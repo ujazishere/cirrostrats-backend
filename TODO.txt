@@ -1,15 +1,21 @@
 TODO: UJ
+    Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it
+    DONT JUMP FROM ONE TO ANOTHER. FINISH the first one COMPLETELY. Then move to the next one.
     Indexing with mongo: https://www.youtube.com/watch?v=D14wWW9EEx8&t=19s
                             https://www.youtube.com/watch?v=nkSjhL40CTs
                             https://www.youtube.com/watch?v=ZoxmVjc4Xdg
-    When searched UA4186 followup with `flight status`, `EDCT`, or `weather` or `datis` for auto completion and suggestions. use 3 flight status, maybe show delay info, grou
     
+
+    When searched UA4186 followup with `flight status`, `EDCT`, or `weather` or `datis` for auto completion and dropdown suggestions trail.
+        Use 3 flight status, maybe show delay info, grouped by airport and dep/arr times.
+        
     logic to consistently pull 
         Current weather based on airports in the database, Save them in the mdb collection `Weather` for access into the main collection and create index.
             Also account for test data in the collection.
             If there  is one server that consistently pulls weather there wont be a need to have another one for testing instance. It would automatically fetch from the legacy server.
+                So maybe distribute tasks via container orchestration- one container for python fetching and backend, one for .
             weather scheduler:
-                # implement health checks such that  if things are not updating I get notified or health check gets pushed out to devops
+                # TODO VHP: implement health checks such that  if things are not updating/returns are not consistent OR health check gets pushed out to devops as notifications.
                 # inefficiency:- Airports that return null consistently should be fetched less frequently.
                 # Track airports that are trending frequent updates and update them frequently and ones that dont update much should be fetched less fequently. This will be a milestone in efficiency.
 

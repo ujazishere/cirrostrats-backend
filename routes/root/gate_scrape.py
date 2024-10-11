@@ -27,12 +27,11 @@ class Gate_Scrape(Root_class):
         
         eastern = pytz.timezone('US/eastern')
         now = datetime.now(eastern)
-        raw_date = now.strftime('%Y%m%d')           # formatted as YYYYMMDD
-        
+        raw_date = now.strftime('%Y%m%d')       # formatted as YYYYMMDD
         flight_view = f"https://www.flightview.com/flight-tracker/{airline_code}/{flight_number_without_airline_code}?date={raw_date}&depapt=EWR"
+        
         soup = self.request(flight_view, timeout=5)
         raw_bs4_scd2 = soup.find_all('td')
-
 
         # Schedule and terminal information with a lot of other garbage:
         scd = []
@@ -40,10 +39,7 @@ class Gate_Scrape(Root_class):
 
         scheduled = scd[2].replace('\xa0', '')
         actual = scd[3].replace('\xa0', '')
-        
         gate = scd[4]
-        
-        # Flight.objects.
         
         reliable_flt_num = re.match(r'[A-Z]{2}\d{2,4}', flt_num)
         if reliable_flt_num and gate and scheduled and actual:
@@ -53,18 +49,19 @@ class Gate_Scrape(Root_class):
                 scheduled = self.dt_conversion(scheduled)
                 actual = self.dt_conversion(actual)
                 
+                # TODO VHP: return as list of dictionaries to make the format consistent with gate_checker.py's ewr_UA_gate func's initial parses
                 return {flt_num: [gate, scheduled, actual]}
             else:
-                print('unreliable matches:','g',gate, 'f', flt_num)
+                print('unreliable matches:','gate:',gate, 'flt_num:', flt_num)
                 # TODO: Have to deal with these outlaws and feed it back into the system.
-                    # Sometimes gate goes into scheduled or actual. Beware of that kind of data.
+                    # Sometimes gate goes into scheduled or actual.
                 self.outlaws_reliable.update({
                     'flight_number': flt_num,
                     'gate': gate,
                     'scheduled': scheduled,
                     'actual': actual,
                 })
-
+        # TODO: return format should resemble the final output. Check below.
         # This is a format that resembles more to the format in the final output.
         # return {'flight_num': flt_num, 'gate': gate, 'scheduled': scheduled, 'actual': actual}
 
@@ -80,15 +77,16 @@ class Gate_Scrape(Root_class):
         
         # feeding self.troubled into the executor using for loop for a few times to restrict infinite troubles, if any. 
         # In a while loop a troubled item may not convert creating endless loop. Hence a for loop(max 5 attempts to minimize excessive waits)
-        for i in range(3):
+        for i in range(3):      # 3 because if the you want to fetch the troubled only a few more times, they might just not be available if theyre not returned within these 3 attempts.
             if self.troubled:
-                time.sleep(3)
+                time.sleep(3)       # This break may resolve temporare redirect issues with error code response on initial fetch
                 ex = self.exec(self.troubled, self.pick_flight_data)
                 master.update(ex['completed'])
                 self.troubled = set(ex['troubled'])     # emptying out troubled and refilling it with new troubled items
 
                 # Following code essentially removes troubled items that are already in the master.
                 # logic: if troubled items are not in master make a new troubled set with those. Essentially doing the job of removing master keys from troubled set
+                # This wont be overwritten as the it takes itseld as an argument.
                 self.troubled = {each for each in self.troubled if each not in master}
                 
                 # Here we check how many times we've looped so far and how many troubled items are still remaining.
@@ -99,7 +97,7 @@ class Gate_Scrape(Root_class):
                 break
         
         # Refer to the activator() master dump. This dump is updated after..
-        # Investigate. This one I suppise was only reaading then I changedd it to write
+        # Investigate. This one I suppose was only reading then I changedd it to write
         # But i realised it would overright the old master so I switcheed it back to rb.
         # However. Master is loaded earlier using load_master. so master seems retained so it can be a write file.
         with open('gate_query_database.pkl', 'wb') as f:
@@ -108,7 +106,7 @@ class Gate_Scrape(Root_class):
         print(self.date_time(), f'Troubled: {len(self.troubled)}, Master : {len(master)}')
 
 
-    def temp_fix_to_remove_old_flights(self):
+    def temp_fix_to_remove_old_flights(self):       # TODO: Should be deprercated
         
         # might want to remove this method. It is destructive. Or just get rid of flights from 2 days ago rather than just 1 day since midnight is too close to previous day.
         
@@ -131,7 +129,7 @@ class Gate_Scrape(Root_class):
 
     def activator(self):
         
-        # Purpose of this file is to dump gate_query_database.pkl file.
+        # Purpose of this function is to dump gate_query_database.pkl file.
 
         # Extracting all United flight numbers in list form to dump into the exec func
         ewr_departures_UA = Newark_departures_scrape().united_departures()

@@ -6,7 +6,7 @@ class Gate_checker(Root_class):
     
     def __init__(self,):
 
-        # super method inherits all of the instance variables of the Gate_root class.
+        # super method inherits all of the instance variables of the Root_class class.
         super().__init__()
 
 

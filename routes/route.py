@@ -115,7 +115,7 @@ async def get_airport_data(airport_id, search: str = None):
     return res
 
 
-@router.get('/fetchandstore')
+@router.get('/fetchandstoreWeather')
 async def fetch_weather_data():
     # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists. Needs to be schedudled every 55 mins for metar and datis, 4 hours for taf,
         # Find a way to schedule this either through a dedicated route via react or just python multi threading.
@@ -129,6 +129,10 @@ async def fetch_weather_data():
 
     return None
 
+@router.get('/fetchandstoreGate')
+async def fetch_weather_data():
+
+    return None
 
 def loading_example_weather():
     file_path = r'example_flight_deet_full_packet.pkl'
@@ -476,12 +480,16 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 
 
 @router.get("/DepartureDestination/{flight_number}")
-# dep and destination id pull
 async def ua_dep_dest_flight_status(flight_number):
+    # dep and destination id pull
     flt_info = Pull_flight_info()
-
-
-    united_dep_dest = flt_info.united_departure_destination_scrape(flt_num=flight_number, pre_process=None)
+    flight_number = flight_number.upper()
+    if "UA" in flight_number:
+        airline_code = flight_number[:3]
+        flight_number = flight_number[3:]
+    else:
+        airline_code = "UA"
+    united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
 
     return united_dep_dest
 
@@ -538,6 +546,15 @@ async def Weather(departure_id, destination_id):
     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     weather_dict = resp_sec
+    
+    # TODO: This is a temporary fix to not change resp_sec_returns. clean that codebase when able
+    weather_dict['dep_weather'], weather_dict['dest_weather'] = {},{}       # declare weather_dict keys so it doesn't throw an error. It assigns values to key if its the first key not subsequent ones. in this case dep_weather['datis'] makes it a key of a key. 
+    weather_dict['dep_weather']['datis'] = weather_dict['dep_datis']
+    weather_dict['dep_weather']['metar'] = weather_dict['dep_metar']
+    weather_dict['dep_weather']['taf'] = weather_dict['dep_taf']
+    weather_dict['dest_weather']['datis'] = weather_dict['dest_datis']
+    weather_dict['dest_weather']['metar'] = weather_dict['dest_metar']
+    weather_dict['dest_weather']['taf'] = weather_dict['dest_taf']
 
     return weather_dict
 
@@ -564,14 +581,30 @@ async def nas(departure_id, destination_id):
     # RATHER, HAVE IT SUCH THAT IT wewatherData.js takes this function.
     #
 
+@router.get("/testDataReturns")
 def test_flight_deet_data():
     test_data_imports_tuple = test_data_imports()
 
     # bulk_flight_deets = dummy_imports_tuple[0]
     bulk_flight_deets = test_data_imports_tuple
-    # print(bulk_flight_deets.keys())
 
-    return bulk_flight_deets
+    print('test_flight_deet_data, test data is being sent')
+    bulk_flight_deet_returns = bulk_flight_deets
+    
+
+    # This is only so that the weather can be 
+    bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
+    bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
+    bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
+    bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
+    bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
+    bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
+
+    print(bulk_flight_deet_returns.keys())
+    # bulk_flight_deet_returns = await parse_query(None, query)
+
+    return bulk_flight_deet_returns
+
 
 @router.get('/dummy')
 async def get_airports():
