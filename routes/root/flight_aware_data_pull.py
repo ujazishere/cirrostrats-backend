@@ -24,7 +24,8 @@ class Flight_aware_pull(Root_class):
         print("null_flightaware_attrs")
 
     def initial_pull(self, airline_code=None, flt_num=None):
-        apiKey = "G43B7Izssvrs8RYeLozyJj2uQyyH4lbU"         # New Key from Ismail
+        # apiKey = "G43B7Izssvrs8RYeLozyJj2uQyyH4lbU"         # New Key from Ismail
+        apiKey = "mAcMRTxklbWPhTciyaUD9FtCz88klfxk"         # ujasvaghani
         apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
         auth_header = {'x-apikey':apiKey}
         # TODO: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
@@ -324,27 +325,29 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
         print('flight_aware_data_pull.pull FLIGHT_AWARE_DATA UNSUCCESSFUL, no `flights` available')
         return fa_object.attrs
 
-
-    return {
-            'ident_icao': ident_icao,
-            'origin':origin, 
-            'destination':destination, 
-            'registration':registration, 
-            'date_out': date_out,
-            'scheduled_out':scheduled_out, 
-            'estimated_out':estimated_out, 
-            'scheduled_in':scheduled_in, 
-            'estimated_in':estimated_in, 
-            "terminal_origin": terminal_origin,
-            "terminal_destination": terminal_destination,
-            "gate_origin": gate_origin,
-            "gate_destination": gate_destination,
-            "terminal_origin": terminal_origin,
-            'filed_altitude':filed_altitude, 
-            'filed_ete':filed_ete,
-            'route': route,
-            'sv': sv,
-                    }
-                       
-    
-
+    try:
+        return {
+                'ident_icao': ident_icao,
+                'origin':origin, 
+                'destination':destination, 
+                'registration':registration, 
+                'date_out': date_out,
+                'scheduled_out':scheduled_out, 
+                'estimated_out':estimated_out, 
+                'scheduled_in':scheduled_in, 
+                'estimated_in':estimated_in, 
+                "terminal_origin": terminal_origin,
+                "terminal_destination": terminal_destination,
+                "gate_origin": gate_origin,
+                "gate_destination": gate_destination,
+                "terminal_origin": terminal_origin,
+                'filed_altitude':filed_altitude, 
+                'filed_ete':filed_ete,
+                'route': route,
+                'sv': sv,
+                        }
+    except Exception as e:
+        print('flight_aware_data_pull.pull FLIGHT_AWARE_DATA UNSUCCESSFUL, no `flights` available')
+        print(e)
+        return fa_object.attrs
+                        

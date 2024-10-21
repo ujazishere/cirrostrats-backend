@@ -1,4 +1,4 @@
-from config.database import collection_weather,collection
+from config.database import collection_gates
 from bson import ObjectId
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
@@ -6,8 +6,6 @@ except:
     print('jupyter import for root_class')
     from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 import datetime as dt
-import asyncio
-import requests
 import json
 import pickle
 from pymongo import UpdateOne
@@ -15,10 +13,8 @@ from routes.root.weather_parse import Weather_parse
 
 """
  Check test_weather.py for set and unset operation.
-# TODO: user collections - weather.metar if there  is a achange.
 """
-# TODO: bandaid - quick fix for path. find better and clean this.
-class Weather_fetch:
+class Gate_fetch:
 
 
     def __init__(self) -> None:
@@ -27,41 +23,6 @@ class Weather_fetch:
         self.fm = Fetching_Mechanism()
         self.rsl = Root_source_links
 
-        self.weather_links_dict = self.weather_link_returns()
-
-    def weather_link_returns(self) -> None:
-        # Returns weather links for all airports with code.
-        all_mdb_airport_codes = [i['code'] for i in collection.find({})]
-
-        import os
-        cwd = (os.getcwd())
-        # TODO: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
-        all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
-        print('PATHHHH:', all_datis_airports_path)
-        # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
-        with open(all_datis_airports_path, 'rb') as f:
-            all_datis_airport_codes = pickle.load(f)
-
-        taf_positive_path = fr'{cwd}/routes/root/pkl/taf_positive_airports.pkl'
-        # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'
-        with open(taf_positive_path, 'rb') as f:
-            taf_positive_airport_codes = pickle.load(f)
-
-        #  All airport codes from mongo db
-        return {
-            "datis": self.list_of_weather_links('datis',all_datis_airport_codes),
-            "metar": self.list_of_weather_links('metar',all_mdb_airport_codes),
-            "taf": self.list_of_weather_links('taf',taf_positive_airport_codes),
-        }
-
-    def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
-        prepend = ""
-        if type_of_weather == 'metar':
-            prepend = "K"
-        
-        return [self.rsl.weather(weather_type=type_of_weather,airport_id=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
-
-
     def mdb_unset(self,):
         # Attempt to update the document. In this case remove a field(key value pair).
         weather = {             # This weather dict wouldnt be necessary since the unset operator is removing the whole weather field itself.
@@ -69,10 +30,10 @@ class Weather_fetch:
             'taf':'',
             'datis':''
         }
-        for each_d in collection_weather.find():
+        for each_d in collection_gates.find():
             airport_id = "K"+each_d['code']
         
-            collection_weather.update_one(
+            collection_gates.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
                 
                 {'$unset': {'weather':weather}},

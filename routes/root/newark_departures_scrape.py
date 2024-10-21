@@ -45,7 +45,8 @@ class Newark_departures_scrape(Root_class):
         
         all_EWR_deps = self.all_newark_departures()
         # extracting all united flights and putting them all in list to return it in the function.
-        united_departures_newark = [each for each in all_EWR_deps if 'UA' in each]
+        # united_departures_newark = [each for each in all_EWR_deps if 'UA' in each]        # Original vulnerable code
+        united_departures_newark = [each_dep for each_dep in all_EWR_deps if each_dep.startswith('UA') ]
         
         # TODO: Log these on a file and setup a scheduler to send email notifications.
         print('Successfully pulled United departures out of Newark at', self.date_time())

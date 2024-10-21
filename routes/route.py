@@ -119,6 +119,7 @@ async def get_airport_data(airport_id, search: str = None):
 async def fetch_weather_data():
     # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists. Needs to be schedudled every 55 mins for metar and datis, 4 hours for taf,
         # Find a way to schedule this either through a dedicated route via react or just python multi threading.
+    # TODO: Make similar for gate fetch and store into mdb and run a scheduler.
     Wf = Weather_fetch()
     print('Starting the big fetch')
 
@@ -251,7 +252,7 @@ async def root(query: str = None):
 
 async def parse_query(main_query):
     """
-    Checkout note `unit testing seems crucial.txt` for the parsing logic
+    Deprecate this! get it from the legacy django codebase. this can be handeled in frontend-react
     """
 
     # Global variable since it is used outside of the if statement in case it was not triggered. purpose: Handeling Error
@@ -485,8 +486,8 @@ async def ua_dep_dest_flight_status(flight_number):
     flt_info = Pull_flight_info()
     flight_number = flight_number.upper()
     if "UA" in flight_number:
-        airline_code = flight_number[:3]
-        flight_number = flight_number[3:]
+        airline_code = flight_number[:2]
+        flight_number = flight_number[2:]
     else:
         airline_code = "UA"
     united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)

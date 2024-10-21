@@ -1,4 +1,6 @@
 import threading
+from config.database import collection_gates
+from routes.root.gate_fetch import Gate_fetch
 from .root_class import Root_class
 from .newark_departures_scrape import Newark_departures_scrape
 from datetime import datetime
@@ -15,7 +17,7 @@ class Gate_Scrape(Root_class):
 
         # troubled is setup here so that it can be accessed locally
         self.troubled = set()
-        self.outlaws_reliable = dict()
+        self.outlaws_reliable = []
 
     
     def pick_flight_data(self, flt_num):
@@ -25,6 +27,9 @@ class Gate_Scrape(Root_class):
         airline_code = flt_num[:2]      # first 2 characters of airline code eg. UA, DL
         flight_number_without_airline_code = flt_num[2:]
         
+        # TODO: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
+            # Scheduled ones are usually very much planned. Repo and non-scheduled have been accounted for.
+            # Highlight late ones in red
         eastern = pytz.timezone('US/eastern')
         now = datetime.now(eastern)
         raw_date = now.strftime('%Y%m%d')       # formatted as YYYYMMDD
@@ -48,22 +53,25 @@ class Gate_Scrape(Root_class):
                 # and maybe even the scheduled time of departure.
                 scheduled = self.dt_conversion(scheduled)
                 actual = self.dt_conversion(actual)
-                
+
                 # TODO VHP: return as list of dictionaries to make the format consistent with gate_checker.py's ewr_UA_gate func's initial parses
-                return {flt_num: [gate, scheduled, actual]}
+                return {
+                    'flight_number': flt_num,
+                    'gate': gate,
+                    'scheduled': scheduled,
+                    'actual': actual,
+                }
+                # return {flt_num: [gate, scheduled, actual]} # This is the old and depricated way of doing things.
             else:
                 print('unreliable matches:','gate:',gate, 'flt_num:', flt_num)
-                # TODO: Have to deal with these outlaws and feed it back into the system.
+                # TODO WIP: Have to deal with these outlaws and feed it back into the system. Dont suppose it is being used right now.
                     # Sometimes gate goes into scheduled or actual.
-                self.outlaws_reliable.update({
+                self.outlaws_reliable.append({
                     'flight_number': flt_num,
                     'gate': gate,
                     'scheduled': scheduled,
                     'actual': actual,
                 })
-        # TODO: return format should resemble the final output. Check below.
-        # This is a format that resembles more to the format in the final output.
-        # return {'flight_num': flt_num, 'gate': gate, 'scheduled': scheduled, 'actual': actual}
 
 
     def tro(self):
@@ -134,36 +142,38 @@ class Gate_Scrape(Root_class):
         # Extracting all United flight numbers in list form to dump into the exec func
         ewr_departures_UA = Newark_departures_scrape().united_departures()
 
-        ewr_departures = Newark_departures_scrape().all_newark_departures()
-        
-
-        # Dmping all flight numbers for newark united departures.
-        # with open('ewr_departures_UA.pkl', 'wb') as f:
-            # pickle.dump(ewr_departures_UA, f)
+        # ewr_departures = Newark_departures_scrape().all_newark_departures()
         
         # VVI Check exec func for notes on how it works. It takes in function as its second argument without double bracs.
         exec_output = self.exec(ewr_departures_UA, self.pick_flight_data)    # inherited from root_class.Root_class
         completed_flights = exec_output['completed']
         troubled_flights = exec_output['troubled']
         
-        # Cant decide if master should be called or kept empty. When kept empty it saves disk space. When called it keeps track of old information.
-        # master = self.load_master()
+        # TODO: This is where the results are returned. since its the `update` method its {flt_num:[gate,sch,act]} 
+            # TODO: you want to change it to the format thats being used by gate_checker 
+        # TODO: Change name and use case from master to- gate_query_database collection update.
         master = {}
-        master.update(completed_flights)
-        self.troubled.update(troubled_flights)
+        master.update(completed_flights)        # Master is a complete overwrite whereas troubled is a read master and update it kind.
+        self.troubled.update(troubled_flights)  # This is a safer write since it will load the master first and then update with the new data then dump write.
         
         # get all the troubled flight numbers
         # print('troubled:', len(self.troubled), self.troubled)
+        
+        # if self.troubled:
+            # self.tro()
 
         # Dumping master dict into the root folder in order to be accessed by ewr_UA_gate func later on.
-        with open('gate_query_database.pkl', 'wb') as f:
-            pickle.dump(master, f) 
+        # TODO: Need to add mdb collection here. maybe instead of the gate collection it should be the flight collection. since the flight number is primary one here.
+        # gf = Gate_fetch()
+
+        # gf.mdb_updates(master, 'ewr_united').
+        # with open('gate_query_database.pkl', 'wb') as f:
+            # pickle.dump(master, f) 
 
         # Redo the troubled flights
-        if self.troubled:
-            self.tro()
-        
-        
+
+        return master
+
 # Mind the threading. Inheriting the thread that makes the code run concurrently
 # TODO: Investigate and master this Thread sorcery
 class Gate_scrape_thread(threading.Thread):
@@ -179,7 +189,7 @@ class Gate_scrape_thread(threading.Thread):
         # self.gc.activator()
         while True:
             print('Lengthy Scrape  in progress...')
-            # TODO: Investigate this async sorcery
+            # The activator here will scrape and save data into the gate_query_database.pkl file.
             self.gate_scrape.activator()
             
             eastern = pytz.timezone('US/eastern')           # Time stamp is local to this Loop. Avoid moving it around

@@ -1,14 +1,14 @@
 TODO: UJ
-    Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it
-    DONT JUMP FROM ONE TO ANOTHER. FINISH the first one COMPLETELY. Then move to the next one.
+    """Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it"""
+    """ DONT JUMP FROM ONE TO ANOTHER. FINISH the first one COMPLETELY. Then move to the next one. """
+    
+    Currently working on the gate scrape.
+    
+    Next:
     Indexing with mongo: https://www.youtube.com/watch?v=D14wWW9EEx8&t=19s
                             https://www.youtube.com/watch?v=nkSjhL40CTs
                             https://www.youtube.com/watch?v=ZoxmVjc4Xdg
     
-
-    When searched UA4186 followup with `flight status`, `EDCT`, or `weather` or `datis` for auto completion and dropdown suggestions trail.
-        Use 3 flight status, maybe show delay info, grouped by airport and dep/arr times.
-        
     logic to consistently pull 
         Current weather based on airports in the database, Save them in the mdb collection `Weather` for access into the main collection and create index.
             Also account for test data in the collection.
@@ -23,12 +23,10 @@ TODO: UJ
         some sort of ping and save to databse to access in the frontend.
 
 
-
-
-
     clean up code. clean up the mess: separate scraping, add notes all along
     Use .env file rather than the switch and auth. Move django contents over.
 
+crawl for all flight numbers and their associated information from flight-stats.com
 Need to setup CORS middleware for Fastapi. it usses `app` and the logic uses router. Check for compatibility.
 configure vite.config.js in frontend to reflect what is on AWS.
 
@@ -43,6 +41,13 @@ fix massive bug on flight_aware route date time conflict with real scheduled_tim
     currently it senses the most recent route that is not None type probs giving future date
     use: if scheduled_out is current_utc and route is not none:
         but current utc date_time has source latency.   
+Fix bug that takes in 2 flight routes for singular flight number.
+    Add option to scroll left and right for dates.
+    Load data incrementally so as to avoid waiting for all data to be fetched.
+
+Add these query words and functionality to chat :
+    weather_range = ['met ', ' met', ' met ', 'met', 'taf ', ' taf', ' taf ', 'taf', 'weather', 'metar', 'metar ']               
+
 Extract all airports D-Atis info during all weather conditinos for analyses and classification
     Add thunderstorm, freezing and such symbols on title.
     Add departure/approach runways in use.
@@ -52,3 +57,12 @@ integrate EDCT info  from https://www.fly.faa.gov/edct/jsp/edctLookUp.jsp
 Remove sql database and create own for seamless lightweight version.
 Fix up weather page and include ability to pull multiple airports
 Understand and configure mongoDB
+
+Logic:
+        "{gate} for {partial/complete airport ID/name}" = "{gate} {airport}"
+        "{gate} for {partial/complete airport name}" = "{gate} {airport}"   
+        "weather for {partial/complete airport} = "{metar} {airport}"
+        "{airport_id} {gate}" = "{gate} {airport}"
+        "{flight number} weather" = "{metar} {departure airport} {destination airport}"
+        "{flight number} destination" = return destination or destination
+        "{flight number} not, notam, notams" = return notams for departure and destination. include ability to return just pertinant information.

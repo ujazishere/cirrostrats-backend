@@ -121,14 +121,8 @@ class Root_class():
                 except Exception as e:
                     # print(f"Error scraping {flt_num}: {e}")
                     troubled.add(flt_num)
-                
-        # reading outlaws and dumping them
-        with open('outlaws.pkl', 'rb') as f:
-            outlaws = pickle.load(f)
-        outlaws.update(self.outlaws_reliable)
-        with open('outlaws.pkl', 'wb') as f:
-            pickle.dump(outlaws, f)
-            
+        
+        # TODO: Check completed data type. If list then its a list of dicts. Its outght to be.
         return dict({'completed':  completed, 'troubled': troubled})
         
 
