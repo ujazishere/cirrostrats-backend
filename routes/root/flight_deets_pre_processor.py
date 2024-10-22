@@ -45,6 +45,27 @@ def resp_initial_returns(resp_dict: dict, airline_code, flight_number_query,):
             #  aviation_stack_data
 
 
+def raw_resp_weather_processing(resp_dict, airport_id):
+    metar,taf,datis = ['']*3
+
+    for url,resp in resp_dict.items():
+        print('each url',resp)
+        if f"metar?ids={airport_id}" in str(url):
+            metar = resp
+        elif f"taf?ids={airport_id}" in str(url):
+            taf = resp
+        elif f"clowd.io/api/{airport_id}" in str(url):          # TODO: Need to account for arrival dep vs arrival datis. Its not been working for Philly
+            datis = json.loads(resp)     # Apparently this is being returned within a list is being fed as is. Accounted for.
+
+    raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
+    # dep_weather = wp.processed_weather(weather_raw=dep_weather)
+    print('RAW rets',raw_weather_returns)
+    
+    wp = Weather_parse()            
+    wpp = wp.processed_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
+    return wpp
+
+    
 def resp_sec_returns(resp_dict,dep_airport_id,dest_airport_id):
     gate_info = None        # Declared this here. in case if gate info is not scraped variable will atleast exist. used to avoid definition error
     dep_metar,nas_data,wpp = [None]*3            # Declaring for use in nas() in views.py

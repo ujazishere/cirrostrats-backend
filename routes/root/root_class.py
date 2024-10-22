@@ -131,7 +131,6 @@ class Root_source_links:
     def __init__(self) -> None:
         pass
 
-
     def weather(weather_type,airport_id):
         urls = {
             "metar": f"https://aviationweather.gov/api/data/metar?ids={airport_id}",

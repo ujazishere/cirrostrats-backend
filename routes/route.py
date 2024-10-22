@@ -7,12 +7,12 @@ from schema.schemas import serialize_document, serialize_document_list, individu
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
-from .root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
+from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.gate_scrape import Gate_scrape_thread
 from .root.weather_parse import Weather_parse
 from .root.weather_fetch import Weather_fetch
 from .root.dep_des import Pull_flight_info
-from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter
+from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
 from time import sleep
 import os
 import pickle
@@ -529,6 +529,31 @@ async def flight_aware_w_auth(airline_code, flight_number):
 # TODO: Need to account for aviation stack
 
 
+@router.get("/Weather/{airport_type}/{airport_id}")
+async def Weather_raw(airport_type, airport_id):
+    if airport_type == "test":
+        test_data = {
+        "datis": "N/A",
+        "datis_zt": "N/A",
+        "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
+        "metar_zt": "21 mins ago",
+        "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
+        "taf_zt": "168 mins ago"
+        }
+        return test_data
+    fm = Fetching_Mechanism()
+    rsl = Root_source_links
+
+    def link_returns(weather_type, airport_id):
+        wl = rsl.weather(weather_type,airport_id)
+        return wl
+    
+    wl_dict = {weather_type:link_returns(weather_type,airport_id) for weather_type in ('metar', 'taf','datis')}
+    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
+    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airport_id)
+    
+    return weather_dict
+
 @router.get("/Weather/{departure_id}/{destination_id}")
 async def Weather(departure_id, destination_id):
     # Only for use on fastapi w react. Temporary! read below
@@ -593,15 +618,33 @@ def test_flight_deet_data():
     bulk_flight_deet_returns = bulk_flight_deets
     
 
-    # This is only so that the weather can be 
-    bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
-    bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
-    bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
-    bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
-    bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
-    bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
+    test_weather_data = {
+    "datis": """EWR <span class="box_around_text">ATIS INFO E</span> 1951Z. 15006KT 10SM FEW250 28/10 <span class="box_around_text">A3020</span> (THREE ZERO TWO ZERO). <span class="box_around_text">ILS RWY 22L APCH IN USE.</span> DEPARTING RY 22R FROM INT W 10,150 FEET TODA. HI-SPEED BRAVO 4 CLSD. TWY NOTAMS, TWY C CLOSED BTWN TWY P AND TWY B. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO E.""",
+    "datis_zt": "N/A",
+    "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
+    "metar_zt": "21 mins ago",
+    "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
+    "taf_zt": "168 mins ago"
+    }
+    
+    bulk_flight_deet_returns['dep_weather'] = test_weather_data
+    bulk_flight_deet_returns['dest_weather'] = test_weather_data
 
-    print(bulk_flight_deet_returns.keys())
+    # # This is the original django dummy weather without the highlight pre-processing.
+    # bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
+    # bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
+    # bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
+    # bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
+    # bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
+    # bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
+
+    # # These are with the html css tags for highlights but the returns are with D-ATIS and such keys and they are not very well processed by react.
+    # wp = Weather_parse()            
+    # bulk_flight_deet_returns['dep_weather'] = wp.processed_weather(weather_raw=bulk_flight_deet_returns['dep_weather'])
+    # print(bulk_flight_deet_returns['dep_weather'])
+    # bulk_flight_deet_returns['dest_weather'] = wp.processed_weather(weather_raw=bulk_flight_deet_returns['dest_weather'])
+
+    # print(bulk_flight_deet_returns.keys())
     # bulk_flight_deet_returns = await parse_query(None, query)
 
     return bulk_flight_deet_returns

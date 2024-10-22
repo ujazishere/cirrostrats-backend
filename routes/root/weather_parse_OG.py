@@ -211,7 +211,6 @@ class Weather_parse:
             # pickle.dump(raw_weather_dummy_data, f)
 
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
-        
         low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
         # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
         low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
