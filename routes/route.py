@@ -70,6 +70,7 @@ This list_serial return is a list type with each item a dict. Check individual_s
 
 @router.get('/airports')
 async def get_airports():
+    print('Triggered /airports')
     # Returns _id,name and code as document field keys.
     all_results = collection.find({})
     return serialize_document_list(all_results)
@@ -111,7 +112,6 @@ async def get_airport_data(airport_id, search: str = None):
     res = collection_weather.find_one(
         {"airport_id": ObjectId(airport_id)})
     res = res['weather']
-    print("single document from mongoDB",res)
     return res
 
 
@@ -228,26 +228,25 @@ async def root(query: str = None):
     return bulk_flight_deet_returns
 
 
-@router.get("/rawQuery/{query}")
-async def root(query: str = None):
-    print('Within rawQuery')
-    # Root_class().send_email(body_to_send=query)
-    print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
-    temp_test_flight_data = test_flight_deet_data()
-    bulk_flight_deet_returns = temp_test_flight_data
+# @router.get("/rawQuery/{query}")
+# async def root(query: str = None):
+#     print('Within rawQuery')
+#     # Root_class().send_email(body_to_send=query)
+#     print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
+#     temp_test_flight_data = test_flight_deet_data()
+#     bulk_flight_deet_returns = temp_test_flight_data
 
-    # This is only so that the weather can be 
-    bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
-    bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
-    bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
-    bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
-    bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
-    bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
+#     # bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
+#     # bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
+#     # bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
+#     # bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
+#     # bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
+#     # bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
 
-    print(bulk_flight_deet_returns.keys())
-    # bulk_flight_deet_returns = await parse_query(None, query)
+#     print(bulk_flight_deet_returns.keys())
+#     # bulk_flight_deet_returns = await parse_query(None, query)
 
-    return bulk_flight_deet_returns
+#     return bulk_flight_deet_returns
 
 
 async def parse_query(main_query):
@@ -529,18 +528,21 @@ async def flight_aware_w_auth(airline_code, flight_number):
 # TODO: Need to account for aviation stack
 
 
-@router.get("/Weather/{airport_type}/{airport_id}")
-async def Weather_raw(airport_type, airport_id):
-    if airport_type == "test":
-        test_data = {
-        "datis": "N/A",
-        "datis_zt": "N/A",
-        "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
-        "metar_zt": "21 mins ago",
-        "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
-        "taf_zt": "168 mins ago"
-        }
-        return test_data
+@router.get("/Weather/{airport_id}")
+async def Weather_raw(airport_id):
+    print('airport_id', airport_id)
+    # # returns test weather data if airport type is "test"
+    # if airport_id == "test":
+    #     test_data = {
+    #     "datis": "N/A",
+    #     "datis_zt": "N/A",
+    #     "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
+    #     "metar_zt": "21 mins ago",
+    #     "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
+    #     "taf_zt": "168 mins ago"
+    #     }
+    #     return test_data
+
     fm = Fetching_Mechanism()
     rsl = Root_source_links
 
@@ -554,35 +556,36 @@ async def Weather_raw(airport_type, airport_id):
     
     return weather_dict
 
-@router.get("/Weather/{departure_id}/{destination_id}")
-async def Weather(departure_id, destination_id):
-    # Only for use on fastapi w react. Temporary! read below
-    # this is a temporary fix to not change resp_sec_returns. clean that codebase when able
-    # the separated funcs nas and awc are the ones that need to be done.
+# Deprecated. took in request from react
+# @router.get("/Weather/{departure_id}/{destination_id}")
+# async def Weather(departure_id, destination_id):
+#     # Only for use on fastapi w react. Temporary! read below
+#     # this is a temporary fix to not change resp_sec_returns. clean that codebase when able
+#     # the separated funcs nas and awc are the ones that need to be done.
 
-    fm = Fetching_Mechanism()
-    sl = Source_links_and_api()
-    wp = Weather_parse()
-    # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
-    # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
-    # resp = response_filter(resp_dict,"awc",)
+#     fm = Fetching_Mechanism()
+#     sl = Source_links_and_api()
+#     wp = Weather_parse()
+#     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
+#     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
+#     # resp = response_filter(resp_dict,"awc",)
 
-    wl_dict = sl.weather_links(departure_id, destination_id)
+#     wl_dict = sl.weather_links(departure_id, destination_id)
 
-    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
-    weather_dict = resp_sec
+#     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
+#     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
+#     weather_dict = resp_sec
     
-    # TODO: This is a temporary fix to not change resp_sec_returns. clean that codebase when able
-    weather_dict['dep_weather'], weather_dict['dest_weather'] = {},{}       # declare weather_dict keys so it doesn't throw an error. It assigns values to key if its the first key not subsequent ones. in this case dep_weather['datis'] makes it a key of a key. 
-    weather_dict['dep_weather']['datis'] = weather_dict['dep_datis']
-    weather_dict['dep_weather']['metar'] = weather_dict['dep_metar']
-    weather_dict['dep_weather']['taf'] = weather_dict['dep_taf']
-    weather_dict['dest_weather']['datis'] = weather_dict['dest_datis']
-    weather_dict['dest_weather']['metar'] = weather_dict['dest_metar']
-    weather_dict['dest_weather']['taf'] = weather_dict['dest_taf']
-
-    return weather_dict
+#     # TODO: This is a temporary fix to not change resp_sec_returns. clean that codebase when able
+#     weather_dict['dep_weather'], weather_dict['dest_weather'] = {},{}       # declare weather_dict keys so it doesn't throw an error. It assigns values to key if its the first key not subsequent ones. in this case dep_weather['datis'] makes it a key of a key. 
+#     weather_dict['dep_weather']['datis'] = weather_dict['dep_datis']
+#     weather_dict['dep_weather']['metar'] = weather_dict['dep_metar']
+#     weather_dict['dep_weather']['taf'] = weather_dict['dep_taf']
+#     weather_dict['dest_weather']['datis'] = weather_dict['dest_datis']
+#     weather_dict['dest_weather']['metar'] = weather_dict['dest_metar']
+#     weather_dict['dest_weather']['taf'] = weather_dict['dest_taf']
+#     print(weather_dict)
+#     return weather_dict
 
 
 @router.get("/NAS/{departure_id}/{destination_id}")
@@ -594,18 +597,13 @@ async def nas(departure_id, destination_id):
     sl = Source_links_and_api()
     
     resp_dict: dict = await fm.async_pull([sl.nas()])
-    print('AWEIFBDSVVN',resp_dict)
     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     
     nas_returns = resp_sec
+    print(nas_returns)
 
     return nas_returns
 
-
-# TODO: GET RID OF THIS!! ITS NOT NECESSARY. ITS NOT USING ASYN CAPABILITY. ACCOUNT FOR WEATHER PULL THROUGH ONE FUNCTION
-    # REDUCE CODE DUPLICATION. THIS IS FEEDING INTO ITS OWN WEATHER.HTML FILE
-    # RATHER, HAVE IT SUCH THAT IT wewatherData.js takes this function.
-    #
 
 @router.get("/testDataReturns")
 def test_flight_deet_data():
@@ -617,6 +615,8 @@ def test_flight_deet_data():
     print('test_flight_deet_data, test data is being sent')
     bulk_flight_deet_returns = bulk_flight_deets
     
+    test_nas_data = {'nas_departure_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}},
+     'nas_destination_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}}}
 
     test_weather_data = {
     "datis": """EWR <span class="box_around_text">ATIS INFO E</span> 1951Z. 15006KT 10SM FEW250 28/10 <span class="box_around_text">A3020</span> (THREE ZERO TWO ZERO). <span class="box_around_text">ILS RWY 22L APCH IN USE.</span> DEPARTING RY 22R FROM INT W 10,150 FEET TODA. HI-SPEED BRAVO 4 CLSD. TWY NOTAMS, TWY C CLOSED BTWN TWY P AND TWY B. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO E.""",
@@ -627,6 +627,7 @@ def test_flight_deet_data():
     "taf_zt": "168 mins ago"
     }
     
+    bulk_flight_deet_returns.update(test_nas_data)
     bulk_flight_deet_returns['dep_weather'] = test_weather_data
     bulk_flight_deet_returns['dest_weather'] = test_weather_data
 

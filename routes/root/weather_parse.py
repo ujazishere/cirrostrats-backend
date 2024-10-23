@@ -249,14 +249,26 @@ class Weather_parse:
         highlighted_datis = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis)
         
         highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar)
-        return dict({ 'D-ATIS': highlighted_datis,
-                      'D-ATIS_zt': zulu_extracts(datis_raw,datis=True),
-                      
-                      'METAR': highlighted_metar, 
-                      'METAR_zt': zulu_extracts(metar_raw),
 
-                      'TAF': highlighted_taf,
-                      'TAF_zt': zulu_extracts(taf_raw,taf=True),
+        # This was the original way of returning the uppercase keys. React did not like it so returning lowercase.
+        # return dict({ 'D-ATIS': highlighted_datis,
+        #               'D-ATIS_zt': zulu_extracts(datis_raw,datis=True),
+                      
+        #               'METAR': highlighted_metar, 
+        #               'METAR_zt': zulu_extracts(metar_raw),
+
+        #               'TAF': highlighted_taf,
+        #               'TAF_zt': zulu_extracts(taf_raw,taf=True),
+        #               })
+
+        return dict({ 'datis': highlighted_datis,
+                      'datis_zt': zulu_extracts(datis_raw,datis=True),
+                      
+                      'metar': highlighted_metar, 
+                      'metar_zt': zulu_extracts(metar_raw),
+
+                      'taf': highlighted_taf,
+                      'taf_zt': zulu_extracts(taf_raw,taf=True),
                       })
 
 

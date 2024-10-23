@@ -82,7 +82,6 @@ class Pull_flight_info(Root_class):
         # table = soup.find('div', {'class': 'a2'})
         try: 
             # TODO: This is prone to throwing list index out of range errors. add if statement on airport_id befor processing departure_ID and destination_ID since airport_ID can be None.
-            print('Trying dep_des')
             airport_id = soup.find_all('div', {'class': 'a2_ak'})
             airport_id = [i.text for i in airport_id if 'ICAO' in i.text]
             if airport_id:

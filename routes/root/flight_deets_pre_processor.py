@@ -49,7 +49,6 @@ def raw_resp_weather_processing(resp_dict, airport_id):
     metar,taf,datis = ['']*3
 
     for url,resp in resp_dict.items():
-        print('each url',resp)
         if f"metar?ids={airport_id}" in str(url):
             metar = resp
         elif f"taf?ids={airport_id}" in str(url):
@@ -59,7 +58,6 @@ def raw_resp_weather_processing(resp_dict, airport_id):
 
     raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
     # dep_weather = wp.processed_weather(weather_raw=dep_weather)
-    print('RAW rets',raw_weather_returns)
     
     wp = Weather_parse()            
     wpp = wp.processed_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
