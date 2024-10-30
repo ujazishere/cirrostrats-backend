@@ -1,6 +1,6 @@
 import threading
 from config.database import collection_gates
-from routes.root.gate_fetch import Gate_fetch
+from routes.root.gates_mdb_ops import Gates_mdb_ops
 from .root_class import Root_class
 from .newark_departures_scrape import Newark_departures_scrape
 from datetime import datetime
@@ -56,7 +56,7 @@ class Gate_Scrape(Root_class):
 
                 # TODO VHP: return as list of dictionaries to make the format consistent with gate_checker.py's ewr_UA_gate func's initial parses
                 return {
-                    'flight_number': flt_num,
+                    'flt_num': flt_num,
                     'gate': gate,
                     'scheduled': scheduled,
                     'actual': actual,
@@ -76,27 +76,16 @@ class Gate_Scrape(Root_class):
 
     def tro(self):
 
-        # Reopening master to check troubled flights within it.
-        
-        # TODO:There is a probelm with opening the gate_query_database.pkl file as is.
-            # Troubled items will already be in this master from old data so they wont be checked and updated
-            # one way to fix it is to check date and time and overwrite the old one with the latest one
-        master = self.load_master()
-        
         # feeding self.troubled into the executor using for loop for a few times to restrict infinite troubles, if any. 
-        # In a while loop a troubled item may not convert creating endless loop. Hence a for loop(max 5 attempts to minimize excessive waits)
+        # In a while loop a troubled item may not convert creating endless loop. Hence a for loop(max 3 attempts to minimize excessive waits)
         for i in range(3):      # 3 because if the you want to fetch the troubled only a few more times, they might just not be available if theyre not returned within these 3 attempts.
             if self.troubled:
                 time.sleep(3)       # This break may resolve temporare redirect issues with error code response on initial fetch
                 ex = self.exec(self.troubled, self.pick_flight_data)
-                master.update(ex['completed'])
+                gf=Gates_mdb_ops()
+                gf.mdb_updates(ex['completed'])        # the results are fed into gates collection using this func.
                 self.troubled = set(ex['troubled'])     # emptying out troubled and refilling it with new troubled items
 
-                # Following code essentially removes troubled items that are already in the master.
-                # logic: if troubled items are not in master make a new troubled set with those. Essentially doing the job of removing master keys from troubled set
-                # This wont be overwritten as the it takes itseld as an argument.
-                self.troubled = {each for each in self.troubled if each not in master}
-                
                 # Here we check how many times we've looped so far and how many troubled items are still remaining.
                 print(f'{i}th trial- troubled len:', len(self.troubled) )
             elif not self.troubled:
@@ -104,35 +93,7 @@ class Gate_Scrape(Root_class):
                 # breaking since troubled is probably empty
                 break
         
-        # Refer to the activator() master dump. This dump is updated after..
-        # Investigate. This one I suppose was only reading then I changedd it to write
-        # But i realised it would overright the old master so I switcheed it back to rb.
-        # However. Master is loaded earlier using load_master. so master seems retained so it can be a write file.
-        with open('gate_query_database.pkl', 'wb') as f:
-            pickle.dump(master, f) 
-        
-        print(self.date_time(), f'Troubled: {len(self.troubled)}, Master : {len(master)}')
-
-
-    def temp_fix_to_remove_old_flights(self):       # TODO: Should be deprercated
-        
-        # might want to remove this method. It is destructive. Or just get rid of flights from 2 days ago rather than just 1 day since midnight is too close to previous day.
-        
-        master = self.load_master()
-        to_remove = []
-
-        for flight_num, (gate, scheduled, actual) in master.items():
-            scheduled = datetime.strptime(scheduled, "%I:%M%p, %b%d") if scheduled else None
-            if scheduled and scheduled.date() < datetime.now().date():
-                to_remove.append(flight_num)
-            else:
-                pass
-        
-        for i in to_remove:
-            del master[i]
-
-        with open('gate_query_database.pkl', 'wb') as f:
-            pickle.dump(master, f)
+        print(self.date_time(), f'Troubled: {len(self.troubled)}')
 
 
     def activator(self):
@@ -140,27 +101,29 @@ class Gate_Scrape(Root_class):
         # Purpose of this function is to dump gate_query_database.pkl file.
 
         # Extracting all United flight numbers in list form to dump into the exec func
-        ewr_departures_UA = Newark_departures_scrape().united_departures()
+        self.ewr_departures_UA = Newark_departures_scrape().united_departures()
 
         # ewr_departures = Newark_departures_scrape().all_newark_departures()
         
         # VVI Check exec func for notes on how it works. It takes in function as its second argument without double bracs.
-        exec_output = self.exec(ewr_departures_UA, self.pick_flight_data)    # inherited from root_class.Root_class
+        exec_output = self.exec(self.ewr_departures_UA, self.pick_flight_data)    # inherited from root_class.Root_class
         completed_flights = exec_output['completed']
+
+        gf=Gates_mdb_ops()
+        gf.mdb_updates(completed_flights)        # the results are fed into gates collection using this func.
+
         troubled_flights = exec_output['troubled']
         
         # TODO: This is where the results are returned. since its the `update` method its {flt_num:[gate,sch,act]} 
             # TODO: you want to change it to the format thats being used by gate_checker 
         # TODO: Change name and use case from master to- gate_query_database collection update.
-        master = {}
-        master.update(completed_flights)        # Master is a complete overwrite whereas troubled is a read master and update it kind.
         self.troubled.update(troubled_flights)  # This is a safer write since it will load the master first and then update with the new data then dump write.
         
         # get all the troubled flight numbers
         # print('troubled:', len(self.troubled), self.troubled)
         
-        # if self.troubled:
-            # self.tro()
+        if self.troubled:
+            self.tro()
 
         # Dumping master dict into the root folder in order to be accessed by ewr_UA_gate func later on.
         # TODO: Need to add mdb collection here. maybe instead of the gate collection it should be the flight collection. since the flight number is primary one here.
@@ -172,10 +135,19 @@ class Gate_Scrape(Root_class):
 
         # Redo the troubled flights
 
-        return master
+        return completed_flights
+
+
+    async def fetch_and_store(self,):
+        
+        rets = self.activator()
+        gmo = Gates_mdb_ops()
+        gmo.mdb_updates(rets)
+        # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
+
 
 # Mind the threading. Inheriting the thread that makes the code run concurrently
-# TODO: Investigate and master this Thread sorcery
+# TODO: Investigate and master this threading.Thread sorcery
 class Gate_scrape_thread(threading.Thread):
     def __init__(self):
         # Super method inherits the init method of the superclass. In this case`Root_class`.

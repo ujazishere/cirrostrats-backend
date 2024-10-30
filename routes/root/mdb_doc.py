@@ -77,6 +77,14 @@ sl = Source_links_and_api()
 rsl = Root_source_links
 fm = Fetching_Mechanism()
 
+def mdb_unset(field_to_unset:str):
+    # Remove entire field from the document. In this case all documents in the collection simultaneously.
+    collection_weather.update_many(
+        {},     # Match all documents
+        {'$unset': {field_to_unset: ''}}        # unset/remove the entire flightStatus field including the field itself.
+    )
+
+
 def later_use():
 
     test_mdb = [i for i in collection.find({})][:3]
@@ -84,9 +92,6 @@ def later_use():
     utc_now = dt.datetime.now(dt.UTC)
     yyyymmddhhmm = utc_now.strftime("%Y%m%d%H%M")
 
-all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
-with open(all_datis_airports_path, 'rb') as f:
-    all_datis_airport_codes = pickle.load(f)
 
 with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
     # TODO: These airport codes are speciafically selected to fetch taf data. 
@@ -110,10 +115,6 @@ def list_of_weather_links(type_of_weather,list_of_airport_codes):
 test_list_of_airport_codes = all_mdb_airport_codes[:5]       
 test_weather_links = list_of_weather_links('datis',test_list_of_airport_codes)
 # test_resp_dict: dict = await fm.async_pull(list(test_weather_links))
-
-
-
-
 
 async def resp_dict_returns(weather_links):
     resp_dict: dict = await fm.async_pull(list(weather_links))
@@ -149,6 +150,9 @@ def datis_processing(resp_dict:dict):
             resp_dict[url]=raw_datis
     return resp_dict
 
+all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+with open(all_datis_airports_path, 'rb') as f:
+    all_datis_airport_codes = pickle.load(f)
 # TODO: This needs to be put in a scheduler like celery.
 weather_links_dict = {
     "datis": list_of_weather_links('datis',all_datis_airport_codes),
@@ -169,20 +173,11 @@ for weather_type, weather_links in weather_links_dict.items():
     # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
     
 
-
-
-
-
-
-
 def weather_field_metar_returns():
     for a, b in test_resp_dict.items():
         airport_id = str(a)[-3:]
         # return just the weather field of the document in question. In this case metar.
         print(collection_weather.find_one({'code': airport_id},{'weather.metar':1}))
-
-
-
 
 
 
@@ -195,12 +190,6 @@ def weather_field_metar_returns():
 # async def get_flights():
 #     flights = list_serial(collection.find())
 #     return flights
-
-
-
-
-
-
 
 
 
@@ -234,17 +223,6 @@ def mdb_updates(resp_dict: dict, type_of_weather):
     result = collection_weather.bulk_write(update_operations)
     print(result)
     
-
-
-
-
-
-
-
-
-
-
-
 
 
 def x():
@@ -375,11 +353,6 @@ def x():
     
 
 
-
-
-
-
-
 # A powerful and flexible way to efficiently update multiple collections. Master it:
 def powerful_aggregatae_way(resp_dict:dict):
     pipeline = [
@@ -406,18 +379,9 @@ def powerful_aggregatae_way(resp_dict:dict):
     collection_weather.aggregate(pipeline)
     
 
-
-
-
-
 # legacy: This code was used to init the weather collection documents.
 for each_airport in collection.find({}):
     collection_weather.insert_one({'airport_id': each_airport['_id'],
         'code': each_airport['code'],
         'weather': {},
         })
-
-
-
-
-

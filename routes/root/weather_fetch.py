@@ -14,7 +14,7 @@ from pymongo import UpdateOne
 from routes.root.weather_parse import Weather_parse
 
 """
- Check test_weather.py for set and unset operation.
+ Check mdb_doc.py for set and unset operation.
 # TODO: user collections - weather.metar if there  is a achange.
 """
 # TODO: bandaid - quick fix for path. find better and clean this.
@@ -91,8 +91,8 @@ class Weather_fetch:
             airport_code_trailing = str(url)[-3:]
             
             update_operations.append(
-                UpdateOne({'code': airport_code_trailing},
-                          {'$set': {f'weather.{weather_type}': weather}})
+                UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code 
+                          {'$set': {f'weather.{weather_type}': weather}})       # sets the weather subfield of that document
             )
 
         result = collection_weather.bulk_write(update_operations)

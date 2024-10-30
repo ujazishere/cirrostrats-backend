@@ -98,7 +98,7 @@ class Root_class():
             # seems like this creates a task list of all functions and all those functions get sent to work at once altogether.
         # this results in all the flight numbers getting sent at once and performing web scrape(`pick_flight_data()`) on all of them simultaneously
     
-        completed = {}
+        completed = []
         troubled = set()
             # VVI!!! The dictionary `futures` .value is the flight number and  key is the the memory location of return from pick_flight_data
             # Used in list comprehension for loop with multiple keys and values in the dictionary. for example:
@@ -112,18 +112,22 @@ class Root_class():
             futures = {executor.submit(multithreader, flt_num): flt_num for flt_num in
                         input1}         # This submit method tasks to do to the executor for concurrent execution.
             # futures .key() is the memory location of the task and the .value() is the flt_num associated with it
+            # print('within futures')
+            # this forloop is where the tasks are executed is a part of as_completed task
             for future in as_completed(futures):    # as_completed is imported with the ThreadPoolExecutor
                 # again, future is the memory location of the task
                 flt_num = futures[future]
                 try:
                     result = future.result()        # result is the output of the task at that memory location 
-                    completed.update(result)
+                    completed.append(result)
                 except Exception as e:
                     # print(f"Error scraping {flt_num}: {e}")
                     troubled.add(flt_num)
         
         # TODO: Check completed data type. If list then its a list of dicts. Its outght to be.
-        return dict({'completed':  completed, 'troubled': troubled})
+        rets = dict({'completed':  completed, 'troubled': troubled})
+        # print(rets)
+        return rets
         
 
 class Root_source_links:

@@ -70,8 +70,8 @@ This list_serial return is a list type with each item a dict. Check individual_s
 
 @router.get('/airports')
 async def get_airports():
-    print('Triggered /airports')
     # Returns _id,name and code as document field keys.
+    # print('Triggered /airports')
     all_results = collection.find({})
     return serialize_document_list(all_results)
 
@@ -105,7 +105,7 @@ async def initial_query_processing_react(initial_query, search: str = None):
         # TODO: Do something here to process the raw search query and return it to the frontend.
         return None
 
-@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
+@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id, search: str = None):
     print("airport_id", airport_id)
     # serialized_return = serialize_airport_input_data(res)
