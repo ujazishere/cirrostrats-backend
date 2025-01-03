@@ -1,0 +1,565 @@
+[33mcommit fd43aa5ab7f04cc0f77fca0c5e078b7bc108258f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m
+Author: ujazishere <ujasvaghani@gmail.com>
+Date:   Wed Oct 30 02:14:37 2024 -0400
+
+    Gate mdb work milestone
+    
+    Finally managed to delete the previous pickle way of saving and retrieving data and replaced it with mongoo. Still need to implement scheduler
+
+[1mdiff --git a/routes/root/gate_fetch.py b/routes/root/gate_fetch.py[m
+[1mdeleted file mode 100644[m
+[1mindex f32d4a3..0000000[m
+[1m--- a/routes/root/gate_fetch.py[m
+[1m+++ /dev/null[m
+[36m@@ -1,109 +0,0 @@[m
+[31m-from config.database import collection_gates[m
+[31m-from bson import ObjectId[m
+[31m-try:[m
+[31m-    from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links[m
+[31m-except:[m
+[31m-    print('jupyter import for root_class')[m
+[31m-    from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links[m
+[31m-import datetime as dt[m
+[31m-import json[m
+[31m-import pickle[m
+[31m-from pymongo import UpdateOne[m
+[31m-from routes.root.weather_parse import Weather_parse[m
+[31m-[m
+[31m-"""[m
+[31m- Check test_weather.py for set and unset operation.[m
+[31m-"""[m
+[31m-class Gate_fetch:[m
+[31m-[m
+[31m-[m
+[31m-    def __init__(self) -> None:[m
+[31m-        self.rc = Root_class()[m
+[31m-        self.sl = Source_links_and_api()[m
+[31m-        self.fm = Fetching_Mechanism()[m
+[31m-        self.rsl = Root_source_links[m
+[31m-[m
+[31m-    def mdb_unset(self,):[m
+[31m-        # Attempt to update the document. In this case remove a field(key value pair).[m
+[31m-        weather = {             # This weather dict wouldnt be necessary since the unset operator is removing the whole weather field itself.[m
+[31m-            'metar':'',[m
+[31m-            'taf':'',[m
+[31m-            'datis':''[m
+[31m-        }[m
+[31m-        for each_d in collection_gates.find():[m
+[31m-            airport_id = "K"+each_d['code'][m
+[31m-        [m
+[31m-            collection_gates.update_one([m
+[31m-                {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document[m
+[31m-                [m
+[31m-                {'$unset': {'weather':weather}},[m
+[31m-                # When you use $unset with the key weather, it removes the entire weather field, not just the contents inside it.[m
+[31m-                upsert=True[m
+[31m-                )[m
+[31m-    [m
+[31m-[m
+[31m-    def mdb_updates(self,resp_dict: dict, weather_type):[m
+[31m-        # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.[m
+[31m-        # TODO: account for new airport codes, maybe upsert or maybe just none for now.[m
+[31m-        print('Updating mdb')[m
+[31m-        update_operations = [][m
+[31m-    [m
+[31m-        for url, weather in resp_dict.items():[m
+[31m-            airport_code_trailing = str(url)[-3:][m
+[31m-            [m
+[31m-            update_operations.append([m
+[31m-                UpdateOne({'code': airport_code_trailing},[m
+[31m-                          {'$set': {f'weather.{weather_type}': weather}})[m
+[31m-            )[m
+[31m-[m
+[31m-        result = collection_weather.bulk_write(update_operations)[m
+[31m-        print(result)[m
+[31m-[m
+[31m-[m
+[31m-    def flight_mdb_updates(self, flightNumbers, scheduledDeparture, scheduledArrival,):[m
+[31m-        # TODO: account for new airport codes for scheduled departure/arriva, maybe upsert or maybe just none for now.[m
+[31m-        print('Updating flights mdb')[m
+[31m-        update_operations = [][m
+[31m-    [m
+[31m-        for flightNumber in  flightNumbers:[m
+[31m-            [m
+[31m-            update_operations.append([m
+[31m-                UpdateOne({'flightNumber': flightNumber},[m
+[31m-                          {'$set': {'flightNumber': flightNumber}}[m
+[31m-                          )[m
+[31m-            )[m
+[31m-[m
+[31m-        result = collection_weather.bulk_write(update_operations)[m
+[31m-        print(result)[m
+[31m-[m
+[31m-[m
+[31m-    def datis_processing(self, resp_dict:dict):[m
+[31m-        print('Processing Datis')[m
+[31m-        # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.[m
+[31m-        # This function processess the raw list and returns just the pure datis[m
+[31m-        for url,datis in resp_dict.items():[m
+[31m-            if not 'error' in datis:[m
+[31m-                raw_datis_from_api = json.loads(datis)[m
+[31m-                raw_datis = Weather_parse().datis_processing(raw_datis_from_api)[m
+[31m-                resp_dict[url]=raw_datis[m
+[31m-   [m
+[31m-        return resp_dict[m
+[31m-[m
+[31m-[m
+[31m-    async def fetch_and_store(self,):[m
+[31m-        print('Initiating the weather fetch.')[m
+[31m-        for weather_type, weather_links in self.weather_links_dict.items():[m
+[31m-            # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator[m
+[31m-            # Check datis bulk extract and bulk weather extract for help on this.[m
+[31m-            print(weather_type)[m
+[31m-            if weather_type == 'taf':[m
+[31m-                print(f'For {weather_type}...')[m
+[31m-                resp_dict: dict = await self.fm.async_pull(list(weather_links))[m
+[31m-                [m
+[31m-                # Datis needs special processing before you put into collection. This bit accomplishes it[m
+[31m-                if weather_type == 'datis':[m
+[31m-                    resp_dict = self.datis_processing(resp_dict)[m
+[31m-                [m
+[31m-                self.mdb_updates(resp_dict,weather_type)[m
+[31m-                # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.[m
+[31m-        [m
+[1mdiff --git a/routes/root/gate_scrape.py b/routes/root/gate_scrape.py[m
+[1mindex b8f688a..65a588f 100644[m
+[1m--- a/routes/root/gate_scrape.py[m
+[1m+++ b/routes/root/gate_scrape.py[m
+[36m@@ -1,6 +1,6 @@[m
+ import threading[m
+ from config.database import collection_gates[m
+[31m-from routes.root.gate_fetch import Gate_fetch[m
+[32m+[m[32mfrom routes.root.gates_mdb_ops import Gates_mdb_ops[m
+ from .root_class import Root_class[m
+ from .newark_departures_scrape import Newark_departures_scrape[m
+ from datetime import datetime[m
+[36m@@ -56,7 +56,7 @@[m [mclass Gate_Scrape(Root_class):[m
+ [m
+                 # TODO VHP: return as list of dictionaries to make the format consistent with gate_checker.py's ewr_UA_gate func's initial parses[m
+                 return {[m
+[31m-                    'flight_number': flt_num,[m
+[32m+[m[32m                    'flt_num': flt_num,[m
+                     'gate': gate,[m
+                     'scheduled': scheduled,[m
+                     'actual': actual,[m
+[36m@@ -76,27 +76,16 @@[m [mclass Gate_Scrape(Root_class):[m
+ [m
+     def tro(self):[m
+ [m
+[31m-        # Reopening master to check troubled flights within it.[m
+[31m-        [m
+[31m-        # TODO:There is a probelm with opening the gate_query_database.pkl file as is.[m
+[31m-            # Troubled items will already be in this master from old data so they wont be checked and updated[m
+[31m-            # one way to fix it is to check date and time and overwrite the old one with the latest one[m
+[31m-        master = self.load_master()[m
+[31m-        [m
+         # feeding self.troubled into the executor using for loop for a few times to restrict infinite troubles, if any. [m
+[31m-        # In a while loop a troubled item may not convert creating endless loop. Hence a for loop(max 5 attempts to minimize excessive waits)[m
+[32m+[m[32m        # In a while loop a troubled item may not convert creating endless loop. Hence a for loop(max 3 attempts to minimize excessive waits)[m
+         for i in range(3):      # 3 because if the you want to fetch the troubled only a few more times, they might just not be available if theyre not returned within these 3 attempts.[m
+             if self.troubled:[m
+                 time.sleep(3)       # This break may resolve temporare redirect issues with error code response on initial fetch[m
+                 ex = self.exec(self.troubled, self.pick_flight_data)[m
+[31m-                master.update(ex['completed'])[m
+[32m+[m[32m                gf=Gates_mdb_ops()[m
+[32m+[m[32m                gf.mdb_updates(ex['completed'])        # the results are fed into gates collection using this func.[m
+                 self.troubled = set(ex['troubled'])     # emptying out troubled and refilling it with new troubled items[m
+ [m
+[31m-                # Following code essentially removes troubled items that are already in the master.[m
+[31m-                # logic: if troubled items are not in master make a new troubled set with those. Essentially doing the job of removing master keys from troubled set[m
+[31m-                # This wont be overwritten as the it takes itseld as an argument.[m
+[31m-                self.troubled = {each for each in self.troubled if each not in master}[m
+[31m-                [m
+                 # Here we check how many times we've looped so far and how many troubled items are still remaining.[m
+                 print(f'{i}th trial- troubled len:', len(self.troubled) )[m
+             elif not self.troubled:[m
+[36m@@ -104,35 +93,7 @@[m [mclass Gate_Scrape(Root_class):[m
+                 # breaking since troubled is probably empty[m
+                 break[m
+         [m
+[31m-        # Refer to the activator() master dump. This dump is updated after..[m
+[31m-        # Investigate. This one I suppose was only reading then I changedd it to write[m
+[31m-        # But i realised it would overright the old master so I switcheed it back to rb.[m
+[31m-        # However. Master is loaded earlier using load_master. so master seems retained so it can be a write file.[m
+[31m-        with open('gate_query_database.pkl', 'wb') as f:[m
+[31m-            pickle.dump(master, f) [m
+[31m-        [m
+[31m-        print(self.date_time(), f'Troubled: {len(self.troubled)}, Master : {len(master)}')[m
+[31m-[m
+[31m-[m
+[31m-    def temp_fix_to_remove_old_flights(self):       # TODO: Should be deprercated[m
+[31m-        [m
+[31m-        # might want to remove this method. It is destructive. Or just get rid of flights from 2 days ago rather than just 1 day since midnight is too close to previous day.[m
+[31m-        [m
+[31m-        master = self.load_master()[m
+[31m-        to_remove = [][m
+[31m-[m
+[31m-        for flight_num, (gate, scheduled, actual) in master.items():[m
+[31m-            scheduled = datetime.strptime(scheduled, "%I:%M%p, %b%d") if scheduled else None[m
+[31m-            if scheduled and scheduled.date() < datetime.now().date():[m
+[31m-                to_remove.append(flight_num)[m
+[31m-            else:[m
+[31m-                pass[m
+[31m-        [m
+[31m-        for i in to_remove:[m
+[31m-            del master[i][m
+[31m-[m
+[31m-        with open('gate_query_database.pkl', 'wb') as f:[m
+[31m-            pickle.dump(master, f)[m
+[32m+[m[32m        print(self.date_time(), f'Troubled: {len(self.troubled)}')[m
+ [m
+ [m
+     def activator(self):[m
+[36m@@ -140,27 +101,29 @@[m [mclass Gate_Scrape(Root_class):[m
+         # Purpose of this function is to dump gate_query_database.pkl file.[m
+ [m
+         # Extracting all United flight numbers in list form to dump into the exec func[m
+[31m-        ewr_departures_UA = Newark_departures_scrape().united_departures()[m
+[32m+[m[32m        self.ewr_departures_UA = Newark_departures_scrape().united_departures()[m
+ [m
+         # ewr_departures = Newark_departures_scrape().all_newark_departures()[m
+         [m
+         # VVI Check exec func for notes on how it works. It takes in function as its second argument without double bracs.[m
+[31m-        exec_output = self.exec(ewr_departures_UA, self.pick_flight_data)    # inherited from root_class.Root_class[m
+[32m+[m[32m        exec_output = self.exec(self.ewr_departures_UA, self.pick_flight_data)    # inherited from root_class.Root_class[m
+         completed_flights = exec_output['completed'][m
+[32m+[m
+[32m+[m[32m        gf=Gates_mdb_ops()[m
+[32m+[m[32m        gf.mdb_updates(completed_flights)        # the results are fed into gates collection using this func.[m
+[32m+[m
+         troubled_flights = exec_output['troubled'][m
+         [m
+         # TODO: This is where the results are returned. since its the `update` method its {flt_num:[gate,sch,act]} [m
+             # TODO: you want to change it to the format thats being used by gate_checker [m
+         # TODO: Change name and use case from master to- gate_query_database collection update.[m
+[31m-        master = {}[m
+[31m-        master.update(completed_flights)        # Master is a complete overwrite whereas troubled is a read master and update it kind.[m
+         self.troubled.update(troubled_flights)  # This is a safer write since it will load the master first and then update with the new data then dump write.[m
+         [m
+         # get all the troubled flight numbers[m
+         # print('troubled:', len(self.troubled), self.troubled)[m
+         [m
+[31m-        # if self.troubled:[m
+[31m-            # self.tro()[m
+[32m+[m[32m        if self.troubled:[m
+[32m+[m[32m            self.tro()[m
+ [m
+         # Dumping master dict into the root folder in order to be accessed by ewr_UA_gate func later on.[m
+         # TODO: Need to add mdb collection here. maybe instead of the gate collection it should be the flight collection. since the flight number is primary one here.[m
+[36m@@ -172,10 +135,19 @@[m [mclass Gate_Scrape(Root_class):[m
+ [m
+         # Redo the troubled flights[m
+ [m
+[31m-        return master[m
+[32m+[m[32m        return completed_flights[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    async def fetch_and_store(self,):[m
+[32m+[m[41m        [m
+[32m+[m[32m        rets = self.activator()[m
+[32m+[m[32m        gmo = Gates_mdb_ops()[m
+[32m+[m[32m        gmo.mdb_updates(rets)[m
+[32m+[m[32m        # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.[m
+[32m+[m
+ [m
+ # Mind the threading. Inheriting the thread that makes the code run concurrently[m
+[31m-# TODO: Investigate and master this Thread sorcery[m
+[32m+[m[32m# TODO: Investigate and master this threading.Thread sorcery[m
+ class Gate_scrape_thread(threading.Thread):[m
+     def __init__(self):[m
+         # Super method inherits the init method of the superclass. In this case`Root_class`.[m
+[1mdiff --git a/routes/root/gates_mdb_ops.py b/routes/root/gates_mdb_ops.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..835450c[m
+[1m--- /dev/null[m
+[1m+++ b/routes/root/gates_mdb_ops.py[m
+[36m@@ -0,0 +1,62 @@[m
+[32m+[m[32mfrom config.database import collection_gates[m
+[32m+[m[32mtry:[m
+[32m+[m[32m    from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links[m
+[32m+[m[32mexcept:[m
+[32m+[m[32m    print('jupyter import for root_class')[m
+[32m+[m[32m    from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links[m
+[32m+[m[32mfrom pymongo import UpdateOne[m
+[32m+[m
+[32m+[m[32m"""[m
+[32m+[m[32m#  Check mdb_doc.py for set and unset operation.[m
+[32m+[m[32m#  notebook code:[m
+[32m+[m[32mfrom config.database import collection_gates, collection_flights,collection, collection_weather[m
+[32m+[m[32m# [i for i in collection_gates.find()][:5]      # Returns first 5 documents for testing - inefficient.[m
+[32m+[m[32mfrom routes.root.gate_scrape import Gate_Scrape[m
+[32m+[m
+[32m+[m[32mgs = Gate_Scrape()[m
+[32m+[m[32mrets = gs.activator()[m
+[32m+[m
+[32m+[m[32mfor a,b in rets.items():[m
+[32m+[m[32m    print(a,b)[m
+[32m+[m[32m"""[m
+[32m+[m[32mclass Gates_mdb_ops:[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    def __init__(self) -> None:[m
+[32m+[m[32m        pass[m
+[32m+[m
+[32m+[m[32m    def mdb_unset(self,field_to_unset:str):[m
+[32m+[m[32m        # Remove entire field from the document.[m
+[32m+[m[32m        collection_gates.update_many([m
+[32m+[m[32m            {},     # Match all documents[m
+[32m+[m[32m            {'$unset': {field_to_unset: ''}}        # unset/remove the entire flightStatus field including the field itself.[m
+[32m+[m[32m        )[m
+[32m+[m[41m    [m
+[32m+[m
+[32m+[m[32m    def mdb_updates(self,incoming_data: list):[m
+[32m+[m[32m        # TODO: WIP to update gates in bulk[m
+[32m+[m[32m        # TODO: Need mechanism to update flight numbers, scheduled departure and scheduled arrival consistently and more frequently.[m
+[32m+[m[41m        [m
+[32m+[m[32m        # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.[m
+[32m+[m[32m        # TODO: account for new airport codes, maybe upsert or maybe just none for now.[m
+[32m+[m[32m        print('Updating mdb')[m
+[32m+[m[32m        update_operations = [][m
+[32m+[m
+[32m+[m[32m        for i in incoming_data:[m
+[32m+[m[32m            if i:           # i is supposed to be a dict, but is sometimes NoneType[m
+[32m+[m[32m                # TODO 10/29/24 handle this with regex. This can be error prone since there is a magic number.[m
+[32m+[m[32m                i['gate'] = "Terminal " + i['gate'][8:]         # Accounting for no space issue between `Terminal` and trailing data.[m
+[32m+[m
+[32m+[m[32m                # Neeed to add notes on how to use UpdateOne as arg without the curly braces including identifying the field and what they do.[m
+[32m+[m[32m                update_operations.append([m
+[32m+[m[32m                    UpdateOne([m
+[32m+[m[32m                        {'Gate': i['gate']},        # Find the document with gate[m
+[32m+[m[32m                        {'$set': {                  # Set the respective fields in the document as follows[m
+[32m+[m[32m                            f'flightStatus.{i.get("flt_num")}.scheduledDeparture': i.get('scheduled'),[m
+[32m+[m[32m                            f'flightStatus.{i.get("flt_num")}.actualDeparture': i.get('sctual'),[m
+[32m+[m[32m                            },[m
+[32m+[m[32m                        })[m
+[32m+[m[32m                )[m
+[32m+[m
+[32m+[m[32m        result = collection_gates.bulk_write(update_operations)[m
+[32m+[m[32m        print(result)[m
+[1mdiff --git a/routes/root/test_weather.py b/routes/root/mdb_doc.py[m
+[1msimilarity index 97%[m
+[1mrename from routes/root/test_weather.py[m
+[1mrename to routes/root/mdb_doc.py[m
+[1mindex 2d13736..c417ca9 100644[m
+[1m--- a/routes/root/test_weather.py[m
+[1m+++ b/routes/root/mdb_doc.py[m
+[36m@@ -77,6 +77,14 @@[m [msl = Source_links_and_api()[m
+ rsl = Root_source_links[m
+ fm = Fetching_Mechanism()[m
+ [m
+[32m+[m[32mdef mdb_unset(field_to_unset:str):[m
+[32m+[m[32m    # Remove entire field from the document. In this case all documents in the collection simultaneously.[m
+[32m+[m[32m    collection_weather.update_many([m
+[32m+[m[32m        {},     # Match all documents[m
+[32m+[m[32m        {'$unset': {field_to_unset: ''}}        # unset/remove the entire flightStatus field including the field itself.[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m
+ def later_use():[m
+ [m
+     test_mdb = [i for i in collection.find({})][:3][m
+[36m@@ -84,9 +92,6 @@[m [mdef later_use():[m
+     utc_now = dt.datetime.now(dt.UTC)[m
+     yyyymmddhhmm = utc_now.strftime("%Y%m%d%H%M")[m
+ [m
+[31m-all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'[m
+[31m-with open(all_datis_airports_path, 'rb') as f:[m
+[31m-    all_datis_airport_codes = pickle.load(f)[m
+ [m
+ with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:[m
+     # TODO: These airport codes are speciafically selected to fetch taf data. [m
+[36m@@ -111,10 +116,6 @@[m [mtest_list_of_airport_codes = all_mdb_airport_codes[:5][m
+ test_weather_links = list_of_weather_links('datis',test_list_of_airport_codes)[m
+ # test_resp_dict: dict = await fm.async_pull(list(test_weather_links))[m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ async def resp_dict_returns(weather_links):[m
+     resp_dict: dict = await fm.async_pull(list(weather_links))[m
+     return resp_dict[m
+[36m@@ -149,6 +150,9 @@[m [mdef datis_processing(resp_dict:dict):[m
+             resp_dict[url]=raw_datis[m
+     return resp_dict[m
+ [m
+[32m+[m[32mall_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'[m
+[32m+[m[32mwith open(all_datis_airports_path, 'rb') as f:[m
+[32m+[m[32m    all_datis_airport_codes = pickle.load(f)[m
+ # TODO: This needs to be put in a scheduler like celery.[m
+ weather_links_dict = {[m
+     "datis": list_of_weather_links('datis',all_datis_airport_codes),[m
+[36m@@ -169,12 +173,6 @@[m [mfor weather_type, weather_links in weather_links_dict.items():[m
+     # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.[m
+     [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ def weather_field_metar_returns():[m
+     for a, b in test_resp_dict.items():[m
+         airport_id = str(a)[-3:][m
+[36m@@ -183,9 +181,6 @@[m [mdef weather_field_metar_returns():[m
+ [m
+ [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+ # TODO: Use these to save and retrive flight data from and to the mongoDB. Use it within route[m
+ # @router.post('/flight')[m
+ # async def add_flight(flight: Flight):[m
+[36m@@ -199,12 +194,6 @@[m [mdef weather_field_metar_returns():[m
+ [m
+ [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ # proof of concept for updating a field. Now just need to do multiple at once.:[m
+ for a, b in test_resp_dict.items():[m
+     airport_id = str(a)[-3:][m
+[36m@@ -236,17 +225,6 @@[m [mdef mdb_updates(resp_dict: dict, type_of_weather):[m
+     [m
+ [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ def x():[m
+     [m
+     # Basics:[m
+[36m@@ -375,11 +353,6 @@[m [mdef x():[m
+     [m
+ [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ # A powerful and flexible way to efficiently update multiple collections. Master it:[m
+ def powerful_aggregatae_way(resp_dict:dict):[m
+     pipeline = [[m
+[36m@@ -406,18 +379,9 @@[m [mdef powerful_aggregatae_way(resp_dict:dict):[m
+     collection_weather.aggregate(pipeline)[m
+     [m
+ [m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+ # legacy: This code was used to init the weather collection documents.[m
+ for each_airport in collection.find({}):[m
+     collection_weather.insert_one({'airport_id': each_airport['_id'],[m
+         'code': each_airport['code'],[m
+         'weather': {},[m
+         })[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[1mdiff --git a/dummy_flight_deet.pkl b/routes/root/pkl/dummy_flight_deet.pkl[m
+[1msimilarity index 100%[m
+[1mrename from dummy_flight_deet.pkl[m
+[1mrename to routes/root/pkl/dummy_flight_deet.pkl[m
+[1mdiff --git a/routes/root/root_class.py b/routes/root/root_class.py[m
+[1mindex 75446e5..4d70f7d 100644[m
+[1m--- a/routes/root/root_class.py[m
+[1m+++ b/routes/root/root_class.py[m
+[36m@@ -98,7 +98,7 @@[m [mclass Root_class():[m
+             # seems like this creates a task list of all functions and all those functions get sent to work at once altogether.[m
+         # this results in all the flight numbers getting sent at once and performing web scrape(`pick_flight_data()`) on all of them simultaneously[m
+     [m
+[31m-        completed = {}[m
+[32m+[m[32m        completed = [][m
+         troubled = set()[m
+             # VVI!!! The dictionary `futures` .value is the flight number and  key is the the memory location of return from pick_flight_data[m
+             # Used in list comprehension for loop with multiple keys and values in the dictionary. for example:[m
+[36m@@ -112,18 +112,22 @@[m [mclass Root_class():[m
+             futures = {executor.submit(multithreader, flt_num): flt_num for flt_num in[m
+                         input1}         # This submit method tasks to do to the executor for concurrent execution.[m
+             # futures .key() is the memory location of the task and the .value() is the flt_num associated with it[m
+[32m+[m[32m            # print('within futures')[m
+[32m+[m[32m            # this forloop is where the tasks are executed is a part of as_completed task[m
+             for future in as_completed(futures):    # as_completed is imported with the ThreadPoolExecutor[m
+                 # again, future is the memory location of the task[m
+                 flt_num = futures[future][m
+                 try:[m
+                     result = future.result()        # result is the output of the task at that memory location [m
+[31m-                    completed.update(result)[m
+[32m+[m[32m                    completed.append(result)[m
+                 except Exception as e:[m
+                     # print(f"Error scraping {flt_num}: {e}")[m
+                     troubled.add(flt_num)[m
+         [m
+         # TODO: Check completed data type. If list then its a list of dicts. Its outght to be.[m
+[31m-        return dict({'completed':  completed, 'troubled': troubled})[m
+[32m+[m[32m        rets = dict({'completed':  completed, 'troubled': troubled})[m
+[32m+[m[32m        # print(rets)[m
+[32m+[m[32m        return rets[m
+         [m
+ [m
+ class Root_source_links:[m
+[1mdiff --git a/routes/root/weather_fetch.py b/routes/root/weather_fetch.py[m
+[1mindex 066661a..887f2dc 100644[m
+[1m--- a/routes/root/weather_fetch.py[m
+[1m+++ b/routes/root/weather_fetch.py[m
+[36m@@ -14,7 +14,7 @@[m [mfrom pymongo import UpdateOne[m
+ from routes.root.weather_parse import Weather_parse[m
+ [m
+ """[m
+[31m- Check test_weather.py for set and unset operation.[m
+[32m+[m[32m Check mdb_doc.py for set and unset operation.[m
+ # TODO: user collections - weather.metar if there  is a achange.[m
+ """[m
+ # TODO: bandaid - quick fix for path. find better and clean this.[m
+[36m@@ -91,8 +91,8 @@[m [mclass Weather_fetch:[m
+             airport_code_trailing = str(url)[-3:][m
+             [m
+             update_operations.append([m
+[31m-                UpdateOne({'code': airport_code_trailing},[m
+[31m-                          {'$set': {f'weather.{weather_type}': weather}})[m
+[32m+[m[32m                UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code[m[41m [m
+[32m+[m[32m                          {'$set': {f'weather.{weather_type}': weather}})       # sets the weather subfield of that document[m
+             )[m
+ [m
+         result = collection_weather.bulk_write(update_operations)[m
+[1mdiff --git a/routes/route.py b/routes/route.py[m
+[1mindex 56b436a..8daece5 100644[m
+[1m--- a/routes/route.py[m
+[1m+++ b/routes/route.py[m
+[36m@@ -70,8 +70,8 @@[m [mThis list_serial return is a list type with each item a dict. Check individual_s[m
+ [m
+ @router.get('/airports')[m
+ async def get_airports():[m
+[31m-    print('Triggered /airports')[m
+     # Returns _id,name and code as document field keys.[m
+[32m+[m[32m    # print('Triggered /airports')[m
+     all_results = collection.find({})[m
+     return serialize_document_list(all_results)[m
+ [m
+[36m@@ -105,7 +105,7 @@[m [masync def initial_query_processing_react(initial_query, search: str = None):[m
+         # TODO: Do something here to process the raw search query and return it to the frontend.[m
+         return None[m
+ [m
+[31m-@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query[m
+[32m+[m[32m@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.[m
+ async def get_airport_data(airport_id, search: str = None):[m
+     print("airport_id", airport_id)[m
+     # serialized_return = serialize_airport_input_data(res)[m

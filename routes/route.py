@@ -8,7 +8,6 @@ from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
-from .root.gate_scrape import Gate_scrape_thread
 from .root.weather_parse import Weather_parse
 from .root.weather_fetch import Weather_fetch
 from .root.dep_des import Pull_flight_info
@@ -16,24 +15,23 @@ from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_retu
 from time import sleep
 import os
 import pickle
+from decouple import config
+from .celery_app import celery_app
 
 
-# This section will perform the gate scrape every 30 mins and save it in pickle file `gate_query_database`
-# Section responsible for switching on Gate lengthy scrape and flight aware api fetch.
-try:        # TODO: Find a better way other than try and except
-    from .root.Switch_n_auth import run_lengthy_web_scrape
-    if run_lengthy_web_scrape:
-        print('Running Lengthy web scrape')
-        gc_thread = Gate_scrape_thread()
-        gc_thread.start()
-    print('found Switch_n_auth. Using bool from run_lenghty_web_scrape to gate scrape')
-except Exception as e:
-    print('Couldnt find swithc_n_auth! ERROR:', e)
-    run_lengthy_web_scrape = False
+@celery_app.task
+def run_my_function():
+
+    print("Running the function...")
+    fetchandstoreWeather()
+
+    # TODO: Account for the fetchandstoreGate function in this async function and how often you want it to run.
+    # Add your desired logic here
+    return "Task Completed!"
+
 
 
 current_time = Gate_checker().date_time()
-
 
 app = FastAPI()
 
@@ -54,23 +52,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 router = APIRouter()
 
-
 """
-if you look up http://127.0.0.1:8000/test this following function will be called.
-It is calling the /test route which automatically calls the async function get_airports()
+if you look up http://127.0.0.1:8000/airports this following function will be called.
+It is calling the /airports route which automatically calls the async function get_airports()
 it looks up the database through `collection` from the config/database.py file
 collection has these crud operation methods like find(), insert_one(), insert_many() and delete_one()
 The return from the collection is a type - <class 'pymongo.cursor.Cursor'>
-it gets sent to list serial and in turn through individual_serial to convert the database into python readble format.
-This list_serial return is a list type with each item a dict. Check individual_serial to see the dict format.
+it gets sent to list serial to convert the database into python readble format.
+This serialize_document_list return is a list type with each item a dict.
+Each list item is a mdb document
+Check individual_serial to see the dict format.
 """
 
 @router.get('/airports')
 async def get_airports():
-    # Returns _id,name and code as document field keys.
+    # Returns '_id','name' and 'code' as document field keys and values as its values.
     # print('Triggered /airports')
     all_results = collection.find({})
     return serialize_document_list(all_results)
@@ -78,7 +76,7 @@ async def get_airports():
 
 @router.get('/flightNumbers')
 async def get_flight_numbers():
-    # TODO: Need to add associated details in this collection-dep/des, STD's, gates, weather. Setup celery scheduler to constantly updatae this data. once sent, look for updated info. 
+    # TODO VHP: Need to add associated details in this collection-dep/des, STD's, gates, weather. Setup celery scheduler to constantly updatae this data. once sent, look for updated info. 
         # Might want to exclude the gates since it can be delayed.
     all_results = collection_flights.find({})
     return serialize_document_list(all_results)
@@ -90,23 +88,25 @@ async def get_us_concourses():
     return serialize_document_list(all_results)
 
 
-@router.get('/query/{initial_query}')       
-async def initial_query_processing_react(initial_query, search: str = None):
+@router.get('/query/{passed_variable}')       
+async def initial_query_processing_react(passed_variable, search: str = None):
     # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
     # This code is present in the react as last resort when dropdown is exhausted.
-    # The only reason I have left initial_query here is for future use of similar variable case.
-    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is initial_query
-    print('Last resort since auto suggestion is exhausted. initial_query:', initial_query,)
+    # The only reason I have left passed_variable here is for future use of similar variable case.
+    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
+    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
     print('search value:', search)
     # As user types in the search bar this if statement gets triggered.
-
-    if (initial_query != "airport"):
-        print('initial_query is not airport. It is:', initial_query)
-        # TODO: Do something here to process the raw search query and return it to the frontend.
-        return None
+    return parse_query(search)
+    # if (passed_variable != "airport"):
+    #     print('passed_variable is not airport. It is:', passed_variable)
+    #     # TODO: Do something here to process the raw search query and return it to the frontend.
+    #     return None
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id, search: str = None):
+    # This is a drop down selection item that is an airprot.
+    # mdb id for airport is passed from react when user selects a drop down item that is an airport.
     print("airport_id", airport_id)
     # serialized_return = serialize_airport_input_data(res)
     res = collection_weather.find_one(
@@ -116,7 +116,7 @@ async def get_airport_data(airport_id, search: str = None):
 
 
 @router.get('/fetchandstoreWeather')
-async def fetch_weather_data():
+async def fetchandstoreWeather():
     # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists. Needs to be schedudled every 55 mins for metar and datis, 4 hours for taf,
         # Find a way to schedule this either through a dedicated route via react or just python multi threading.
     # TODO: Make similar for gate fetch and store into mdb and run a scheduler.
@@ -131,7 +131,12 @@ async def fetch_weather_data():
     return None
 
 @router.get('/fetchandstoreGate')
-async def fetch_weather_data():
+async def fetchandstoreGate():
+
+    from routes.root.gate_scrape import Gate_Scrape
+    gs = Gate_Scrape()
+
+    gs.fetch_and_store()
 
     return None
 
@@ -148,49 +153,10 @@ def loading_example_weather():
     return weather_info
 
 
-def weather_stuff_react(airport_id):
-
-    wp = Weather_parse()
-    # weather = wp.scrape(weather_query, datis_arr=True)
-
-    # Dont get actual data yet. It wont work. use the test/example data for now to get the highlights to work.
-    actual_weather = False
-
-    # Gets the actual weather wihtout the highlight
-    def get_actual_weather():
-        weather = wp.processed_weather(query=airport_id,)
-        weather_page_data = {}
-    
-        weather_page_data['airport'] = airport_id
-    
-        weather_page_data['D_ATIS'] = weather['D-ATIS']
-    
-        weather_page_data['METAR'] = weather['METAR']
-        weather_page_data['TAF'] = weather['TAF']
-    
-        weather_page_data['datis_zt'] = weather['D-ATIS_zt']
-        weather_page_data['metar_zt'] = weather['METAR_zt']
-        weather_page_data['taf_zt'] = weather['TAF_zt']
-        return weather_page_data
-
-    def get_test_data_with_highlights():
-        array_returns  = wp.weather_highlight_array(
-                    {'D-ATIS':wp.test_datis,'METAR':wp.test_metar,'TAF':wp.test_taf}
-                    )
-        # print(array_returns)
-        return array_returns
-
-
-    if actual_weather:
-        weather_page_data = get_actual_weather()
-    else:
-        weather_page_data = get_test_data_with_highlights()
-    
-    return weather_page_data
-
-
 @router.get("/weatherDisplay/{airportID}")
 def weather_display(airportID):
+    # This is used in the parse query.
+ 
     # remove leading and trailing spaces. Seems precautionary.
     airportID = airportID
 
@@ -228,136 +194,108 @@ async def root(query: str = None):
     return bulk_flight_deet_returns
 
 
-# @router.get("/rawQuery/{query}")
-# async def root(query: str = None):
-#     print('Within rawQuery')
-#     # Root_class().send_email(body_to_send=query)
-#     print('temp test flight data is being sent.. \n','DELETE THIS TEMP DATA')
-#     temp_test_flight_data = test_flight_deet_data()
-#     bulk_flight_deet_returns = temp_test_flight_data
-
-#     # bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
-#     # bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
-#     # bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
-#     # bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
-#     # bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
-#     # bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
-
-#     print(bulk_flight_deet_returns.keys())
-#     # bulk_flight_deet_returns = await parse_query(None, query)
-
-#     return bulk_flight_deet_returns
-
-
-async def parse_query(main_query):
+def parse_query(main_query):
     """
-    Deprecate this! get it from the legacy django codebase. this can be handeled in frontend-react
+    TODO : Deprecate this! get it from the legacy django codebase. this can be handeled in frontend-react
     """
 
     # Global variable since it is used outside of the if statement in case it was not triggered. purpose: Handeling Error
     query_in_list_form = []
     # if .split() method is used outside here it can return since empty strings cannot be split.
 
-    if main_query == '':        # query is empty then return all gates
-        print('Empty query')
-        return gate_info(main_query='')
-    if 'DUMM' in main_query.upper():
-        print('in dummy')
-        return test_flight_deet_data()
+    # splits query. Necessary operation to avoid complexity. Its a quick fix for a deeper more wider issue.
+    query_in_list_form = main_query.split()
 
-    if main_query != '':
-        # splits query. Necessary operation to avoid complexity. Its a quick fix for a deeper more wider issue.
-        query_in_list_form = main_query.split()
+    # TODO: Log the extent of query reach deep within this code, also log its occurrances to find impossible statements and frequent searches.
+    # If query is only one word or item. else statement for more than 1 is outside of this indent. bring it in as an elif statement to this if.
+    if len(query_in_list_form) == 1:
 
-        # TODO: Log the extent of query reach deep within this code, also log its occurrances to find impossible statements and frequent searches.
-        # If query is only one word or item. else statement for more than 1 is outside of this indent. bring it in as an elif statement to this if.
-        if len(query_in_list_form) == 1:
-
-            # this is string form instead of list
-            query = query_in_list_form[0].upper()
-            # TODO: find a better way to handle this. Maybe regex. Need a system that classifies the query and assigns it a dedicated function like flight_deet or gate query.
-            # Accounting for flight number query with leading alphabets
-            if query[:2] == 'UA' or query[:3] == 'GJS':
-                if query[0] == 'G':     # if GJS instead of UA: else its UA
-                    # Its GJS
-                    airline_code, flt_digits = query[:3], query[3:]
-                else:
-                    flt_digits = query[2:]
-                    airline_code = None
-                    if query[:3] ==  'UAL':
-                        airline_code = 'UAL'
-                        flt_digits = query[3:]
-                    elif query[:2] == 'UA':
-                        airline_code = 'UA'
-                print('\nSearching for:', airline_code, flt_digits)
-                return await flight_deets(airline_code=airline_code, flight_number_query=flt_digits)
-
-            # flight or gate info page returns
-            elif len(query) == 4 or len(query) == 3 or len(query) == 2:
-
-                if query.isdigit():
-                    query = int(query)
-                    if 1 <= query <= 35 or 40 <= query <= 136:              # Accounting for EWR gates for gate query
-                        return gate_info(main_query=str(query))
-                    else:                                                   # Accounting for fligh number
-                        print("INITIATING flight_deets FUNCTION.")
-                        return await flight_deets(airline_code=None, flight_number_query=query)
-                else:
-                    if len(query) == 4 and query[0] == 'K':
-                        weather_query_airport = query
-                        # Making query uppercase for it to be compatible
-                        weather_query_airport = weather_query_airport.upper()
-                        return weather_display(weather_query_airport)
-                    else:           # tpical gate query with length of 2-4 alphanumerics
-                        print('gate query')
-                        return gate_info(main_query=str(query))
-            # Accounting for 1 letter only. Gate query.
-            elif 'A' in query or 'B' in query or 'C' in query or len(query) == 1:
-                # When the length of query_in_list_form is only 1 it returns gates table for that particular query.
-                gate_query = query
-                return gate_info(main_query=gate_query)
-            else:   # return gate
-                gate_query = query
-                return gate_info(main_query=gate_query)
-
-        # its really an else statement but stated >1 here for situational awareness. This is more than one word query.
-        elif len(query_in_list_form) > 1:
-            # Making it uppercase for compatibility issues and error handling
-            first_letter = query_in_list_form[0].upper()
-            if first_letter == 'W':
-                weather_query_airport = query_in_list_form[1]
-                # Making query uppercase for it to be compatible
-                weather_query_airport = weather_query_airport.upper()
-                return weather_display(weather_query_airport)
+        # this is string form instead of list
+        query = query_in_list_form[0].upper()
+        # TODO: find a better way to handle this. Maybe regex. Need a system that classifies the query and assigns it a dedicated function like flight_deet or gate query.
+        # Accounting for flight number query with leading alphabets
+        if query[:2] == 'UA' or query[:3] == 'GJS':
+            if query[0] == 'G':     # if GJS instead of UA: else its UA
+                # Its GJS
+                airline_code, flt_digits = query[:3], query[3:]
             else:
-                return gate_info(main_query=' '.join(query_in_list_form))
+                flt_digits = query[2:]
+                airline_code = None
+                if query[:3] ==  'UAL':
+                    airline_code = 'UAL'
+                    flt_digits = query[3:]
+                elif query[:2] == 'UA':
+                    airline_code = 'UA'
+            print('\nSearching for:', airline_code, flt_digits)
+            return {'flightNumber': airline_code+flt_digits, 'type': 'flightNumber'}
+
+        # flight or gate info page returns
+        elif len(query) == 4 or len(query) == 3 or len(query) == 2:
+
+            if query.isdigit():
+                query = int(query)
+                if 1 <= query <= 35 or 40 <= query <= 136:              # Accounting for EWR gates for gate query
+                    return gate_info(main_query=str(query))
+                else:                                                   # Accounting for fligh number
+                    print("INITIATING flight_deets FUNCTION.")
+                    return {'flightNumber': query, 'type': 'flightNumber'}
+            else:
+                if len(query) == 4 and query[0] == 'K':
+                    weather_query_airport = query
+                    # Making query uppercase for it to be compatible
+                    weather_query_airport = weather_query_airport.upper()
+                    return {'code': weather_query_airport, 'type': 'airport'}
+                else:           # tpical gate query with length of 2-4 alphanumerics
+                    print('gate query')
+                    return {'gate': str(query), 'type': 'gate'}
+                    return gate_info(main_query=str(query))
+        # Accounting for 1 letter only. Gate query.
+        elif 'A' in query or 'B' in query or 'C' in query or len(query) == 1:
+            # When the length of query_in_list_form is only 1 it returns gates table for that particular query.
+            gate_query = query
+            return {'gate': str(gate_query), 'type': 'gate'}
+        else:   # return gate
+            gate_query = query
+            return {'gate': str(gate_query), 'type': 'gate'}
+
+    # its really an else statement but stated >1 here for situational awareness. This is more than one word query.
+    elif len(query_in_list_form) > 1:
+        # Making it uppercase for compatibility issues and error handling
+        first_letter = query_in_list_form[0].upper()
+        if first_letter == 'W':
+            weather_query_airport = query_in_list_form[1]
+            # Making query uppercase for it to be compatible
+            weather_query_airport = weather_query_airport.upper()
+            return weather_display(weather_query_airport)
+        else:
+            return gate_info(main_query=' '.join(query_in_list_form))
 
 
 def gate_info(main_query):
-    gate = main_query
+    gate_query = main_query
     # In the database all the gates are uppercase so making the query uppercase
-    gate = gate.upper()
+    gate_query = gate_query.upper()
     current_time = Root_class().date_time()
 
     # This is a list full of dictionararies returned by err_UA_gate depending on what user requested..
     # Each dictionary has 4 key value pair.eg. gate:c10,flight_number:UA4433,scheduled:20:34 and so on
-    gate_data_table = Gate_checker().ewr_UA_gate(gate)
+    gate_data_table = Gate_checker().ewr_UA_gate(gate_query)
 
     # This can be a json to be delivered to the frontend
     data_out = {'gate_data_table': gate_data_table,
-                'gate': gate, 'current_time': current_time}
+                'gate': gate_query, 'current_time': current_time}
 
     # showing info if the info is found else it falls back to `No flights found for {{gate}}`on flight_info.html
     if gate_data_table:
         # print(gate_data_table)
         return data_out
     else:       # Returns all gates since query is empty. Maybe this is not necessary. TODO: Try deleting else statement.
-        return {'gate': gate}
+        return {'gate': gate_query}
 
 
 async def flight_deets(airline_code=None, flight_number_query=None, ):
     # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
-    if run_lengthy_web_scrape:
+    if config('env') == 'production':
         # to restrict fa api use: for local use keep it False.
         bypass_fa = False
     else:
@@ -479,6 +417,9 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
     return bulk_flight_deets
 
 
+
+
+
 @router.get("/DepartureDestination/{flight_number}")
 async def ua_dep_dest_flight_status(flight_number):
     # dep and destination id pull
@@ -494,7 +435,6 @@ async def ua_dep_dest_flight_status(flight_number):
     return united_dep_dest
 
 
-
 @router.get("/DepartureDestinationTZ/{flight_number}")
 async def flight_stats_url(flight_number):      # time zone pull
     flt_info = Pull_flight_info()
@@ -505,6 +445,7 @@ async def flight_stats_url(flight_number):      # time zone pull
     return fs_departure_arr_time_zone
 
 
+# TODO: Need to account for aviation stack
 @router.get("/flightAware/{airline_code}/{flight_number}")
 async def flight_aware_w_auth(airline_code, flight_number):
     return None
@@ -523,9 +464,6 @@ async def flight_aware_w_auth(airline_code, flight_number):
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
-
-
-# TODO: Need to account for aviation stack
 
 
 @router.get("/Weather/{airport_id}")

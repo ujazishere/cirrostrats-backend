@@ -138,39 +138,9 @@ class Gate_Scrape(Root_class):
         return completed_flights
 
 
-    async def fetch_and_store(self,):
+    def fetch_and_store(self,):
         
         rets = self.activator()
         gmo = Gates_mdb_ops()
         gmo.mdb_updates(rets)
         # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
-
-
-# Mind the threading. Inheriting the thread that makes the code run concurrently
-# TODO: Investigate and master this threading.Thread sorcery
-class Gate_scrape_thread(threading.Thread):
-    def __init__(self):
-        # Super method inherits the init method of the superclass. In this case`Root_class`.
-        super().__init__()
-        self.gate_scrape = Gate_Scrape()
-
-    
-    # run method is inherited through .Thread; It gets called as
-    def run(self):
-        
-        # self.gc.activator()
-        while True:
-            print('Lengthy Scrape  in progress...')
-            # The activator here will scrape and save data into the gate_query_database.pkl file.
-            self.gate_scrape.activator()
-            
-            eastern = pytz.timezone('US/eastern')           # Time stamp is local to this Loop. Avoid moving it around
-            now = datetime.now(eastern)
-            latest_time = now.strftime("%#I:%M%p, %b %d.")
-            print('Pulled Gate Scrape at:', latest_time, eastern)
-            
-           # TODO: Requires stops between 11:55pm and 4am while also pulling flights from morning once. 
-            time.sleep(1800)        
-# flights = Gate_checker('').ewr_UA_gate()
-
-

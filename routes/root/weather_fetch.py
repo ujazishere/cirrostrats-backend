@@ -34,7 +34,7 @@ class Weather_fetch:
         all_mdb_airport_codes = [i['code'] for i in collection.find({})]
 
         import os
-        cwd = (os.getcwd())
+        cwd = os.getcwd()
         # TODO: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
         all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
         print('PATHHHH:', all_datis_airports_path)
@@ -55,6 +55,7 @@ class Weather_fetch:
         }
 
     def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
+        # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
@@ -92,7 +93,9 @@ class Weather_fetch:
             
             update_operations.append(
                 UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code 
-                          {'$set': {f'weather.{weather_type}': weather}})       # sets the weather subfield of that document
+                          {'$set': {f'weather.{weather_type}': weather},}
+                        #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     # TODO: Check if this can work since it has be used to pick out the airports that are not fetched more frequently and notify devs.
+                          )       # sets the weather subfield of that document
             )
 
         result = collection_weather.bulk_write(update_operations)
@@ -111,7 +114,6 @@ class Weather_fetch:
                           {'$set': {'flightNumber': flightNumber}}
                           )
             )
-
         result = collection_weather.bulk_write(update_operations)
         print(result)
 
@@ -120,6 +122,7 @@ class Weather_fetch:
         print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
         # This function processess the raw list and returns just the pure datis
+        # TODO: Need to account for ARR/DEP datis.
         for url,datis in resp_dict.items():
             if not 'error' in datis:
                 raw_datis_from_api = json.loads(datis)
@@ -129,20 +132,33 @@ class Weather_fetch:
         return resp_dict
 
 
-    async def fetch_and_store(self,):
+    async def fetch_and_store(self,):       # TODO: Make this into a TAF only form. just like the ones below
         print('Initiating the weather fetch.')
         for weather_type, weather_links in self.weather_links_dict.items():
             # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
             # Check datis bulk extract and bulk weather extract for help on this.
             print(weather_type)
-            if weather_type == 'taf':
+            if weather_type == 'taf':           # TODO: Why is this only accounting for the taf not for all others?
                 print(f'For {weather_type}...')
                 resp_dict: dict = await self.fm.async_pull(list(weather_links))
                 
                 # Datis needs special processing before you put into collection. This bit accomplishes it
+                # TODO: This bit is within the indent of the taf which never reached datis. Need to be outside of the if statement.
                 if weather_type == 'datis':
                     resp_dict = self.datis_processing(resp_dict)
                 
                 self.mdb_updates(resp_dict,weather_type)
                 # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
         
+
+    async def fetch_and_store_metar(self,):
+        print('Metar async fetch in progress..')
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['metar'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        print('Fetch done.')
+        self.mdb_updates(resp_dict=resp_dict,weather_type='metar')
+
+    async def fetch_and_store_datis(self,):
+        print('DATIS async fetch in progress..')
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        print('Fetch done.')
+        self.mdb_updates(resp_dict=resp_dict,weather_type='datis')

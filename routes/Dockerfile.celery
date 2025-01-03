@@ -1,0 +1,20 @@
+FROM python:3.9-slim
+
+# Set working directory to /app
+WORKDIR /app
+
+# Copy requirements file
+# COPY requirements.txt .
+
+# Copy application code
+COPY . .
+
+# Install dependencies
+# RUN pip install -r requirements.txt
+RUN pip install redis "celery[redis]>=5.4.0"
+
+# Expose port. This is only to docment does not actually bind.
+# EXPOSE 8000
+
+# Run command when container launches
+CMD ["celery", "-A", "celery_app", "worker", "--loglevel=info"]

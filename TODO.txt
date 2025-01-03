@@ -1,19 +1,21 @@
 TODO: UJ
-    """Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it"""
-    """ DONT JUMP FROM ONE TO ANOTHER. FINISH the first one COMPLETELY. Then move to the next one. """
+    "Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it"
     
-    Currently working on the gate scrape.
+    Get the ATIS to update periodically, set up notifications when updates fail.
+
+    ***MAKE RELIABLE DATA FETCHING A PRIORITY*** -- In the mean time you can use aviation stack, flightRadar and flightAware - 
+        multiple free accounts to increase requests and track the exhaustion of requests.
+
+        ***IT IS CRITICAL TO GET PROPER SOURCE OF FLIGHT DATA. JMS MAY BE THE DEAL BREAKER. fetching all departures on many major airports just doesn't seem feasable.***
+    Not practicle with scraping: Currently working on fetching flight numbers and their associated information from flight-stats.com, and any other web.
+    continuous weather, gate and flight_number data fetching and saving on mdb. setting up checkpoints to notify of ill behaved fetching.
+    Currently working on the gate scrape. - Works need to have it fetch consistently, fix date format issues and aesthetics.
     
-    Next:
-    Indexing with mongo: https://www.youtube.com/watch?v=D14wWW9EEx8&t=19s
-                            https://www.youtube.com/watch?v=nkSjhL40CTs
-                            https://www.youtube.com/watch?v=ZoxmVjc4Xdg
-    
-    logic to consistently pull 
+    logic to consistently pull and save.
         Current weather based on airports in the database, Save them in the mdb collection `Weather` for access into the main collection and create index.
             Also account for test data in the collection.
             If there  is one server that consistently pulls weather there wont be a need to have another one for testing instance. It would automatically fetch from the legacy server.
-                So maybe distribute tasks via container orchestration- one container for python fetching and backend, one for .
+                So maybe distribute tasks via container orchestration- one container for python fetching and backend, one for celery, one for react.
             weather scheduler:
                 # TODO VHP: implement health checks such that  if things are not updating/returns are not consistent OR health check gets pushed out to devops as notifications.
                 # inefficiency:- Airports that return null consistently should be fetched less frequently.
@@ -21,10 +23,17 @@ TODO: UJ
 
         current flight numbers and their details.
         some sort of ping and save to databse to access in the frontend.
+    
+    
+    Indexing can be done after the data is fetched.
+    Indexing with mongo: https://www.youtube.com/watch?v=D14wWW9EEx8&t=19s
+                            https://www.youtube.com/watch?v=nkSjhL40CTs
+                            https://www.youtube.com/watch?v=ZoxmVjc4Xdg
+    
 
 
     clean up code. clean up the mess: separate scraping, add notes all along
-    Use .env file rather than the switch and auth. Move django contents over.
+    Use .env file rather than the switch and auth. Move django contents over(from where to where?).
 
 crawl for all flight numbers and their associated information from flight-stats.com
 Need to setup CORS middleware for Fastapi. it usses `app` and the logic uses router. Check for compatibility.
@@ -54,11 +63,15 @@ Extract all airports D-Atis info during all weather conditinos for analyses and 
 integrate EDCT info  from https://www.fly.faa.gov/edct/jsp/edctLookUp.jsp
     ask then faa guys you have been reaching out to for jms issue
 
-Remove sql database and create own for seamless lightweight version.
+Remove sql database and create own for seamless lightweight version in case mdb goes out.
 Fix up weather page and include ability to pull multiple airports
-Understand and configure mongoDB
+Understand and configure mongoDB.
 
-Logic:
+Airport based recommendations: hotel, restaurents, things to do, etc.
+runways and winds
+frequencies for the airport.
+
+Machine learning Logic:
         "{gate} for {partial/complete airport ID/name}" = "{gate} {airport}"
         "{gate} for {partial/complete airport name}" = "{gate} {airport}"   
         "weather for {partial/complete airport} = "{metar} {airport}"

@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
-# Expose the port (if needed)
+# Expose the port (if needed) This is only to docment does not actually bind. 
 EXPOSE 8000
 
 # Start the Uvicorn server
