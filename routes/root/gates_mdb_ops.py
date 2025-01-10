@@ -39,7 +39,7 @@ class Gates_mdb_ops:
         
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
         # TODO: account for new airport codes, maybe upsert or maybe just none for now.
-        print('Updating mdb')
+        print('Updating mdb in Gates')
         update_operations = []
 
         for i in incoming_data:

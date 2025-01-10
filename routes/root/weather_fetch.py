@@ -1,3 +1,4 @@
+import threading
 from config.database import collection_weather,collection
 from bson import ObjectId
 try:
@@ -151,14 +152,42 @@ class Weather_fetch:
                 # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
         
 
-    async def fetch_and_store_metar(self,):
-        print('Metar async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['metar'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
-        print('Fetch done.')
-        self.mdb_updates(resp_dict=resp_dict,weather_type='metar')
+    async def fetch_and_store_by_type(self,weather_type):
+        print(f'{weather_type} async fetch in progress..')
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        print(f'{weather_type} fetch done.')
+        self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
 
     async def fetch_and_store_datis(self,):
         print('DATIS async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         print('Fetch done.')
         self.mdb_updates(resp_dict=resp_dict,weather_type='datis')
+    
+    async def fetch_and_store_TAF(self,):
+        print('DATIS async fetch in progress..')
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['taf'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        print('Fetch done.')
+        self.mdb_updates(resp_dict=resp_dict,weather_type='taf')
+
+# Only for use on fastapi if celery doesn't work.
+# class Weather_fetch_thread(threading.Thread):
+#     def __init__(self):
+#         super().__init__()
+#         self.Wf = Weather_fetch()
+
+#     # run method is inherited through .Thread; It gets called as
+#     def run(self):
+        
+#         while True:
+#             print('Weather fetch in progress...')
+
+#             self.Wf.fetch_and_store_datis()
+#             yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
+#             utc_now = yyyymmddhhmm
+#             print('Weather fetched at:', utc_now)
+            
+            
+#             dt.time.sleep(1800)        
+#     # flights = Gate_checker('').ewr_UA_gate()
+

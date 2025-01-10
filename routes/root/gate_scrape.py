@@ -140,7 +140,7 @@ class Gate_Scrape(Root_class):
 
     def fetch_and_store(self,):
         
-        rets = self.activator()
+        fetch_returns = self.activator()
         gmo = Gates_mdb_ops()
-        gmo.mdb_updates(rets)
+        gmo.mdb_updates(fetch_returns)
         # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.

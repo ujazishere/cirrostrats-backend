@@ -1,9 +1,18 @@
+import asyncio
 from celery import Celery
 from celery.schedules import crontab
-# from routes.root.weather_fetch import Weather_fetch  # Used for periodic scheduling
+from routes.root.weather_fetch import Weather_fetch  # Used for periodic scheduling
+from routes.root.gate_scrape import Gate_Scrape
+import datetime as dt
 
-import os
-print(os.getcwd(), 'DIR->>',os.listdir())
+
+
+'''     ***CAUTION***
+    Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
+    instead use asyncio.run(async_function()) and this async_function() can be an async function. check example below for asyncio.run()
+'''
+
+
 
 celery_app = Celery(
     'tasks',
@@ -15,39 +24,76 @@ celery_app = Celery(
 
 @celery_app.task
 def MetarFetch():
+    asyncio.run(run_metar_fetch())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
-    print('Testing MetarFetch empty function')      # TODO: If this works then uncomment the below lines.
-    # Wf = Weather_fetch()
-    # print('Starting METAR fetch')
-    # await Wf.fetch_and_store_metar()
-    # print("finished fetching")
-    # return None
+async def run_metar_fetch():
+    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
+    Wf = Weather_fetch()
+    await Wf.fetch_and_store_by_type(weather_type='metar')
+    return 'Celery task completed for fetching metar'
+
 
 @celery_app.task
 def DatisFetch():
+    asyncio.run(run_datis_fetch())
 
-    print('Testing DATIS fetch empty function')         # TODO: If this works then uncomment the below lines.
+async def run_datis_fetch():    
+    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
+    Wf = Weather_fetch()
+    await Wf.fetch_and_store_by_type(weather_type='datis')
 
-    # Wf = Weather_fetch()
-    # print('Starting DATIS fetch')
-    # await Wf.fetch_and_store_datis()
-    # print("finished fetching")
-    # return None
+
+@celery_app.task
+def TAFFetch():
+    asyncio.run(run_TAF_fetch())
+
+async def run_TAF_fetch():    
+    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
+    Wf = Weather_fetch()
+    await Wf.fetch_and_store_by_type(weather_type='taf')
+
+
+@celery_app.task
+def GateFetch():
+    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
+    gs = Gate_Scrape()
+    gs.fetch_and_store()
+    Gf = Weather_fetch()
+
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
+
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
-    'run-every-55-mins-past-hour': {
-        'task': 'celery_app.MetarFetch',      # The task function that needs to be scheduled
-        'schedule': crontab(minute=33),  # frequency of the task. In this case every 53 mins past the hour.
+    # TODO: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every minute or so.
+    'run-metarfetch-every-53-mins-past-hour': {
+        'task': 'routes.celery_app.MetarFetch',      # The task function that needs to be scheduled
+        'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
-    'func_run_frequently': {
-        'task': 'celery_app.DatisFetch',
-        'schedule': 20,  # Every x seconds
+    'run-datisfetch-every-53-mins-past-hour': {
+        'task': 'routes.celery_app.DatisFetch',      # The task function that needs to be scheduled
+        'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
+        # 'args': (16, 16)          # Arguments to pass to the task function
     },
+    'run-TAFfetch-every-4-hours': {
+        'task': 'routes.celery_app.TAFFetch',      # The task function that needs to be scheduled
+        'schedule': crontab(minute=21, hour='5,11,17,23'),  # Run at 05:21, 11:21, 17:21, and 23:21 UTC
+        # 'args': (16, 16)          # Arguments to pass to the task function
+    },
+    'gatefetch-func_run_frequently': {
+        'task': 'routes.celery_app.GateFetch',
+        'schedule': 1800,  # Every x seconds
+    },
+    # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.
+    # 'func_run_frequently': {
+    #     'task': 'routes.celery_app.DatisFetch',
+    #     'schedule': 30,  # Every x seconds
+    #     # 'args': (16, 16)          # Arguments to pass to the task function
+    # },
 }
+
 
 # Import the tasks so they're registered with the app
 # celery_app.autodiscover_tasks(['cel_trial'])

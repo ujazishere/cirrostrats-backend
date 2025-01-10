@@ -1,6 +1,6 @@
 win_local.bat
 trial.py
-
+celerybeat-schedule
 /venv
 .env
 *.py[cod]

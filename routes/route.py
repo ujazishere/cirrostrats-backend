@@ -18,16 +18,17 @@ import pickle
 from decouple import config
 from .celery_app import celery_app
 
+# This code is only to run outside of celery in case celery doesnt work with async. This organic async should work outside of celery.
+# if config('run_weather_fetch'):
+#     print('weather_fetch config',config('run_weather_fetch'))
+#     print('Running weather fetch...')
+#     wf_thread = Weather_fetch_thread()
+#     wf_thread.start()
+# else:
+#     print('weather_fetch not active: ',config('run_weather_fetch'))
+#     print(bool(config('run_weather_fetch')))
 
-@celery_app.task
-def run_my_function():
 
-    print("Running the function...")
-    fetchandstoreWeather()
-
-    # TODO: Account for the fetchandstoreGate function in this async function and how often you want it to run.
-    # Add your desired logic here
-    return "Task Completed!"
 
 
 
