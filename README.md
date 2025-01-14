@@ -1,42 +1,40 @@
-### Backend
 
 
-### Can be spooled up by using one of two ways:
+# One of two ways to do this:
+**A: Docker container(spools up frontend, backend and nginx using docker:) - Most efficient and Full-Featured:**
 
-## Docker container(spools up frontend, backend and nginx):
-1. **Clone the base repo:f** https://github.com/Cirrostrats/base
+**OR**
 
-2. **Clone backend and the frontend repos within the base repo**
-
-   Clone this repo within base directory and follow the instructions from point 3.
-   Clone the frontend repo into the base directory and follow its own set of instructions.
-
-3. **Create an env file inside of the cirrostrats-backend folder :**
-
-   Create new file and name it '.env'
-   inside of the file create a variable named connection_string=''
-   inside of the quotes add your connection string with username and password for the mongo db.
-
-4. **Run docker compose command to build and run the container:**
-   
-   You will need docker desktop up and running for the following command to work.
-   ```docker-compose up --build```
-
-5. **Access backend:**
-
-   Open browser and access backend through: [http://127.0.0.1:8000](http://127.0.0.1:8000).
+**B: Without docker(Spool up just the backend) - Python FastAPI**
 
 
-## Without Docker(Just backend):
+## A: Docker container(spools up frontend, backend and nginx using docker:) - Most efficient and Full-Featured:
 
-1. **Open Terminal:** You will need to open the terminal via your computer or visual code
+1. **Clone the base repo:f** [https://github.com/Cirrostrats/base](https://github.com/Cirrostrats/base)
+
+2. **Follow instructions in `base/README.md`**
+
+
+## B: Without docker(Spool up just the backend - Python FastAPI)
+
+1. **Clone this cirrostrats-backend repo**
 
 2. **Running the Backend:**
+
+   **`.env` contents:**
+   **Create an `.env` file inside of the `cirrostrats-backend` folder :**
+   **paste the following into this `.env` file, replacing the `connection_string` with your MongoDB connection string.**
+      
+      ```bash
+      # .env (for local environment)
+      connection_string='***'
+      env='development'         # Use this locally. For production change it to 'production'
+      ```
 
    a. **Ensure Python Installation:** Make sure Python is installed on your machine.
 
 
-   b. **Initialize Virtual Environment (venv):**
+   b. **Initialize Virtual Environment (venv):** Ensure you are working in `cirrostrats-backend` directory
 
    ```bash
    python -m venv venv
@@ -54,12 +52,12 @@
    pip install -r requirements.txt
    ```
 
-   e. **Run the Server:**
+   e. **Run the FastAPI Server:**
 
    ```bash
    uvicorn main:app --reload
    ```
 
-   f. **Local browser acess of the backend:** The project will be locally running on [http://127.0.0.1:8000](http://127.0.0.1:8000).
+   f. **Access the Backend Locally:** The project will be locally running at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-   g. **Accessing the frontend Project:** frontend for this project is at: https://github.com/ujazishere/cirrostrats-frontend
+
