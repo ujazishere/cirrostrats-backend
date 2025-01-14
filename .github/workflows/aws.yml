@@ -22,5 +22,5 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i private_key ${USER}@${HOST} '
           cd base/cirrostrats-backend &&
           git pull origin dev &&
-          docker-compose --profile production up -d --build
+          docker compose --profile production up -d --build
         '
