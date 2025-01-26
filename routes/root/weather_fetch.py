@@ -14,6 +14,7 @@ import pickle
 from pymongo import UpdateOne
 from routes.root.weather_parse import Weather_parse
 
+
 """
  Check mdb_doc.py for set and unset operation.
 # TODO: user collections - weather.metar if there  is a achange.
@@ -27,7 +28,7 @@ class Weather_fetch:
         self.sl = Source_links_and_api()
         self.fm = Fetching_Mechanism()
         self.rsl = Root_source_links
-
+        self.weather_returns = {}
         self.weather_links_dict = self.weather_link_returns()
 
     def weather_link_returns(self) -> None:
@@ -129,7 +130,11 @@ class Weather_fetch:
                 raw_datis_from_api = json.loads(datis)
                 raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
                 resp_dict[url]=raw_datis
-   
+            else:
+                # ending up in this block means the code is broken somewhere.
+                # TODO: checkpoint here for notification- track how many times the code ends up here.
+                print('Datis processing error')
+                pass
         return resp_dict
 
 
@@ -155,16 +160,27 @@ class Weather_fetch:
     async def fetch_and_store_by_type(self,weather_type):
         print(f'{weather_type} async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
-        print(f'{weather_type} fetch done.')
-        self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
+        
+        if weather_type == 'datis':
+            processed_datis = self.datis_processing(resp_dict=resp_dict)
+            self.weather_returns[weather_type] = processed_datis
+            print('processed datis')
+            self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
+        else:
+            self.weather_returns[weather_type] = resp_dict
+            self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
 
-    async def fetch_and_store_datis(self,):
+        
+        print(f'{weather_type} fetch done.')
+
+
+    async def fetch_and_store_datis(self,):         # Unused
         print('DATIS async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         print('Fetch done.')
         self.mdb_updates(resp_dict=resp_dict,weather_type='datis')
     
-    async def fetch_and_store_TAF(self,):
+    async def fetch_and_store_TAF(self,):           # Unused
         print('DATIS async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['taf'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         print('Fetch done.')
@@ -191,3 +207,17 @@ class Weather_fetch:
 #             dt.time.sleep(1800)        
 #     # flights = Gate_checker('').ewr_UA_gate()
 
+"""
+# For use in jupyter
+
+# test datis returns:
+from routes.root.weather_fetch import Weather_fetch
+Wf = Weather_fetch()
+
+Wf.fetch_and_store_by_type(weather_type='datis')
+datis = Wf.datis_returns
+
+# Wf.fetch_and_store_by_type(weather_type='metar')
+# Wf.fetch_and_store_by_type(weather_type='taf')
+
+"""

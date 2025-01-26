@@ -1,7 +1,6 @@
 """
 # This is the jupyter code to initialize  collections
 from config.database import collection, collection_weather
-from schema.schemas import individual_serial, list_serial, individual_airport_input_data, serialize_airport_input_data
 from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 from bson import ObjectId
 import requests

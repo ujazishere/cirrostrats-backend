@@ -78,9 +78,9 @@ class Weather_parse:
         if type(datis) == list and 'datis' in datis[0].keys():
             if len(datis) == 1:
                 datis_raw = datis[0]['datis']
-            elif len(datis) == 2:       # Datis arrival and departure have been separated
+            elif len(datis) == 2:       # Departure and arrival datis separated
                 if datis[0]['type'] == 'arr':
-                    print('Returned Arrival D-ATIS through weather_parse.py')
+                    print('Returned Arrival D-ATIS through weather_parse.py')           # TODO: need to properly send this seperately for departure vs arrial for mdb.
                     arr_datis = datis[0]['datis']
                 else:
                     arr_datis = datis[1]['datis']

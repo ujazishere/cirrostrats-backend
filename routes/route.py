@@ -131,29 +131,6 @@ async def fetchandstoreWeather():
 
     return None
 
-@router.get('/fetchandstoreGate')
-async def fetchandstoreGate():
-
-    from routes.root.gate_scrape import Gate_Scrape
-    gs = Gate_Scrape()
-
-    gs.fetch_and_store()
-
-    return None
-
-def loading_example_weather():
-    file_path = r'example_flight_deet_full_packet.pkl'
-    with open(file_path, 'rb') as f:
-        example_flight_deet = pickle.load(f)
-    weather_info = example_flight_deet['dep_weather']
-
-    wp = Weather_parse()
-    highlighted_weather = wp.weather_highlight_array(example_data=weather_info)
-
-    weather_info['D_ATIS'] = weather_info['D-ATIS']
-    return weather_info
-
-
 @router.get("/weatherDisplay/{airportID}")
 def weather_display(airportID):
     # This is used in the parse query.
@@ -494,38 +471,6 @@ async def Weather_raw(airport_id):
     weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airport_id)
     
     return weather_dict
-
-# Deprecated. took in request from react
-# @router.get("/Weather/{departure_id}/{destination_id}")
-# async def Weather(departure_id, destination_id):
-#     # Only for use on fastapi w react. Temporary! read below
-#     # this is a temporary fix to not change resp_sec_returns. clean that codebase when able
-#     # the separated funcs nas and awc are the ones that need to be done.
-
-#     fm = Fetching_Mechanism()
-#     sl = Source_links_and_api()
-#     wp = Weather_parse()
-#     # This is  to be used if using separate functions. This is an attempt to reduce code duplication.
-#     # link = sl.awc_weather(metar_or_taf="metar",airport_id=airport_id)
-#     # resp = response_filter(resp_dict,"awc",)
-
-#     wl_dict = sl.weather_links(departure_id, destination_id)
-
-#     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-#     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
-#     weather_dict = resp_sec
-    
-#     # TODO: This is a temporary fix to not change resp_sec_returns. clean that codebase when able
-#     weather_dict['dep_weather'], weather_dict['dest_weather'] = {},{}       # declare weather_dict keys so it doesn't throw an error. It assigns values to key if its the first key not subsequent ones. in this case dep_weather['datis'] makes it a key of a key. 
-#     weather_dict['dep_weather']['datis'] = weather_dict['dep_datis']
-#     weather_dict['dep_weather']['metar'] = weather_dict['dep_metar']
-#     weather_dict['dep_weather']['taf'] = weather_dict['dep_taf']
-#     weather_dict['dest_weather']['datis'] = weather_dict['dest_datis']
-#     weather_dict['dest_weather']['metar'] = weather_dict['dest_metar']
-#     weather_dict['dest_weather']['taf'] = weather_dict['dest_taf']
-#     print(weather_dict)
-#     return weather_dict
-
 
 @router.get("/NAS/{departure_id}/{destination_id}")
 async def nas(departure_id, destination_id):

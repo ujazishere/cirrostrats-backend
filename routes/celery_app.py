@@ -5,14 +5,10 @@ from routes.root.weather_fetch import Weather_fetch  # Used for periodic schedul
 from routes.root.gate_scrape import Gate_Scrape
 import datetime as dt
 
-
-
 '''     ***CAUTION***
     Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
     instead use asyncio.run(async_function()) and this async_function() can be an async function. check example below for asyncio.run()
 '''
-
-
 
 celery_app = Celery(
     'tasks',
@@ -24,12 +20,13 @@ celery_app = Celery(
 
 @celery_app.task
 def MetarFetch():
-    asyncio.run(run_metar_fetch())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
+    asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
-async def run_metar_fetch():
+async def run_metar_fetch_async_function():
     # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     Wf = Weather_fetch()
     await Wf.fetch_and_store_by_type(weather_type='metar')
+
     return 'Celery task completed for fetching metar'
 
 
@@ -58,7 +55,6 @@ def GateFetch():
     # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     gs = Gate_Scrape()
     gs.fetch_and_store()
-    Gf = Weather_fetch()
 
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
