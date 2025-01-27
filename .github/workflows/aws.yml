@@ -24,3 +24,9 @@ jobs:
           git pull origin dev &&
           docker compose --profile production up -d --build
         '
+
+    - name: Cleanup Dangling Images
+      run: docker image prune -f
+
+    - name: Remove build cache
+      run: docker builder prune -f
