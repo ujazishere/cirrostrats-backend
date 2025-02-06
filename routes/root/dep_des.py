@@ -41,7 +41,7 @@ class Pull_flight_info(Root_class):
         # If there is a valid active flight its time zone will show up in TimeGroupContainer
         departure_time_zone,arrival_time_zone = [None]*2
         origin_fs,destination_fs = [None]*2
-        Ticket_Card = soup_fs.select('[class*="TicketCard"]')
+        Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
         fs_time_zone = soup_fs.select('[class*="TimeGroupContainer"]')
         if fs_time_zone and Ticket_Card:
             origin_fs = Ticket_Card[0]
@@ -359,3 +359,14 @@ class Pull_flight_info(Root_class):
 
     def aviation_stack_pull(self,):
         return None
+
+
+"""
+# for use in jupyter
+from dep_des import Pull_flight_info
+
+# united scrape mechanism
+flt_info = Pull_flight_info()
+scrape_all = flt_info.united_departure_destination_scrape(flt_num="4184")
+
+"""

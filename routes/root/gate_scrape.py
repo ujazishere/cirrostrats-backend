@@ -144,3 +144,6 @@ class Gate_Scrape(Root_class):
         gmo = Gates_mdb_ops()
         gmo.mdb_updates(fetch_returns)
         # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
+
+
+# for use in Jupyter

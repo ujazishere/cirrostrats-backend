@@ -8,3 +8,6 @@ celerybeat-schedule
 
 **/__pycache__/ 
 /config/database.py
+
+# UJ uses this to connect to ssh ec2.
+ec2.bat

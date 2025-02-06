@@ -53,3 +53,10 @@ class Newark_departures_scrape(Root_class):
         print(f'Total United departures: {len(united_departures_newark)}')
         
         return united_departures_newark
+
+
+"""
+from routes.root.newark_departures_scrape import Newark_departures_scrape
+# from routes.root.gate_scrape import Gate_Scrape
+ewr_departures_UA = Newark_departures_scrape().united_departures()
+"""

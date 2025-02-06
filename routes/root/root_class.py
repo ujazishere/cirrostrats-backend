@@ -151,7 +151,10 @@ class Source_links_and_api:
     def ua_dep_dest_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.
-    
+
+
+    def newark_airport(self):
+        return "https://www.flightstats.com/airport/USKN/Newark"
 
     def flight_stats_url(self,flight_number):
         # local time zones. just needs flight number and date as input

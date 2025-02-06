@@ -4,13 +4,13 @@ FROM python:3.11-slim-bullseye
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Set the working directory
+# Set the working directory  in the container
 WORKDIR /app
 
-# Copy the requirements file
+# Copy the requirements file to the working directory
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies. no-cache-dir will prevent storing packages in the cache so rebuilds are latest.
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code

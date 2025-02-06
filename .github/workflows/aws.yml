@@ -25,8 +25,8 @@ jobs:
           docker compose --profile production up -d --build
         '
 
-    - name: Cleanup Dangling Images
-      run: docker image prune -f
+    - name: Cleanup Dangling Images, Volumes, Build Cache
+      run: docker image prune -a -f --volumes
 
     - name: Remove build cache
       run: docker builder prune -f
