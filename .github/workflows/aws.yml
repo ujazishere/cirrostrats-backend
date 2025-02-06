@@ -25,8 +25,12 @@ jobs:
           docker compose --profile production up -d --build
         '
 
-    - name: Cleanup Dangling Images, Volumes, Build Cache
-      run: docker image prune -a -f --volumes
+    - name: Remove dangling images - <none> type images
+      run: docker image prune -af
+
+    # Seems like this wont be necessary since volumes bloat issue has been fixed
+    # - name: Cleanup Dangling Images, Volumes, and Build Cache
+      # run: docker system prune -a -f --volumes
 
     - name: Remove build cache
       run: docker builder prune -f
