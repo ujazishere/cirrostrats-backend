@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -89,8 +90,9 @@ async def get_us_concourses():
     return serialize_document_list(all_results)
 
 
-@router.get('/query/{passed_variable}')       
-async def initial_query_processing_react(passed_variable, search: str = None):
+@router.get('/query')       
+# @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
+async def initial_query_processing_react(passed_variable: str = None, search: str = None):
     # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
     # This code is present in the react as last resort when dropdown is exhausted.
     # The only reason I have left passed_variable here is for future use of similar variable case.
@@ -176,7 +178,6 @@ def parse_query(main_query):
     """
     TODO : Deprecate this! get it from the legacy django codebase. this can be handeled in frontend-react
     """
-
     # Global variable since it is used outside of the if statement in case it was not triggered. purpose: Handeling Error
     query_in_list_form = []
     # if .split() method is used outside here it can return since empty strings cannot be split.
@@ -188,28 +189,19 @@ def parse_query(main_query):
     # If query is only one word or item. else statement for more than 1 is outside of this indent. bring it in as an elif statement to this if.
     if len(query_in_list_form) == 1:
 
-        # this is string form instead of list
+        # this is string form instead of list - Taking the only element(first element) of the query and making it uppercase.
         query = query_in_list_form[0].upper()
+        flight_pattern = re.compile(r'^(UAL|UA|GJS)(\d+)$')     # ^ matches only for start of the line. would only match trailing pattern that is at the start of a line.
+        gate_pattern = re.compile(r'^(A|B|C)|\d{1,3}$')
         # TODO: find a better way to handle this. Maybe regex. Need a system that classifies the query and assigns it a dedicated function like flight_deet or gate query.
         # Accounting for flight number query with leading alphabets
-        if query[:2] == 'UA' or query[:3] == 'GJS':
-            if query[0] == 'G':     # if GJS instead of UA: else its UA
-                # Its GJS
-                airline_code, flt_digits = query[:3], query[3:]
-            else:
-                flt_digits = query[2:]
-                airline_code = None
-                if query[:3] ==  'UAL':
-                    airline_code = 'UAL'
-                    flt_digits = query[3:]
-                elif query[:2] == 'UA':
-                    airline_code = 'UA'
+        flight_pattern_match = flight_pattern.fullmatch(query)
+        if flight_pattern_match:
+            airline_code, flt_digits = flight_pattern_match.groups()
             print('\nSearching for:', airline_code, flt_digits)
-            return {'flightNumber': airline_code+flt_digits, 'type': 'flightNumber'}
-
+            return {'type': 'flightNumber', 'airlineCode': airline_code, 'flightNumber': flt_digits}
         # flight or gate info page returns
         elif len(query) == 4 or len(query) == 3 or len(query) == 2:
-
             if query.isdigit():
                 query = int(query)
                 if 1 <= query <= 35 or 40 <= query <= 136:              # Accounting for EWR gates for gate query
@@ -223,16 +215,16 @@ def parse_query(main_query):
                     # Making query uppercase for it to be compatible
                     weather_query_airport = weather_query_airport.upper()
                     return {'code': weather_query_airport, 'type': 'airport'}
-                else:           # tpical gate query with length of 2-4 alphanumerics
-                    print('gate query')
+                else:           # All others
+                    print('Accounting for unkown query.')
                     return {'gate': str(query), 'type': 'gate'}
-                    return gate_info(main_query=str(query))
         # Accounting for 1 letter only. Gate query.
         elif 'A' in query or 'B' in query or 'C' in query or len(query) == 1:
             # When the length of query_in_list_form is only 1 it returns gates table for that particular query.
             gate_query = query
             return {'gate': str(gate_query), 'type': 'gate'}
         else:   # return gate
+            print('alast resort')
             gate_query = query
             return {'gate': str(gate_query), 'type': 'gate'}
 
@@ -247,6 +239,9 @@ def parse_query(main_query):
             return weather_display(weather_query_airport)
         else:
             return gate_info(main_query=' '.join(query_in_list_form))
+
+    else:
+        print('Error in query processing. Last resort.')
 
 
 def gate_info(main_query):
