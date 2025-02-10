@@ -35,6 +35,7 @@ The key value pairs within the documents are called fields. They maybe nested fi
 # Collection names
 collection = db['airports']
 collection_weather = db['Weather']
+collection_searchTrack = db['SearchTrack']
 
 collection_gates = db['US-gates']
 collection_flights = db['Flights']

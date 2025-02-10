@@ -1,9 +1,10 @@
+from datetime import datetime
 import re
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models.model import FlightNumber, Airport
-from config.database import collection, collection_weather, collection_flights, collection_gates
+from config.database import collection, collection_weather, collection_flights, collection_gates, collection_searchTrack
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
@@ -18,22 +19,6 @@ import os
 import pickle
 from decouple import config
 from .celery_app import celery_app
-
-# This code is only to run outside of celery in case celery doesnt work with async. This organic async should work outside of celery.
-# if config('run_weather_fetch'):
-#     print('weather_fetch config',config('run_weather_fetch'))
-#     print('Running weather fetch...')
-#     wf_thread = Weather_fetch_thread()
-#     wf_thread.start()
-# else:
-#     print('weather_fetch not active: ',config('run_weather_fetch'))
-#     print(bool(config('run_weather_fetch')))
-
-
-
-
-
-current_time = Gate_checker().date_time()
 
 app = FastAPI()
 
@@ -67,7 +52,6 @@ This serialize_document_list return is a list type with each item a dict.
 Each list item is a mdb document
 Check individual_serial to see the dict format.
 """
-
 @router.get('/airports')
 async def get_airports():
     # Returns '_id','name' and 'code' as document field keys and values as its values.
@@ -105,6 +89,31 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     #     print('passed_variable is not airport. It is:', passed_variable)
     #     # TODO: Do something here to process the raw search query and return it to the frontend.
     #     return None
+
+# Define a Pydantic model to validate incoming request data
+class SearchData(BaseModel):
+    email: str
+    searchTerm: str
+    timestamp: datetime
+    
+@router.post('/track-search')
+def track_search(data: SearchData):
+    print(data.email, data.searchTerm, data.timestamp)
+    search_record = {
+        "email": data.email,
+        "searchTerm": data.searchTerm,
+        "timestamp": data.timestamp  # MongoDB automatically stores this as ISODate
+    }
+    
+    # Insert into MongoDB
+    result = collection_searchTrack.insert_one(search_record)
+    print({"message": "Search tracked successfully", "id": str(result.inserted_id)})
+    # print('tracking data',data[0][1], data[1][1], data[2][1])
+
+
+    # Here, you can save it to a database (e.g., MongoDB, PostgreSQL, etc.)
+    # Example: db.insert({"email": data.email, "searchTerm": data.searchTerm, "timestamp": data.timestamp})
+
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id, search: str = None):
