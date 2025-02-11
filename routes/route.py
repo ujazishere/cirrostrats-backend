@@ -98,21 +98,27 @@ class SearchData(BaseModel):
     
 @router.post('/track-search')
 def track_search(data: SearchData):
+    # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
+
+    # Create update operation using MongoDB's atomic operators
     print(data.email, data.searchTerm, data.timestamp)
-    search_record = {
-        "email": data.email,
-        "searchTerm": data.searchTerm,
-        "timestamp": data.timestamp  # MongoDB automatically stores this as ISODate
+    update_query = {
+        "$setOnInsert": {"email": data.email},  # Only set email on document creation
+        "$inc": {f"searches.{data.searchTerm}": 1},  # Increment count for this search term
+        "$set": {"lastUpdated": data.timestamp()}  # Update timestamp
     }
-    
-    # Insert into MongoDB
-    result = collection_searchTrack.insert_one(search_record)
-    print({"message": "Search tracked successfully", "id": str(result.inserted_id)})
-    # print('tracking data',data[0][1], data[1][1], data[2][1])
 
+    # This single operation will:
+    # 1. Create document if email doesn't exist
+    # 2. Create searchTerm with count 1 if it doesn't exist
+    # 3. Increment count if searchTerm exists
+    result = collection_searchTrack.update_one(
+        {"email": data.email},
+        update_query,
+        upsert=True
+    )
 
-    # Here, you can save it to a database (e.g., MongoDB, PostgreSQL, etc.)
-    # Example: db.insert({"email": data.email, "searchTerm": data.searchTerm, "timestamp": data.timestamp})
+    return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
 
 
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
@@ -413,7 +419,7 @@ async def ua_dep_dest_flight_status(flight_number):
     else:
         airline_code = "UA"
     united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
-
+    print('depdes united_dep_dest',united_dep_dest)
     return united_dep_dest
 
 
@@ -423,6 +429,7 @@ async def flight_stats_url(flight_number):      # time zone pull
 
     fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
         flt_num_query=flight_number,)
+    print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
 
     return fs_departure_arr_time_zone
 

@@ -253,10 +253,12 @@ def x():
     collection.find_one({'code':'OZR'})     # Returns the whole document - inefficient.
     doc_id = collection.find_one({'code':'OZR'},{'_id':1})       # Returns a specific field from within the document. In this case the '_id' field of the document only. 1 is equivalent to True.
     # Delete a document:
-    collection_weather.delete_one({'_id':ObjectId(doc_id)})
+    collection.delete_one({'_id':ObjectId(doc_id)})
+    # delete all documents:
+    collection.delete_many({})
 
     # Count documents that match certain crit.
-    collection_weather.count_documents({'weather.datis':{}}, )
+    collection.count_documents({'weather.datis':{}}, )
 
     # This only returns the docs that have subfield datis of a sub document.
     [i for i in collection_weather.find({'weather.datis':{'$exists':True}}, )]

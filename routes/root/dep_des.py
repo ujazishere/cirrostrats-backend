@@ -60,7 +60,7 @@ class Pull_flight_info(Root_class):
             print("no departure_arrival time zone found using flight_stats")
 
         # TODO: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
-        bulk_flight_deet = {'flight_number': f'UA{flt_num}',            # This flt_num is probably misleading since the UA attached manually. Try pulling it from the flightstats web
+        bulk_flight_deet = {'flight_number': flt_num,            # This flt_num is probably misleading since the UA attached manually. Try pulling it from the flightstats web
                             'origin_fs':origin_fs,
                             'destination_fs':destination_fs,
                             'scheduled_departure_time': departure_time_zone,
