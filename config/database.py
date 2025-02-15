@@ -54,6 +54,3 @@ def create_airport(airport: Airport):
     return {'id': str(result.inserted_id)}
 
 # This will add info based on object id and refer to it.
-"""
-
-"""

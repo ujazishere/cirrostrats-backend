@@ -73,24 +73,9 @@ async def get_us_concourses():
     all_results = collection_gates.find({})
     return serialize_document_list(all_results)
 
+#_____________________________________________________________________________
 
-@router.get('/query')       
-# @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
-async def initial_query_processing_react(passed_variable: str = None, search: str = None):
-    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
-    # This code is present in the react as last resort when dropdown is exhausted.
-    # The only reason I have left passed_variable here is for future use of similar variable case.
-    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
-    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
-    print('search value:', search)
-    # As user types in the search bar this if statement gets triggered.
-    return parse_query(search)
-    # if (passed_variable != "airport"):
-    #     print('passed_variable is not airport. It is:', passed_variable)
-    #     # TODO: Do something here to process the raw search query and return it to the frontend.
-    #     return None
-
-# Define a Pydantic model to validate incoming request data
+# A Pydantic model to validate incoming request data for search tracking
 class SearchData(BaseModel):
     email: str
     searchTerm: str
@@ -105,7 +90,7 @@ def track_search(data: SearchData):
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
         "$inc": {f"searches.{data.searchTerm}": 1},  # Increment count for this search term
-        "$set": {"lastUpdated": data.timestamp()}  # Update timestamp
+        "$set": {"lastUpdated": data.timestamp}  # Update timestamp
     }
 
     # This single operation will:
@@ -120,17 +105,149 @@ def track_search(data: SearchData):
 
     return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
 
-
 @router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id, search: str = None):
     # This is a drop down selection item that is an airprot.
     # mdb id for airport is passed from react when user selects a drop down item that is an airport.
-    print("airport_id", airport_id)
     # serialized_return = serialize_airport_input_data(res)
     res = collection_weather.find_one(
         {"airport_id": ObjectId(airport_id)})
     res = res['weather']
     return res
+
+
+# ___________________________________________________________________________
+
+@router.get("/DepartureDestination/{flight_number}")
+async def ua_dep_dest_flight_status(flight_number):
+    # dep and destination id pull
+    flt_info = Pull_flight_info()
+    flight_number = flight_number.upper()
+    if "UA" in flight_number:
+        airline_code = flight_number[:2]
+        flight_number = flight_number[2:]
+    else:
+        airline_code = "UA"
+    united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
+    print('depdes united_dep_dest',united_dep_dest)
+    return united_dep_dest
+
+
+@router.get("/DepartureDestinationTZ/{flight_number}")
+async def flight_stats_url(flight_number):      # time zone pull
+    flt_info = Pull_flight_info()
+
+    fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
+        flt_num_query=flight_number,)
+    print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
+
+    return fs_departure_arr_time_zone
+
+
+# TODO: Need to account for aviation stack
+@router.get("/flightAware/{airline_code}/{flight_number}")
+async def flight_aware_w_auth(airline_code, flight_number):
+    return None
+    # sl.flight_stats_url(flight_number_query),])
+    fm = Fetching_Mechanism(flt_num=flight_number)
+    sl = Source_links_and_api()
+    flt_info = Pull_flight_info()
+
+    link = sl.flight_aware_w_auth(airline_code, flight_number)
+    resp_dict: dict = await fm.async_pull([link])
+
+    resp = response_filter(resp_dict, "json",)
+    fa_return = resp['flights']
+    flight_aware_data = flt_info.fa_data_pull(
+        airline_code=airline_code, flt_num=flight_number, pre_process=fa_return)
+
+    # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
+    return flight_aware_data
+
+
+@router.get("/Weather/{airport_id}")
+async def Weather_raw(airport_id):
+    print('airport_id', airport_id)
+
+    fm = Fetching_Mechanism()
+    rsl = Root_source_links
+
+    def link_returns(weather_type, airport_id):
+        wl = rsl.weather(weather_type,airport_id)
+        return wl
+    
+    wl_dict = {weather_type:link_returns(weather_type,airport_id) for weather_type in ('metar', 'taf','datis')}
+    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
+    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airport_id)
+    
+    return weather_dict
+
+@router.get("/NAS/{departure_id}/{destination_id}")
+async def nas(departure_id, destination_id):
+
+    # Probably wont work. If it doesnt its probably because of the reesp_sec_returns
+    # does not account for just nas instead going whole mile to get and process weather(unnecessary)
+    fm = Fetching_Mechanism()
+    sl = Source_links_and_api()
+    
+    resp_dict: dict = await fm.async_pull([sl.nas()])
+    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
+    
+    nas_returns = resp_sec
+    print(nas_returns)
+
+    return nas_returns
+
+
+@router.get("/testDataReturns")
+def test_flight_deet_data():
+    test_data_imports_tuple = test_data_imports()
+
+    # bulk_flight_deets = dummy_imports_tuple[0]
+    bulk_flight_deets = test_data_imports_tuple
+
+    print('test_flight_deet_data, test data is being sent')
+    bulk_flight_deet_returns = bulk_flight_deets
+    
+    test_nas_data = {'nas_departure_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}},
+     'nas_destination_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}}}
+
+    test_weather_data = {
+    "datis": """EWR <span class="box_around_text">ATIS INFO E</span> 1951Z. 15006KT 10SM FEW250 28/10 <span class="box_around_text">A3020</span> (THREE ZERO TWO ZERO). <span class="box_around_text">ILS RWY 22L APCH IN USE.</span> DEPARTING RY 22R FROM INT W 10,150 FEET TODA. HI-SPEED BRAVO 4 CLSD. TWY NOTAMS, TWY C CLOSED BTWN TWY P AND TWY B. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO E.""",
+    "datis_zt": "N/A",
+    "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
+    "metar_zt": "21 mins ago",
+    "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
+    "taf_zt": "168 mins ago"
+    }
+    
+    bulk_flight_deet_returns.update(test_nas_data)
+    bulk_flight_deet_returns['dep_weather'] = test_weather_data
+    bulk_flight_deet_returns['dest_weather'] = test_weather_data
+
+    return bulk_flight_deet_returns
+
+
+
+# ____________________________________________________________________________________
+
+@router.get('/query')       # /query/{passed_variable} can be used tp get the passed variable from frontend
+async def initial_query_processing_react(passed_variable: str = None, search: str = None):
+    # TODO: Make this function run only when user hits submit. right now it runs soon as the drop down is exhausted.
+
+    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
+    # This code is present in the react as last resort when dropdown is exhausted.
+    # The only reason I have left passed_variable here is for future use of similar variable case.
+    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
+    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
+    print('search value:', search)
+    # As user types in the search bar this if statement gets triggered.
+    # return None
+    return parse_query(search)
+    # if (passed_variable != "airport"):
+    #     print('passed_variable is not airport. It is:', passed_variable)
+    #     # TODO: Do something here to process the raw search query and return it to the frontend.
+    #     return None
 
 
 @router.get('/fetchandstoreWeather')
@@ -147,46 +264,6 @@ async def fetchandstoreWeather():
     print("finished fetching")
 
     return None
-
-@router.get("/weatherDisplay/{airportID}")
-def weather_display(airportID):
-    # This is used in the parse query.
- 
-    # remove leading and trailing spaces. Seems precautionary.
-    airportID = airportID
-
-    weather = Weather_parse()
-    # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
-    # weather = weather.scrape(weather_query, datis_arr=True)
-    weather = weather.processed_weather(query=airportID, )
-
-    weather_page_data = {}
-
-    weather_page_data['airport'] = airportID
-
-    weather_page_data['D_ATIS'] = weather['D-ATIS']
-    weather_page_data['METAR'] = weather['METAR']
-    weather_page_data['TAF'] = weather['TAF']
-
-    weather_page_data['datis_zt'] = weather['D-ATIS_zt']
-    weather_page_data['metar_zt'] = weather['METAR_zt']
-    weather_page_data['taf_zt'] = weather['TAF_zt']
-    # weather_page_data['trr'] = weather_page_data
-    return weather_page_data
-
-
-# Do not need this
-@router.get("/rawQueryTest/{query}")
-async def root(query: str = None):
-    # Root_class().send_email(body_to_send=query)
-    # TODO: This needs to be a parse query first then goes to the flight_deets.
-                # WIP: separation of concern for flight deets
-                # First get departure and arrival from the flightstats or  ua_dep and arrival and return it back to react.
-                # As soon as setLoading is false send that data back top the
-    bulk_flight_deet_returns = await ua_dep_dest_flight_status(query)
-    print(bulk_flight_deet_returns)
-
-    return bulk_flight_deet_returns
 
 
 def parse_query(main_query):
@@ -403,147 +480,6 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
         # It was an inefficient fucntion to bypass the futures error on EC2
 
     return bulk_flight_deets
-
-
-
-
-
-@router.get("/DepartureDestination/{flight_number}")
-async def ua_dep_dest_flight_status(flight_number):
-    # dep and destination id pull
-    flt_info = Pull_flight_info()
-    flight_number = flight_number.upper()
-    if "UA" in flight_number:
-        airline_code = flight_number[:2]
-        flight_number = flight_number[2:]
-    else:
-        airline_code = "UA"
-    united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
-    print('depdes united_dep_dest',united_dep_dest)
-    return united_dep_dest
-
-
-@router.get("/DepartureDestinationTZ/{flight_number}")
-async def flight_stats_url(flight_number):      # time zone pull
-    flt_info = Pull_flight_info()
-
-    fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
-        flt_num_query=flight_number,)
-    print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
-
-    return fs_departure_arr_time_zone
-
-
-# TODO: Need to account for aviation stack
-@router.get("/flightAware/{airline_code}/{flight_number}")
-async def flight_aware_w_auth(airline_code, flight_number):
-    return None
-    # sl.flight_stats_url(flight_number_query),])
-    fm = Fetching_Mechanism(flt_num=flight_number)
-    sl = Source_links_and_api()
-    flt_info = Pull_flight_info()
-
-    link = sl.flight_aware_w_auth(airline_code, flight_number)
-    resp_dict: dict = await fm.async_pull([link])
-
-    resp = response_filter(resp_dict, "json",)
-    fa_return = resp['flights']
-    flight_aware_data = flt_info.fa_data_pull(
-        airline_code=airline_code, flt_num=flight_number, pre_process=fa_return)
-
-    # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
-    return flight_aware_data
-
-
-@router.get("/Weather/{airport_id}")
-async def Weather_raw(airport_id):
-    print('airport_id', airport_id)
-    # # returns test weather data if airport type is "test"
-    # if airport_id == "test":
-    #     test_data = {
-    #     "datis": "N/A",
-    #     "datis_zt": "N/A",
-    #     "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
-    #     "metar_zt": "21 mins ago",
-    #     "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
-    #     "taf_zt": "168 mins ago"
-    #     }
-    #     return test_data
-
-    fm = Fetching_Mechanism()
-    rsl = Root_source_links
-
-    def link_returns(weather_type, airport_id):
-        wl = rsl.weather(weather_type,airport_id)
-        return wl
-    
-    wl_dict = {weather_type:link_returns(weather_type,airport_id) for weather_type in ('metar', 'taf','datis')}
-    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airport_id)
-    
-    return weather_dict
-
-@router.get("/NAS/{departure_id}/{destination_id}")
-async def nas(departure_id, destination_id):
-
-    # Probably wont work. If it doesnt its probably because of the reesp_sec_returns
-    # does not account for just nas instead going whole mile to get and process weather(unnecessary)
-    fm = Fetching_Mechanism()
-    sl = Source_links_and_api()
-    
-    resp_dict: dict = await fm.async_pull([sl.nas()])
-    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
-    
-    nas_returns = resp_sec
-    print(nas_returns)
-
-    return nas_returns
-
-
-@router.get("/testDataReturns")
-def test_flight_deet_data():
-    test_data_imports_tuple = test_data_imports()
-
-    # bulk_flight_deets = dummy_imports_tuple[0]
-    bulk_flight_deets = test_data_imports_tuple
-
-    print('test_flight_deet_data, test data is being sent')
-    bulk_flight_deet_returns = bulk_flight_deets
-    
-    test_nas_data = {'nas_departure_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}},
-     'nas_destination_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}}}
-
-    test_weather_data = {
-    "datis": """EWR <span class="box_around_text">ATIS INFO E</span> 1951Z. 15006KT 10SM FEW250 28/10 <span class="box_around_text">A3020</span> (THREE ZERO TWO ZERO). <span class="box_around_text">ILS RWY 22L APCH IN USE.</span> DEPARTING RY 22R FROM INT W 10,150 FEET TODA. HI-SPEED BRAVO 4 CLSD. TWY NOTAMS, TWY C CLOSED BTWN TWY P AND TWY B. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO E.""",
-    "datis_zt": "N/A",
-    "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
-    "metar_zt": "21 mins ago",
-    "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
-    "taf_zt": "168 mins ago"
-    }
-    
-    bulk_flight_deet_returns.update(test_nas_data)
-    bulk_flight_deet_returns['dep_weather'] = test_weather_data
-    bulk_flight_deet_returns['dest_weather'] = test_weather_data
-
-    # # This is the original django dummy weather without the highlight pre-processing.
-    # bulk_flight_deet_returns['dep_weather']['datis'] = bulk_flight_deet_returns['dep_weather']['D-ATIS']
-    # bulk_flight_deet_returns['dep_weather']['metar'] = bulk_flight_deet_returns['dep_weather']['METAR']
-    # bulk_flight_deet_returns['dep_weather']['taf'] = bulk_flight_deet_returns['dep_weather']['TAF']
-    # bulk_flight_deet_returns['dest_weather']['datis'] = bulk_flight_deet_returns['dest_weather']['D-ATIS']
-    # bulk_flight_deet_returns['dest_weather']['metar'] = bulk_flight_deet_returns['dest_weather']['METAR']
-    # bulk_flight_deet_returns['dest_weather']['taf'] = bulk_flight_deet_returns['dest_weather']['TAF']
-
-    # # These are with the html css tags for highlights but the returns are with D-ATIS and such keys and they are not very well processed by react.
-    # wp = Weather_parse()            
-    # bulk_flight_deet_returns['dep_weather'] = wp.processed_weather(weather_raw=bulk_flight_deet_returns['dep_weather'])
-    # print(bulk_flight_deet_returns['dep_weather'])
-    # bulk_flight_deet_returns['dest_weather'] = wp.processed_weather(weather_raw=bulk_flight_deet_returns['dest_weather'])
-
-    # print(bulk_flight_deet_returns.keys())
-    # bulk_flight_deet_returns = await parse_query(None, query)
-
-    return bulk_flight_deet_returns
 
 
 @router.get('/dummy')
