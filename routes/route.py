@@ -74,6 +74,12 @@ async def get_us_concourses():
     return serialize_document_list(all_results)
 
 
+@router.get('/searches')
+async def get_us_concourses():
+    all_results = collection_searchTrack.find({})
+    return serialize_document_list(all_results)
+
+
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
 async def initial_query_processing_react(passed_variable: str = None, search: str = None):
