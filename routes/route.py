@@ -75,7 +75,30 @@ async def get_us_concourses():
 
 #_____________________________________________________________________________
 
-# A Pydantic model to validate incoming request data for search tracking
+@router.get('/searches')
+async def get_us_concourses():
+    # Shows all the searches that have been made.
+    all_results = collection_searchTrack.find({})
+    return serialize_document_list(all_results)
+
+
+@router.get('/query')       
+# @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
+async def initial_query_processing_react(passed_variable: str = None, search: str = None):
+    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
+    # This code is present in the react as last resort when dropdown is exhausted.
+    # The only reason I have left passed_variable here is for future use of similar variable case.
+    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
+    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
+    print('search value:', search)
+    # As user types in the search bar this if statement gets triggered.
+    return parse_query(search)
+    # if (passed_variable != "airport"):
+    #     print('passed_variable is not airport. It is:', passed_variable)
+    #     # TODO: Do something here to process the raw search query and return it to the frontend.
+    #     return None
+
+# Define a Pydantic model to validate incoming request data
 class SearchData(BaseModel):
     email: str
     searchTerm: str
