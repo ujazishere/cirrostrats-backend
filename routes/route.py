@@ -79,6 +79,7 @@ async def get_us_concourses():
 class SearchData(BaseModel):
     email: str
     searchTerm: str
+    submitTerm: str
     timestamp: datetime
     
 @router.post('/track-search')
@@ -89,7 +90,8 @@ def track_search(data: SearchData):
     print(data.email, data.searchTerm, data.timestamp)
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
-        "$inc": {f"searches.{data.searchTerm}": 1},  # Increment count for this search term
+        "$inc": {f"searchTerm.{data.searchTerm}": 1},  # Increment count for this search term
+        "$inc": {f"submits.{data.submitTerm}": 1},
         "$set": {"lastUpdated": data.timestamp}  # Update timestamp
     }
 
