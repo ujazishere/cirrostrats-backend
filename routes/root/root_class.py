@@ -9,6 +9,7 @@ import smtplib
 import asyncio
 import aiohttp
 from time import sleep
+from decouple import config
 
 class Root_class():
     
@@ -17,11 +18,12 @@ class Root_class():
 
 
     def send_email(self, body_to_send):
-        try: 
-            from .Switch_n_auth import EC2_location
-            full_email = f"Subject: {EC2_location}\n\n{body_to_send}"
-        except Exception as e:
-            print("error in Switch_n_auth",e)
+        if config('env') == 'development':
+            return
+        else:
+            env_type = config('env')
+            
+            full_email = f"Subject: {env_type}\n\n{body_to_send}"
             print(r'EC2_location within dj\dj_app\root\Switch_n_auth.py was not found. Need the file and the variable as string.')
             full_email = f"Subject: UNKNOWN Local\n\n{body_to_send}"
         smtp_server = "smtp.gmail.com"

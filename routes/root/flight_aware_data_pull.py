@@ -53,57 +53,6 @@ class Flight_aware_pull(Root_class):
             return None    
 
 
-    def trial(self):    # INACTIVE
-        # This is for swift portal.
-        # checkout for knowledge https://www.faa.gov/air_traffic/technology/swim/swift
-        api_url = 'API_URL'
-        params = {
-            'providerUrl': 'tcps://ems1.swim.faa.gov:55443',
-            'queue': 'ujasvaghani.yahoo.com.FDPS.0f5efc2e-f47e-4e6a-a6c8-7fb338b8a76f.OUT',
-            'connectionFactory': 'ujasvaghani.yahoo.com.CF',
-            'username': 'ujasvaghani.yahoo.com',
-            'password': 'MxciGP1zQ760UpxdDoL-ew',
-            'vpn': 'FDPS',
-        }
-        
-        response = requests.get(api_url, params=params)
-        
-        if response.status_code == 200:
-            data = response.json()  # Assuming the data is in JSON format
-
-    def jms_trial(self):    # INACTIVE
-        class SolaceJMSClient:
-            def __init__(self, config):
-                self.config = config
-                # self.connection = stomp.Connection([(config['jms_connection_url'], 55443)])  # Assuming default port 61613
-        
-            # def connect(self):
-                # self.connection.connect(self.config['username'], self.config['password'], wait=True)        # code breaks here.
-                # self.connection.subscribe(destination=f"/queue/{self.config['queue_name']}", id=1, ack="auto")
-        
-            # def send_message(self, message):
-                # self.connection.send(body=message, destination=f"/queue/{self.config['queue_name']}")
-        
-            # def disconnect(self):
-                # self.connection.disconnect()
-        
-        # Example usage
-        solace_config = {
-                    'jms_connection_url': 'tcps://ems1.swim.faa.gov:55443',
-                    'queue_name': 'ujasvaghani.yahoo.com.FDPS.0f5efc2e-f47e-4e6a-a6c8-7fb338b8a76f.OUT',
-                    'connectionFactory': 'ujasvaghani.yahoo.com.CF',
-                    'username': 'ujasvaghani.yahoo.com',
-                    'password': 'MxciGP1zQ760UpxdDoL-ew',
-                    'vpn': 'FDPS',
-        }
-        
-        # solace_client = SolaceJMSClient(solace_config)
-        # solace_client.connect()
-        
-        # solace_client.send_message("Hello, Solace JMS!")
-        
-        # solace_client.disconnect()
-
 def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, return_example=None):
     """
     return_example is only to check dummy an example data from flightaware and thats used in jupyter. 
