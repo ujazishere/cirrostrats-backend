@@ -1,6 +1,6 @@
 from datetime import datetime
 import re
-from typing import Union
+from typing import Dict, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -82,6 +82,7 @@ class SearchData(BaseModel):
     searchTerm: str
     # submitTerm can be string or null type of variable from react
     submitTerm: Union[str, None]
+    searchId: Union[str, None]
     timestamp: datetime
     
 @router.post('/searches/track')
@@ -99,12 +100,11 @@ def track_search(data: SearchData):
     if data.submitTerm is None:     # disregard submitTerm if submission is not made and just pass keystrokes
         update_query.update({"$inc": {f"searchTerm.{data.searchTerm}": 1}})     # Increment count
     elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
-        update_query.update({"$inc": {f"submits.{data.submitTerm}": 1}})        # Increment count
-
-    # This single operation will:
-    # 1. Create document if email doesn't exist
-    # 2. Create searchTerm with count 1 if it doesn't exist
-    # 3. Increment count if searchTerm exists
+        update_query.update({"$inc": {f"submits.{data.submitTerm}.count": 1}})        # Increment count
+        if data.searchId is not None:       # if submission contains ID.
+            # TODO: Removed objectId from the database. Keeps frontend and backend in sync without ObjectId conversion issue.
+            update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.searchId}})  # Ensure ID is stored
+    
     result = collection_searchTrack.update_one(
         {"email": data.email},
         update_query,
@@ -114,17 +114,31 @@ def track_search(data: SearchData):
     return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
 
 @router.get('/searches/all')
-async def get_us_concourses():
+async def get_all_searches():
     # Shows all the searches that have been made.
     all_results = collection_searchTrack.find({})
     return serialize_document_list(all_results)
 
 @router.get('/searches/{email}')
-async def get_us_concourses(email):
+async def get_user_searches(email):
     # Shows all the searches that have been made by the user.
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
 
+@router.get('/searches/suggestions/{email}')
+async def get_user_search_suggestions(email):
+    # Shows all the searches that have been made by the user.
+    user_data = collection_searchTrack.find_one({"email": email})
+    submits: Dict[str, int] = user_data.get("submits", {})
+    submits = {
+        k: v for k, v in sorted(
+            submits.items(), 
+            key=lambda item: item[1] if isinstance(item[1], int) else item[1].get("count", 0), 
+            reverse=True
+        )
+    }
+    
+    return submits
 # ____________________________________________________________________________
 
 
