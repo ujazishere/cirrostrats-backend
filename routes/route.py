@@ -79,17 +79,15 @@ async def get_us_concourses():
 # Define a Pydantic model to validate incoming request data
 class SearchData(BaseModel):
     email: str
-    searchTerm: str
-    # submitTerm can be string or null type of variable from react
-    submitTerm: Union[str, None]
-    searchId: Union[str, None]
+    searchTerm: Union[str, None]
+    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
+    submitId: Union[str, None]
     timestamp: datetime
     
 @router.post('/searches/track')
 def track_search(data: SearchData):
     
     # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
-        # Separate the search term from the submit term.
 
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
@@ -101,22 +99,24 @@ def track_search(data: SearchData):
         update_query.update({"$inc": {f"searchTerm.{data.searchTerm}": 1}})     # Increment count
     elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
         update_query.update({"$inc": {f"submits.{data.submitTerm}.count": 1}})        # Increment count
-        if data.searchId is not None:       # if submission contains ID.
+        if data.submitId is not None:       # if submission contains ID.
             # TODO: Removed objectId from the database. Keeps frontend and backend in sync without ObjectId conversion issue.
-            update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.searchId}})  # Ensure ID is stored
+            update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.submitId}})  # Ensure ID is stored
     
-    result = collection_searchTrack.update_one(
-        {"email": data.email},
-        update_query,
-        upsert=True
-    )
+    # result = collection_searchTrack.update_one(
+    #     {"email": data.email},
+    #     update_query,
+    #     upsert=True
+    # )
+    print("update_query: ", update_query)
 
-    return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
+    # return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
 
 @router.get('/searches/all')
 async def get_all_searches():
     # Shows all the searches that have been made.
     all_results = collection_searchTrack.find({})
+    
     return serialize_document_list(all_results)
 
 @router.get('/searches/{email}')
@@ -129,16 +129,30 @@ async def get_user_searches(email):
 async def get_user_search_suggestions(email):
     # Shows all the searches that have been made by the user.
     user_data = collection_searchTrack.find_one({"email": email})
-    submits: Dict[str, int] = user_data.get("submits", {})
-    submits = {
-        k: v for k, v in sorted(
-            submits.items(), 
-            key=lambda item: item[1] if isinstance(item[1], int) else item[1].get("count", 0), 
-            reverse=True
-        )
-    }
+
+    suggestions = []
     
-    return submits
+    query = "g"    # Search for predertimined items in pipeline containing "ap"
+    page = 1        # 
+    page_size = 50
+    
+    collection_merge = [collection, collection_flights] 
+    for coll in collection_merge:
+        pipeline = [
+                {"$match": {"count": {"$exists": True}}},
+                {"$match": {"$or": [
+                    {"flightNumber": {"$regex": query, "$options": "i"}},       # matches flightNumber field in flights collection
+                    {"name": {"$regex": query, "$options": "i"}}                # matches name field in airport collection
+                ]}},
+                {"$sort": {"count": -1}},               # sort by popularity - the count field contains popularity rating.
+                # {"$skip": (page - 1) * page_size},    # the page number itself.
+                # {"$limit": page_size}                 # items per page
+            ]
+    
+        suggestions.extend(coll.aggregate(pipeline))
+    suggestions
+
+    return suggestions
 # ____________________________________________________________________________
 
 

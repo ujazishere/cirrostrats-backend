@@ -21,10 +21,12 @@ To troubeshoot make sure to print the connection string to see whats actuallly b
 """
 # print('CONNECTION STRING',config('connection_string'))
 client = MongoClient(config('connection_string'), tlsCAFile=certifi.where())
+client_UJ = MongoClient(config('connection_string_uj'), tlsCAFile=certifi.where())
 # client = MongoClient(config('connection_string'))
 
 # database name
 db = client.cirrostrats
+db_UJ = client_UJ.cirrostrats
 
 """
 Think of collection as a database tree.
@@ -38,7 +40,7 @@ collection_weather = db['Weather']
 collection_searchTrack = db['SearchTrack']
 
 collection_gates = db['US-gates']
-collection_flights = db['Flights']
+collection_flights = db_UJ['flights']
 
 # From here on its all custom code for database crud operation.
 

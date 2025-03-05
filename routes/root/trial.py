@@ -1,6 +1,5 @@
-
-from dj.dj_app.root.weather_parse import Weather_parse
-from dj.dj_app.root.dep_des import Pull_flight_info
+from routes.root.weather_parse import Weather_parse
+from routes.root.dep_des import Pull_flight_info
 
 # Fetching raw data from raw functions from the backend.
 wp = Weather_parse()
@@ -21,17 +20,7 @@ flight_number_query = '4433'
 # sl.ua_dep_dest_flight_status(flight_number_query)
 # sl.flight_stats_url(flight_number_query),
 
-from config.database import collection, collection_weather, collection_gates, collection_flights
 from routes.root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
-
-a = [i for i in collection.find()]
-b = [i for i in collection_weather.find()]
-c = [i for i in collection_gates.find()]
-d = [i for i in collection_flights.find()]
-print(a[0])
-print(b[0])
-print(c[0])
-print(d[0])
 
 
 # departures and destinations from particular airports. Need another source for redundancy.
