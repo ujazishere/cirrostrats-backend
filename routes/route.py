@@ -126,33 +126,34 @@ async def get_user_searches(email):
     return serialize_document_list(all_results)
 
 @router.get('/searches/suggestions/{email}')
-async def get_user_search_suggestions(email):
+async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
     # Shows all the searches that have been made by the user.
-    user_data = collection_searchTrack.find_one({"email": email})
-
+    # user_data = collection_searchTrack.find_one({"email": email})
     suggestions = []
     
-    query = "g"    # Search for predertimined items in pipeline containing "ap"
-    page = 1        # 
-    page_size = 50
+    # query = "g"    # Search for predertimined items in pipeline containing "ap"
+    # page = 1        # first page
+    # page_size = 30  # items per page
     
+    print('\n\n\nTriggered email, query, page, page_size', email, query, page, page_size)
     collection_merge = [collection, collection_flights] 
     for coll in collection_merge:
         pipeline = [
-                {"$match": {"count": {"$exists": True}}},
+                {"$match": {"count": {"$exists": True}}},        # filter documents that have a count field
+                # {"$project": {"_id": {"$toString": "$_id", "count": 1}}},
                 {"$match": {"$or": [
                     {"flightNumber": {"$regex": query, "$options": "i"}},       # matches flightNumber field in flights collection
                     {"name": {"$regex": query, "$options": "i"}}                # matches name field in airport collection
                 ]}},
                 {"$sort": {"count": -1}},               # sort by popularity - the count field contains popularity rating.
-                # {"$skip": (page - 1) * page_size},    # the page number itself.
-                # {"$limit": page_size}                 # items per page
+                {"$skip": (page - 1) * page_size},    # the page number itself.
+                {"$limit": page_size}                 # items per page
             ]
     
         suggestions.extend(coll.aggregate(pipeline))
-    suggestions
-
-    return suggestions
+    format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
+    print(len(format_fixed_suggestions), 'totals', format_fixed_suggestions)
+    return format_fixed_suggestions
 # ____________________________________________________________________________
 
 
@@ -170,6 +171,7 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
     print('search value:', search)
     # As user types in the search bar this if statement gets triggered.
+    
     return None
     # return parse_query(search)
     # if (passed_variable != "airport"):
