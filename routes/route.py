@@ -11,8 +11,10 @@ from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
+from .root.mdb_fetch import Mdb_fetch
 from .root.weather_parse import Weather_parse
 from .root.weather_fetch import Weather_fetch
+from .root.flight_aware_data_pull import Flight_aware_pull
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
 from time import sleep
@@ -127,32 +129,19 @@ async def get_user_searches(email):
 
 @router.get('/searches/suggestions/{email}')
 async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
-    # Shows all the searches that have been made by the user.
-    # user_data = collection_searchTrack.find_one({"email": email})
-    suggestions = []
     
-    # query = "g"    # Search for predertimined items in pipeline containing "ap"
-    # page = 1        # first page
-    # page_size = 30  # items per page
     
-    print('\n\n\nTriggered email, query, page, page_size', email, query, page, page_size)
-    collection_merge = [collection, collection_flights] 
-    for coll in collection_merge:
-        pipeline = [
-                {"$match": {"count": {"$exists": True}}},        # filter documents that have a count field
-                # {"$project": {"_id": {"$toString": "$_id", "count": 1}}},
-                {"$match": {"$or": [
-                    {"flightNumber": {"$regex": query, "$options": "i"}},       # matches flightNumber field in flights collection
-                    {"name": {"$regex": query, "$options": "i"}}                # matches name field in airport collection
-                ]}},
-                {"$sort": {"count": -1}},               # sort by popularity - the count field contains popularity rating.
-                {"$skip": (page - 1) * page_size},    # the page number itself.
-                {"$limit": page_size}                 # items per page
-            ]
+    with open('test_popular_suggestions.pkl', 'rb') as f:
+        suggestions = pickle.load(f)
+    try:
+        suggestions = suggestions[page]
+    except IndexError as e:
+        suggestions = []
+        print(e)
     
-        suggestions.extend(coll.aggregate(pipeline))
+    
+
     format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
-    print(len(format_fixed_suggestions), 'totals', format_fixed_suggestions)
     return format_fixed_suggestions
 # ____________________________________________________________________________
 
