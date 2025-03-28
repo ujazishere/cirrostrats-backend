@@ -21,7 +21,9 @@ from routes.root.weather_parse import Weather_parse
 """
 # TODO: bandaid - quick fix for path. find better and clean this.
 class Weather_fetch:
-
+    """
+    TODO: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
+    """
 
     def __init__(self) -> None:
         self.rc = Root_class()
@@ -89,10 +91,10 @@ class Weather_fetch:
         # TODO: account for new airport codes, maybe upsert or maybe just none for now.
         print('Updating mdb')
         update_operations = []
-    
+
         for url, weather in resp_dict.items():
             airport_code_trailing = str(url)[-3:]
-            
+
             update_operations.append(
                 UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code 
                           {'$set': {f'weather.{weather_type}': weather},}
@@ -156,7 +158,6 @@ class Weather_fetch:
                 self.mdb_updates(resp_dict,weather_type)
                 # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
         
-
     async def fetch_and_store_by_type(self,weather_type):
         print(f'{weather_type} async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
@@ -172,7 +173,6 @@ class Weather_fetch:
 
         
         print(f'{weather_type} fetch done.')
-
 
     async def fetch_and_store_datis(self,):         # Unused
         print('DATIS async fetch in progress..')

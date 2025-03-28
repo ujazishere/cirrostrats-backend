@@ -5,6 +5,12 @@ from .root_class import Root_class
             
 class Newark_departures_scrape(Root_class):
     
+    """
+    TODO: This link contains database of safetly reports and is categorised by good metrics:
+         https://asrs.arc.nasa.gov/search/database.html
+        Reports can be downloaded in csv, find a way to decipher these and represent it in
+        a readable format based on airports and show it on the web app airport page/components.
+    """
     def __init__(self) -> None:
             pass
 

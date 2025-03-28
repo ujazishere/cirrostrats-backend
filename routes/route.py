@@ -138,8 +138,7 @@ async def get_user_search_suggestions(email: str, query: str, page: int, page_si
     except IndexError as e:
         suggestions = []
         print(e)
-    
-    
+
 
     format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
     return format_fixed_suggestions
@@ -189,6 +188,9 @@ async def ua_dep_dest_flight_status(flight_number):
     if "UA" in flight_number:
         airline_code = flight_number[:2]
         flight_number = flight_number[2:]
+    elif "GJS" in flight_number:
+        flight_number = flight_number[3:]
+        airline_code = "UA"
     else:
         airline_code = "UA"
     united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
