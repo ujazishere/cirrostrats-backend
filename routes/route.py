@@ -5,15 +5,24 @@ from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models.model import FlightNumber, Airport
-from config.database import collection, collection_weather, collection_flights, collection_gates, collection_searchTrack
+try:
+    from config.database import collection, collection_weather, collection_flights, collection_gates, collection_searchTrack
+except Exception as e:
+    print('Mongo connection unsuccessful\n', e)
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
-from .root.mdb_fetch import Mdb_fetch
-from .root.weather_parse import Weather_parse
-from .root.weather_fetch import Weather_fetch
+try:
+    from .root.mdb_fetch import Mdb_fetch
+except Exception as e:
+    print('Mongo connection unsuccessful\n', e)
+# from .root.weather_parse import Weather_parse
+try:
+    from .root.weather_fetch import Weather_fetch
+except Exception as e:
+    print('Mongo connection unsuccessful\n', e)
 from .root.flight_aware_data_pull import Flight_aware_pull
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
@@ -21,7 +30,7 @@ from time import sleep
 import os
 import pickle
 from decouple import config
-from .celery_app import celery_app
+# from .celery_app import celery_app
 
 app = FastAPI()
 
@@ -77,7 +86,7 @@ async def get_us_concourses():
     return serialize_document_list(all_results)
 
 #_____________________________________________________________________________
-""" This section has everything to do with tracking, saving and retrieving searches"""
+""" Tracking, saving and retrieving searches"""
 # Define a Pydantic model to validate incoming request data
 class SearchData(BaseModel):
     email: str
@@ -127,10 +136,28 @@ async def get_user_searches(email):
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
 
+@router.get('/searches/initialSuggestions')
+async def get_initial_suggestions(query: str, page: int, page_size: int):
+    # Shows all of the popular searches.
+    print(page,query)
+    with open('publicuj_searches_unique_sorts.pkl', 'rb') as f:
+        suggestions = pickle.load(f)
+    try:
+        suggestions = suggestions[page]
+    except IndexError as e:
+        suggestions = []
+        print(e)
+
+
+    format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
+    return format_fixed_suggestions
+
+
+
 @router.get('/searches/suggestions/{email}')
 async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
     
-    
+    print(page)
     with open('test_popular_suggestions.pkl', 'rb') as f:
         suggestions = pickle.load(f)
     try:
@@ -193,8 +220,10 @@ async def ua_dep_dest_flight_status(flight_number):
         airline_code = "UA"
     else:
         airline_code = "UA"
-    united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
-    print('depdes united_dep_dest',united_dep_dest)
+
+    united_dep_dest = flt_info.flight_view_gate_info(flt_num=flight_number, airport=None)
+    # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
+    # print('depdes united_dep_dest',united_dep_dest)
     return united_dep_dest
 
 

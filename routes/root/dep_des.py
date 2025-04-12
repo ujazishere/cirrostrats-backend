@@ -69,6 +69,7 @@ class Pull_flight_info(Root_class):
         return bulk_flight_deet
 
     def united_departure_destination_scrape(self,airline_code=None, flt_num=None,pre_process=None):
+        print('dep_des.py united_departure_destination_scrape', flt_num, airline_code)
         departure_scheduled_time,destination_scheduled_time = [None]*2
         if not airline_code:
             airline_code = 'UA'
@@ -76,6 +77,7 @@ class Pull_flight_info(Root_class):
             soup = pre_process
         else:
             info = f"https://united-airlines.flight-status.info/{airline_code}-{flt_num}"               # This web probably contains incorrect information.
+            print('info',info)
             soup = self.request(info)
         # Airport distance and duration can be misleading. Be careful with using these. 
 
@@ -276,7 +278,7 @@ class Pull_flight_info(Root_class):
                 }
 
 
-    def flight_view_gate_info(self, flt_num=None, airport=None, pre_process=None):             # not used yet. Plan on using it such that only reliable and useful information is pulled.
+    def flight_view_gate_info(self, airline_code=None, flt_num=None, airport=None, pre_process=None):             # not used yet. Plan on using it such that only reliable and useful information is pulled.
 
         # TODO: flight view can give reliable origin and destination info. Repo flights still dont show up tho. Use flightstats for repo flights. Use link below:
             #  https://www.flightview.com/flight-tracker/UA/4437
@@ -292,13 +294,17 @@ class Pull_flight_info(Root_class):
                 date = str(self.date_time(raw=True))     # Root_class inheritance format yyyymmdd
             print("dep_des.py flight_view_gate_info",flt_num,airport,date)
             try:        # the airport coming in initially wouldnt take airport as arg since it lacks the initial info, hence sec rep info will have this airport ID
-                flight_view = f"https://www.flightview.com/flight-tracker/UA/{flt_num}?date={date}&depapt={airport[1:]}"
-            except:
-                pass
-            print('dep_des.py flight_view_gate_info. Standard synchronoys fetch for gate info from:', flight_view)
+                # flight_view = f"https://www.flightview.com/flight-tracker/UA/{flt_num}?date={date}&depapt={airport[1:]}"
+                flight_view = f"https://www.flightview.com/flight-tracker/{airline_code}/{flt_num}"
+            except Exception as e:
+                print('dep_des.py flight_view_gate_info. ***UNABLE*** to pull gate info', e)
+                return
+
             
+            print('fetching soup', flight_view)
             self.soup = self.request(flight_view)
             soup = self.soup
+            print('Done fetching soup')
         try :
             leg_data = soup.find_all('div', class_='leg')   # Has all the departure and destination data
             departure_gate = leg_data[0].find_all('tr', class_='even')[1].text[17:]
