@@ -1,12 +1,14 @@
 from datetime import datetime
+import json
 import re
 from typing import Dict, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import requests
 from models.model import FlightNumber, Airport
 try:
-    from config.database import collection, collection_weather, collection_flights, collection_gates, collection_searchTrack
+    from config.database import collection_airports, collection_weather, collection_flights, collection_gates, collection_searchTrack
 except Exception as e:
     print('Mongo connection unsuccessful\n', e)
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
@@ -68,7 +70,7 @@ Check individual_serial to see the dict format.
 async def get_airports():
     # Returns '_id','name' and 'code' as document field keys and values as its values.
     # print('Triggered /airports')
-    all_results = collection.find({})
+    all_results = collection_airports.find({})
     return serialize_document_list(all_results)
 
 
@@ -152,23 +154,68 @@ async def get_initial_suggestions(query: str, page: int, page_size: int):
     format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
     return format_fixed_suggestions
 
-
-
 @router.get('/searches/suggestions/{email}')
-async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
+async def get_user_search_suggestions(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
+    regex_pattern: str = query.upper()
+
+    # Calculate skip value for pagination
+    skip = page * page_size
+    def call_collection_page(c,regex_pattern,skip,page_size):
+        # Perform the query with pagination
+        cursor = c.find(
+            {'flightID': {'$regex': regex_pattern}},
+            {'flightID': 1}
+        ).skip(skip).limit(page_size)
+        # Convert cursor to list of documents
+        results = [doc for doc in cursor]
+        # for doc in cursor:
+            # doc['type']=
+            
+        return results
+
+    results_flights = call_collection_page(collection_flights,regex_pattern,skip,page_size)
+    # results_airports = call_collection_page(collection_airports,regex_pattern,skip,page_size)
+    # results_gates = call_collection_page(collection_gates,regex_pattern,skip,page_size)
+    # merged_results = results_flights + results_airports + results_gates
+    # results = merged_results
     
-    print(page)
-    with open('test_popular_suggestions.pkl', 'rb') as f:
-        suggestions = pickle.load(f)
-    try:
-        suggestions = suggestions[page]
-    except IndexError as e:
-        suggestions = []
-        print(e)
+    # Get total count for pagination metadata
+    total_count = collection_flights.count_documents({'flightID': {'$regex': regex_pattern}})
+    total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+
+    results = results_flights
+    results = [i for i in serialize_document_list(results)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
+
+    # Return paginated results with metadata
+    data = {"results": results,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages - 1,
+            "has_prev": page > 0
+        }
+    }
+
+    return results
 
 
-    format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
-    return format_fixed_suggestions
+# @router.get('/searches/suggestions/{email}')
+# async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
+    
+#     print(page)
+#     with open('test_popular_suggestions.pkl', 'rb') as f:
+#         suggestions = pickle.load(f)
+#     try:
+#         suggestions = suggestions[page]
+#     except IndexError as e:
+#         suggestions = []
+#         print(e)
+
+
+#     format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
+#     return format_fixed_suggestions
 # ____________________________________________________________________________
 
 
@@ -207,22 +254,22 @@ async def get_airport_data(airport_id, search: str = None):
 
 # ___________________________________________________________________________
 
-@router.get("/DepartureDestination/{flight_number}")
-async def ua_dep_dest_flight_status(flight_number):
+@router.get("/DepartureDestination/{flightID}")
+async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
     flt_info = Pull_flight_info()
-    flight_number = flight_number.upper()
-    if "UA" in flight_number:
-        airline_code = flight_number[:2]
-        flight_number = flight_number[2:]
-    elif "GJS" in flight_number:
-        flight_number = flight_number[3:]
+    flightID = flightID.upper()
+    if "UA" in flightID or "UAL" in flightID:
+        airline_code = flightID[:2]
+        flightID = flightID[2:]
+    elif "GJS" in flightID:
+        flightID = flightID[3:]
         airline_code = "UA"
     else:
         airline_code = "UA"
 
-    united_dep_dest = flt_info.flight_view_gate_info(flt_num=flight_number, airport=None)
-    # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flight_number, pre_process=None)
+    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID, airport=None)
+    # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
     # print('depdes united_dep_dest',united_dep_dest)
     return united_dep_dest
 
@@ -584,7 +631,7 @@ async def get_airports():
 async def get_airports():
 
     # list_serial only returns id
-    mdb = (serialize_document_list(collection.find({})))
+    mdb = (serialize_document_list(collection_airports.find({})))
     print(mdb[:2])
     for i in mdb[:2]:
         id = i['id']
@@ -593,6 +640,6 @@ async def get_airports():
         # print(1,id,name,code)
 
 
-    result = collection.find({})
+    result = collection_airports.find({})
 
     return serialize_document_list(result)
