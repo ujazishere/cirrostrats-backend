@@ -1,6 +1,6 @@
 from routes.root.weather_parse import Weather_parse
 from routes.root.dep_des import Pull_flight_info
-from config.database import collection, collection_weather, collection_flights, collection_gates, collection_searchTrack
+from config.database import collection_airports, collection_weather, collection_flights, collection_gates, collection_searchTrack
 
 # TODO: save data on elasticSeach or redis. Once fetched from mongo.
 # Fetching raw data from raw functions from the backend.
@@ -18,7 +18,7 @@ class Mdb_fetch():
         # page_size = 30  # items per page
 
         print('\n\n\nTriggered email, query, page, page_size', email, query, page=0, page_size=0)
-        collection_merge = [collection, collection_flights] 
+        collection_merge = [collection_airports, collection_flights] 
         for coll in collection_merge:
             pipeline = [
                     {"$match": {"count": {"$exists": True}}},        # filter documents that have a count field

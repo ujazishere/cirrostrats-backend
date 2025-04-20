@@ -1,5 +1,5 @@
 import threading
-from config.database import collection_weather,collection
+from config.database import collection_weather,collection_airports
 from bson import ObjectId
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
@@ -35,7 +35,7 @@ class Weather_fetch:
 
     def weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
-        all_mdb_airport_codes = [i['code'] for i in collection.find({})]
+        all_mdb_airport_codes = [i['code'] for i in collection_airports.find({})]
 
         import os
         cwd = os.getcwd()

@@ -7,24 +7,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 from models.model import FlightNumber, Airport
-try:
+try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_flights, collection_gates, collection_searchTrack
 except Exception as e:
-    print('Mongo connection unsuccessful\n', e)
+    print('Mongo collection connection unsuccessful\n', e)
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from bson import ObjectId
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
-try:
+try:        # This is in order to keep going when collections are not available
     from .root.mdb_fetch import Mdb_fetch
 except Exception as e:
-    print('Mongo connection unsuccessful\n', e)
+    print('Mongo Mdb_fetch connection unsuccessful\n', e)
 # from .root.weather_parse import Weather_parse
-try:
+try:        # This is in order to keep going when collections are not available
     from .root.weather_fetch import Weather_fetch
 except Exception as e:
-    print('Mongo connection unsuccessful\n', e)
+    print('Mongo Weather_fetch connection unsuccessful\n', e)
 from .root.flight_aware_data_pull import Flight_aware_pull
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
