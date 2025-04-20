@@ -35,7 +35,7 @@ The key value pairs within the documents are called fields. They maybe nested fi
 """
 
 # Collection names
-collection = db['airports']
+collection_airports = db['airports']
 collection_weather = db['Weather']
 collection_searchTrack = db['SearchTrack']
 
@@ -52,7 +52,7 @@ class Airport(BaseModel):
     name: str
     code: str
 def create_airport(airport: Airport):
-    result = collection.insert_one({})
+    result = collection_airports.insert_one({})
     return {'id': str(result.inserted_id)}
 
 # This will add info based on object id and refer to it.
