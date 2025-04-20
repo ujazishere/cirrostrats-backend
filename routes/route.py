@@ -254,6 +254,29 @@ async def get_airport_data(airport_id, search: str = None):
 
 # ___________________________________________________________________________
 
+@router.get("/ajms/{flight_number}")
+async def aws_jms(flight_number):
+    try:
+        data = requests.get(f'http://3.146.107.112:8000/flights/{flight_number}?days_threshold=1')
+        data = json.loads(data.text)
+    except Exception as e:
+        print(e)
+        data = {}
+    # TODO: Get clearance, and beacon code and sort according to latest data. Right now only the latest data is returned.
+    def data_retrieve(data):
+        for i in data:
+            if i['version'] == 'latest':
+                data = i
+
+    if data.get('latest'):
+        return data
+    else:
+        data = data['mongo'][0]['matching_versions']
+        data = data[-1]
+        print('DATA*****',data)
+        return data
+
+
 @router.get("/DepartureDestination/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
