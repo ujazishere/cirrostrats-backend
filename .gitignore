@@ -2,6 +2,7 @@ win_local.bat
 trial.py
 celerybeat-schedule
 /venv
+.vscode
 .env
 *.py[cod]
 /fast-api/__pycache__

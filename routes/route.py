@@ -4,6 +4,7 @@ import re
 from typing import Dict, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fuzzywuzzy import fuzz, process
 from pydantic import BaseModel
 import requests
 from models.model import FlightNumber, Airport
@@ -28,6 +29,7 @@ except Exception as e:
 from .root.flight_aware_data_pull import Flight_aware_pull
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
+from .root.search_data import get_search_suggestion_data
 from time import sleep
 import os
 import pickle
@@ -66,6 +68,7 @@ This serialize_document_list return is a list type with each item a dict.
 Each list item is a mdb document
 Check individual_serial to see the dict format.
 """
+# TODO: Delete these 3-airports,flightNumbers,gates. Probably dont need it anymore.
 @router.get('/airports')
 async def get_airports():
     # Returns '_id','name' and 'code' as document field keys and values as its values.
@@ -96,7 +99,58 @@ class SearchData(BaseModel):
     submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
     submitId: Union[str, None]
     timestamp: datetime
+
+
+@router.get('/searches/suggestions/{email}')
+# @functools.lru_cache(maxsize=100)
+# def fuzzy_search_cached(query, limit=100):
+async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: int = 20, limit=5):  # Default page and page size
+
+    """Cached fuzzy search to improve performance for repeated queries."""
+    data = get_search_suggestion_data()
     
+    # For very short queries, prioritize prefix matching
+    if len(query) <= 2:
+        print('1')
+
+        # First find exact prefix matches
+        prefix_matches = [item for item in data 
+                         if item['search_text'].startswith(query.lower())]
+        # Return prefix matches if we have enough
+
+        if len(prefix_matches) >= limit:
+            return prefix_matches[:limit]
+            
+        # Otherwise, supplement with fuzzy matches
+        remaining = limit - len(prefix_matches)
+        search_universe = [item for item in data if item not in prefix_matches]
+        
+    else:
+        print('in else')
+        prefix_matches = []
+        search_universe = data
+        remaining = limit
+    
+    # Get search text from all items
+    choices = [item['search_text'] for item in search_universe]
+    
+    # Get fuzzy matches using fuzzywuzzy
+    fuzzy_matches = process.extract(
+        query.lower(), 
+        choices,
+        limit=remaining,
+        scorer=fuzz.partial_ratio  # Better for autocomplete scenarios
+    )
+    
+    # Get the corresponding items
+    fuzzy_items = [search_universe[choices.index(match)] for match, score in fuzzy_matches 
+                  if score > 60]  # Minimum similarity threshold
+    
+    # Combine prefix and fuzzy matches
+    return prefix_matches + fuzzy_items
+
+
+
 @router.post('/searches/track')
 def track_search(data: SearchData):
     
@@ -138,24 +192,9 @@ async def get_user_searches(email):
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
 
-@router.get('/searches/initialSuggestions')
-async def get_initial_suggestions(query: str, page: int, page_size: int):
-    # Shows all of the popular searches.
-    print(page,query)
-    with open('publicuj_searches_unique_sorts.pkl', 'rb') as f:
-        suggestions = pickle.load(f)
-    try:
-        suggestions = suggestions[page]
-    except IndexError as e:
-        suggestions = []
-        print(e)
 
-
-    format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
-    return format_fixed_suggestions
-
-@router.get('/searches/suggestions/{email}')
-async def get_user_search_suggestions(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
+# @router.get('/searches/suggestions/{email}')
+async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
     regex_pattern: str = query.upper()
 
     # Calculate skip value for pagination
@@ -173,17 +212,18 @@ async def get_user_search_suggestions(email: str, query: str, page: int = 0, pag
             
         return results
 
-    results_flights = call_collection_page(collection_flights,regex_pattern,skip,page_size)
-    # results_airports = call_collection_page(collection_airports,regex_pattern,skip,page_size)
+    # results_flights = call_collection_page(collection_flights,regex_pattern,skip,page_size)
+    results_airports = call_collection_page(collection_airports,regex_pattern,skip,page_size)
     # results_gates = call_collection_page(collection_gates,regex_pattern,skip,page_size)
     # merged_results = results_flights + results_airports + results_gates
     # results = merged_results
     
     # Get total count for pagination metadata
-    total_count = collection_flights.count_documents({'flightID': {'$regex': regex_pattern}})
+    total_count = collection_airports.count_documents({'flightID': {'$regex': regex_pattern}})
     total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
-
-    results = results_flights
+    print('TOTALS *****',total_count, total_pages)
+    print('results:',results_airports)
+    results = results_airports
     results = [i for i in serialize_document_list(results)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
 
     # Return paginated results with metadata

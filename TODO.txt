@@ -1,5 +1,6 @@
 TODO: UJ
-    "Prioritize and categorize tasks by importance and urgency. Focus on just one on the top list and do it"
+
+# get count fields from all collections, save it into a new collection - maybe searchtrack, return sorted by count for frontend to use? 
     
 
 
