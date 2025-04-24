@@ -24,7 +24,7 @@ def resp_initial_returns(resp_dict: dict, airline_code, flight_number_query,):
             print("22.resp_intitial_return flightstats.com")
             soup = fm.requests_processing(resp,bs=True)
             print("22Sending raw data to fs_dep_arr_timezone_pull for timezone data cleaning")
-            flight_stats_arr_dep_time_zone = flt_info.fs_dep_arr_timezone_pull(flt_num_query=flight_number_query,pre_process=soup)
+            flight_stats_arr_dep_time_zone = flt_info.flightstats_dep_arr_timezone_pull(flt_num_query=flight_number_query,pre_process=soup)
             # print(flight_stats_arr_dep_time_zone)
 
 

@@ -317,19 +317,20 @@ async def aws_jms(flight_number):
         return data
 
 
-@router.get("/DepartureDestination/{flightID}")
+@router.get("/flightViewGateInfo/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
     flt_info = Pull_flight_info()
+
     flightID = flightID.upper()
-    if "UA" in flightID or "UAL" in flightID:
-        airline_code = flightID[:2]
-        flightID = flightID[2:]
-    elif "GJS" in flightID:
-        flightID = flightID[3:]
-        airline_code = "UA"
-    else:
-        airline_code = "UA"
+    if flightID.startswith(("UA", "UAL", "GJS")):
+        airline_code = "UA"  # Always use "UA" even if it starts with "UAL"
+        if flightID.startswith("GJS"):
+            flightID = flightID[3:]
+        elif flightID.startswith("UAL"):
+            flightID = flightID[3:]  # "UAL" is 3 chars
+        elif flightID.startswith("UA"):  # "UA" case
+            flightID = flightID[2:]
 
     united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID, airport=None)
     # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
@@ -337,12 +338,22 @@ async def ua_dep_dest_flight_status(flightID):
     return united_dep_dest
 
 
-@router.get("/DepartureDestinationTZ/{flight_number}")
-async def flight_stats_url(flight_number):      # time zone pull
+@router.get("/flightStatsTZ/{flightID}")
+async def flight_stats_url(flightID):      # time zone pull
     flt_info = Pull_flight_info()
+    
+    flightID = flightID.upper()
+    if flightID.startswith(("UA", "UAL", "GJS")):
+        airline_code = "UA"  # Always use "UA" even if it starts with "UAL"
+        if flightID.startswith("GJS"):
+            flightID = flightID[3:]
+        elif flightID.startswith("UAL"):
+            flightID = flightID[3:]  # "UAL" is 3 chars
+        elif flightID.startswith("UA"):  # "UA" case
+            flightID = flightID[2:]
 
-    fs_departure_arr_time_zone = flt_info.fs_dep_arr_timezone_pull(
-        flt_num_query=flight_number,)
+    fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
+        airline_code=airline_code,flt_num_query=flightID,)
     print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
 
     return fs_departure_arr_time_zone
