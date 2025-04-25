@@ -140,24 +140,6 @@ class Weather_fetch:
         return resp_dict
 
 
-    async def fetch_and_store(self,):       # TODO: Make this into a TAF only form. just like the ones below
-        print('Initiating the weather fetch.')
-        for weather_type, weather_links in self.weather_links_dict.items():
-            # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
-            # Check datis bulk extract and bulk weather extract for help on this.
-            print(weather_type)
-            if weather_type == 'taf':           # TODO: Why is this only accounting for the taf not for all others?
-                print(f'For {weather_type}...')
-                resp_dict: dict = await self.fm.async_pull(list(weather_links))
-                
-                # Datis needs special processing before you put into collection. This bit accomplishes it
-                # TODO: This bit is within the indent of the taf which never reached datis. Need to be outside of the if statement.
-                if weather_type == 'datis':
-                    resp_dict = self.datis_processing(resp_dict)
-                
-                self.mdb_updates(resp_dict,weather_type)
-                # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
-        
     async def fetch_and_store_by_type(self,weather_type):
         print(f'{weather_type} async fetch in progress..')
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.

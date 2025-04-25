@@ -7,34 +7,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
 from pydantic import BaseModel
 import requests
-from models.model import FlightNumber, Airport
-try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_flights, collection_gates, collection_searchTrack
-except Exception as e:
-    print('Mongo collection connection unsuccessful\n', e)
-from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
+
+from decouple import config
 from bson import ObjectId
+try:        # This is in order to keep going when collections are not available
+    from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
+except Exception as e:
+    print('Mongo collection(Luis) connection unsuccessful\n', e)
+try:
+    from config.database import collection_flights
+except Exception as e:
+    print('Mongo collection(UJ) connection unsuccessful\n', e)
+
+from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
-try:        # This is in order to keep going when collections are not available
-    from .root.mdb_fetch import Mdb_fetch
-except Exception as e:
-    print('Mongo Mdb_fetch connection unsuccessful\n', e)
-# from .root.weather_parse import Weather_parse
-try:        # This is in order to keep going when collections are not available
-    from .root.weather_fetch import Weather_fetch
-except Exception as e:
-    print('Mongo Weather_fetch connection unsuccessful\n', e)
-from .root.flight_aware_data_pull import Flight_aware_pull
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
 from .root.search_data import get_search_suggestion_data
-from time import sleep
-import os
-import pickle
-from decouple import config
-# from .celery_app import celery_app
+try:        # returns collections with count - Supposed to be used for drop down suggestions in frontend.
+    from .root.mdb_fetch import Mdb_fetch
+except Exception as e:
+    print('Mongo Mdb_fetch connection unsuccessful\n', e)
 
 app = FastAPI()
 
@@ -463,22 +458,6 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     #     print('passed_variable is not airport. It is:', passed_variable)
     #     # TODO: Do something here to process the raw search query and return it to the frontend.
     #     return None
-
-
-@router.get('/fetchandstoreWeather')
-async def fetchandstoreWeather():
-    # TODO: This Wf is just for testing the big fetch. delete this from here. A route for it alreadt exists. Needs to be schedudled every 55 mins for metar and datis, 4 hours for taf,
-        # Find a way to schedule this either through a dedicated route via react or just python multi threading.
-    # TODO: Make similar for gate fetch and store into mdb and run a scheduler.
-    Wf = Weather_fetch()
-    print('Starting the big fetch')
-
-#     To fetch live weather use the x line and access http://127.0.0.1:8000/fetchandstore from the browser. It will automatically fetch and save all weather data into the mongodb
-#     Check docker terminal logs for progress on  the fetch.
-    x = await Wf.fetch_and_store()
-    print("finished fetching")
-
-    return None
 
 
 def parse_query(main_query):

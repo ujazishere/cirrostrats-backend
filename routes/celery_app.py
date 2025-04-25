@@ -7,7 +7,7 @@ import datetime as dt
 
 '''     ***CAUTION***
     Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
-    instead use asyncio.run(async_function()) and this async_function() can be an async function. check example below for asyncio.run()
+    instead use asyncio.run(async_function()) and this async_function() can be any async function you want to schedule. check example below for asyncio.run()
 '''
 
 celery_app = Celery(
@@ -23,7 +23,6 @@ def MetarFetch():
     asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
 async def run_metar_fetch_async_function():
-    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     Wf = Weather_fetch()
     await Wf.fetch_and_store_by_type(weather_type='metar')
 
@@ -35,7 +34,6 @@ def DatisFetch():
     asyncio.run(run_datis_fetch())
 
 async def run_datis_fetch():    
-    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     Wf = Weather_fetch()
     await Wf.fetch_and_store_by_type(weather_type='datis')
 
@@ -45,14 +43,12 @@ def TAFFetch():
     asyncio.run(run_TAF_fetch())
 
 async def run_TAF_fetch():    
-    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     Wf = Weather_fetch()
     await Wf.fetch_and_store_by_type(weather_type='taf')
 
 
 @celery_app.task
 def GateFetch():
-    # yyyymmddhhmm = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
     gs = Gate_Scrape()
     gs.fetch_and_store()
 
