@@ -1,8 +1,1 @@
 TODO: UJ
-
-# get count fields from all collections, save it into a new collection - maybe searchtrack, return sorted by count for frontend to use? 
-    
-
-
-
-

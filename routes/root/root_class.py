@@ -8,7 +8,6 @@ import pickle
 import smtplib
 import asyncio
 import aiohttp
-from time import sleep
 from decouple import config
 
 class Root_class():

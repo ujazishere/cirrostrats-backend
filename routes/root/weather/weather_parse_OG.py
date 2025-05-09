@@ -3,7 +3,7 @@ import pickle
 from bs4 import BeautifulSoup as bs4
 import requests
 import json
-from .root_class import Root_class,Fetching_Mechanism
+from ..root_class import Root_class,Fetching_Mechanism
 from datetime import datetime
 
 

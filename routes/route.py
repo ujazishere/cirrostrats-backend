@@ -5,33 +5,32 @@ from typing import Dict, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
+# from levenshtein import levenshtein  # type: ignore
 from pydantic import BaseModel
 import requests
-
 from decouple import config
 from bson import ObjectId
+
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
-try:
-    from config.database import collection_flights
-except Exception as e:
-    print('Mongo collection(UJ) connection unsuccessful\n', e)
 
+from routes.root.search.query_classifier import QueryClassifier
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from .root.test_data_imports import test_data_imports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
-from .root.search_data import get_search_suggestion_data
-try:        # returns collections with count - Supposed to be used for drop down suggestions in frontend.
-    from .root.mdb_fetch import Mdb_fetch
-except Exception as e:
-    print('Mongo Mdb_fetch connection unsuccessful\n', e)
+from .root.search.search_data import get_search_suggestion_data
 
 app = FastAPI()
+qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+
+
+test_suggestions = True if config('test_suggestions')=='1' else False
+qc.initialize_collections(test_suggestions=test_suggestions)
 
 # Define the origins that are allowed to access the backend
 origins = [
@@ -99,14 +98,12 @@ class SearchData(BaseModel):
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)
 # def fuzzy_search_cached(query, limit=100):
-async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: int = 20, limit=5):  # Default page and page size
-
+async def fetch_most_searched(email: str, query: str, limit=5):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
-    data = get_search_suggestion_data()
-    
+    data = get_search_suggestion_data(c_docs=qc.c_sti_docs)
+
     # For very short queries, prioritize prefix matching
     if len(query) <= 2:
-        print('1')
 
         # First find exact prefix matches
         prefix_matches = [item for item in data 
@@ -119,13 +116,14 @@ async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: 
         # Otherwise, supplement with fuzzy matches
         remaining = limit - len(prefix_matches)
         search_universe = [item for item in data if item not in prefix_matches]
-        
+
     else:
-        print('in else')
         prefix_matches = []
         search_universe = data
         remaining = limit
-    
+        parsed_query = qc.parse_query(query)           # Attempt to run the parse query when suggestions are exhausted.
+        print('pq', parsed_query)
+
     # Get search text from all items
     choices = [item['search_text'] for item in search_universe]
     
@@ -236,21 +234,6 @@ async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: 
     return results
 
 
-# @router.get('/searches/suggestions/{email}')
-# async def get_user_search_suggestions(email: str, query: str, page: int, page_size: int):
-    
-#     print(page)
-#     with open('test_popular_suggestions.pkl', 'rb') as f:
-#         suggestions = pickle.load(f)
-#     try:
-#         suggestions = suggestions[page]
-#     except IndexError as e:
-#         suggestions = []
-#         print(e)
-
-
-#     format_fixed_suggestions = [i for i in serialize_document_list(suggestions)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
-#     return format_fixed_suggestions
 # ____________________________________________________________________________
 
 
@@ -270,7 +253,7 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     # As user types in the search bar this if statement gets triggered.
     
     return None
-    # return parse_query(search)
+    # return qc.parse_query(search)
     # if (passed_variable != "airport"):
     #     print('passed_variable is not airport. It is:', passed_variable)
     #     # TODO: Do something here to process the raw search query and return it to the frontend.
@@ -290,27 +273,73 @@ async def get_airport_data(airport_id, search: str = None):
 # ___________________________________________________________________________
 
 @router.get("/ajms/{flight_number}")
-async def aws_jms(flight_number):
+async def aws_jms(flight_number, mock=False):
+    # TODO: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
+            # still needs work to address dict returns and arrival and destinationAirport mismatch.
+    # TODO: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
     try:
-        data = requests.get(f'http://3.146.107.112:8000/flights/{flight_number}?days_threshold=1')
-        data = json.loads(data.text)
+        if mock:
+            data = mock
+            # print('test data', data)
+        else:
+            data = requests.get(f'http://3.146.107.112:8000/flights/{flight_number}?days_threshold=1')
+            data = json.loads(data.text)
+        mongo,latest = data.get('mongo'),data.get('latest')
+
+        # This is throughly sought! if mongo and latest both not availbale just return. if either is available just fix them!
+        # Data is flowing in popularity increments - latest is the best, mongo is second best
+        if not mongo and not latest:
+            return {}
+        
+        elif mongo:     # if mongo availbalem, temporarily fix that cunt first! process it later
+            # TODO: This needs fixing. mongo base that is a list type is redundant. just pass the insider dict instead of dict inside of the list since theres only one dict with `flightID` and `matching_versions` for its keys. 
+            # Check all areas that it reachs and account for all areas. 
+            mongo:dict =  mongo[0]['matching_versions']            # mongo is a list type at the base that has only one dict with keys `flightID` and `matching_versions`. hence magic number 0 to get rid of the base list.
+            
+        # TODO: Again hazardous!! ****CAUTION*** FIX ASAP! clearance subdoc may not reflect the same as the secondary flight data subdoc..
+        if not latest:      # Idea is to get clearance and if found in latest return that and mongo
+            print('no latest w mongo')
+            latest_mogno = mongo[-1]
+            if latest_mogno.get('towerAircraftID') and len(mongo)>=2:
+                print('mongo clearance found')
+                second_latest_mongo = mongo[-2]
+                merged_dict = {**latest_mogno,**second_latest_mongo}
+                return merged_dict
+                # print('here', mongo)
+            else:
+                print('no latest, no clearance found in mongo, returinng latest mongo only')
+                return latest_mogno
+            # print(mongo)
+            # print('found mongo but not latest')
+        elif latest:
+            print('found latest checking if it has clearance')
+            if not latest.get('clearance'):
+                print('Latest doesnt have clearance, returning it as is')
+                return latest
+            else:
+                print('found clearance in latest')
+                if mongo:
+                    print('have clearance from latest now updating latest mongo to it')
+                    latest_mogno = mongo[-1]
+                    if not latest_mogno.get('clearance'):
+                        merged_dict = {**latest,**latest_mogno}
+                        # print('latest', latest)
+                        return merged_dict
+                    else:
+                        print('!!! found clearance in latest as well as latest_mongo')
+                        # TODO: log this data for inspection and notification later on.
+                        second_latest_mongo = mongo[-2] if len(mongo)>=2 else {}
+                        print('second_latest_mogno',second_latest_mongo)
+
+                        return {**latest, **second_latest_mongo}
+                elif not mongo:
+                    print('NOMAD,No old mongo data for this flight!, investigate!')
+                    # This should never be the case unless a flight has never had a history in mongo and flight data has very recently been born and put into latest.
+                    return latest
+                    
     except Exception as e:
         print(e)
-        data = {}
-    # TODO: Get clearance, and beacon code and sort according to latest data. Right now only the latest data is returned.
-    def data_retrieve(data):
-        for i in data:
-            if i['version'] == 'latest':
-                data = i
-
-    if data.get('latest'):
-        return data
-    else:
-        data = data['mongo'][0]['matching_versions']
-        data = data[-1]
-        print('DATA*****',data)
-        return data
-
+        return {}
 
 @router.get("/flightViewGateInfo/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
@@ -327,18 +356,19 @@ async def ua_dep_dest_flight_status(flightID):
         elif flightID.startswith("UA"):  # "UA" case
             flightID = flightID[2:]
 
-    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID, airport=None)
+    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID, departure_airport=None)
     # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
     # print('depdes united_dep_dest',united_dep_dest)
     return united_dep_dest
 
 
 @router.get("/flightStatsTZ/{flightID}")
-async def flight_stats_url(flightID):      # time zone pull
+async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
     flt_info = Pull_flight_info()
     
     flightID = flightID.upper()
-    if flightID.startswith(("UA", "UAL", "GJS")):
+    icao_codes = ("UA", "UAL", "GJS", "DL", "AA", "AAL", "DAL")
+    if flightID.startswith(icao_codes):
         airline_code = "UA"  # Always use "UA" even if it starts with "UAL"
         if flightID.startswith("GJS"):
             flightID = flightID[3:]
@@ -453,112 +483,17 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     print('search value:', search)
     # As user types in the search bar this if statement gets triggered.
     # return None
-    return parse_query(search)
+    return qc.parse_query(search)
     # if (passed_variable != "airport"):
     #     print('passed_variable is not airport. It is:', passed_variable)
     #     # TODO: Do something here to process the raw search query and return it to the frontend.
     #     return None
 
 
-def parse_query(main_query):
-    """
-    TODO : Deprecate this! get it from the legacy django codebase. this can be handeled in frontend-react
-    """
-    # Global variable since it is used outside of the if statement in case it was not triggered. purpose: Handeling Error
-    query_in_list_form = []
-    # if .split() method is used outside here it can return since empty strings cannot be split.
-
-    # splits query. Necessary operation to avoid complexity. Its a quick fix for a deeper more wider issue.
-    query_in_list_form = main_query.split()
-
-    # TODO: Log the extent of query reach deep within this code, also log its occurrances to find impossible statements and frequent searches.
-    # If query is only one word or item. else statement for more than 1 is outside of this indent. bring it in as an elif statement to this if.
-    if len(query_in_list_form) == 1:
-
-        # this is string form instead of list - Taking the only element(first element) of the query and making it uppercase.
-        query = query_in_list_form[0].upper()
-        flight_pattern = re.compile(r'^(UAL|UA|GJS)(\d+)$')     # ^ matches only for start of the line. would only match trailing pattern that is at the start of a line.
-        gate_pattern = re.compile(r'^(A|B|C)|\d{1,3}$')
-        # TODO: find a better way to handle this. Maybe regex. Need a system that classifies the query and assigns it a dedicated function like flight_deet or gate query.
-        # Accounting for flight number query with leading alphabets
-        flight_pattern_match = flight_pattern.fullmatch(query)
-        if flight_pattern_match:
-            airline_code, flt_digits = flight_pattern_match.groups()
-            print('\nSearching for:', airline_code, flt_digits)
-            return {'type': 'flightNumber', 'airlineCode': airline_code, 'flightNumber': flt_digits}
-        # flight or gate info page returns
-        elif len(query) == 4 or len(query) == 3 or len(query) == 2:
-            if query.isdigit():
-                query = int(query)
-                if 1 <= query <= 35 or 40 <= query <= 136:              # Accounting for EWR gates for gate query
-                    return gate_info(main_query=str(query))
-                else:                                                   # Accounting for fligh number
-                    print("INITIATING flight_deets FUNCTION.")
-                    return {'flightNumber': query, 'type': 'flightNumber'}
-            else:
-                if len(query) == 4 and query[0] == 'K':
-                    weather_query_airport = query
-                    # Making query uppercase for it to be compatible
-                    weather_query_airport = weather_query_airport.upper()
-                    return {'code': weather_query_airport, 'type': 'airport'}
-                else:           # All others
-                    print('Accounting for unkown query.')
-                    return {'gate': str(query), 'type': 'gate'}
-        # Accounting for 1 letter only. Gate query.
-        elif 'A' in query or 'B' in query or 'C' in query or len(query) == 1:
-            # When the length of query_in_list_form is only 1 it returns gates table for that particular query.
-            gate_query = query
-            return {'gate': str(gate_query), 'type': 'gate'}
-        else:   # return gate
-            print('alast resort')
-            gate_query = query
-            return {'gate': str(gate_query), 'type': 'gate'}
-
-    # its really an else statement but stated >1 here for situational awareness. This is more than one word query.
-    elif len(query_in_list_form) > 1:
-        # Making it uppercase for compatibility issues and error handling
-        first_letter = query_in_list_form[0].upper()
-        if first_letter == 'W':
-            weather_query_airport = query_in_list_form[1]
-            # Making query uppercase for it to be compatible
-            weather_query_airport = weather_query_airport.upper()
-            return weather_display(weather_query_airport)
-        else:
-            return gate_info(main_query=' '.join(query_in_list_form))
-
-    else:
-        print('Error in query processing. Last resort.')
-
-
-def gate_info(main_query):
-    gate_query = main_query
-    # In the database all the gates are uppercase so making the query uppercase
-    gate_query = gate_query.upper()
-    current_time = Root_class().date_time()
-
-    # This is a list full of dictionararies returned by err_UA_gate depending on what user requested..
-    # Each dictionary has 4 key value pair.eg. gate:c10,flight_number:UA4433,scheduled:20:34 and so on
-    gate_data_table = Gate_checker().ewr_UA_gate(gate_query)
-
-    # This can be a json to be delivered to the frontend
-    data_out = {'gate_data_table': gate_data_table,
-                'gate': gate_query, 'current_time': current_time}
-
-    # showing info if the info is found else it falls back to `No flights found for {{gate}}`on flight_info.html
-    if gate_data_table:
-        # print(gate_data_table)
-        return data_out
-    else:       # Returns all gates since query is empty. Maybe this is not necessary. TODO: Try deleting else statement.
-        return {'gate': gate_query}
-
-
-async def flight_deets(airline_code=None, flight_number_query=None, ):
+async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=True):
     # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
-    if config('env') == 'production':
-        # to restrict fa api use: for local use keep it False.
+    if config('env') == 'production':       # to restrict fa api use: for local use keep it False.       
         bypass_fa = False
-    else:
-        bypass_fa = True
 
     bulk_flight_deets = {}
 
@@ -629,7 +564,7 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 
         # This gate stuff is a not async because async is throwig errors when doing async
         gate_returns = Pull_flight_info().flight_view_gate_info(
-            flt_num=flight_number_query, airport=fa_data['origin'])
+            flt_num=flight_number_query, departure_airport=fa_data['origin'])
         bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
                              **weather_dict, **fa_data, **gate_returns}
     # If flightaware data is not available use this scraped data. Very unstable. TODO: Change this. Have 3 sources for redundencies
@@ -659,7 +594,7 @@ async def flight_deets(airline_code=None, flight_number_query=None, ):
 
         weather_dict = resp_sec
         gate_returns = Pull_flight_info().flight_view_gate_info(
-            flt_num=flight_number_query, airport=united_dep_dest['departure_ID'])
+            flt_num=flight_number_query, departure_airport=united_dep_dest['departure_ID'])
         bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
                              **weather_dict, **fa_data, **gate_returns}
 
