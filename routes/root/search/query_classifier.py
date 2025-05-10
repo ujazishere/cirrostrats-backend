@@ -17,25 +17,26 @@ cts = db_UJ['test_st']   # create/get a collection
 class QueryClassifier:
     """
     A class for classifying search queries into categories like Airports, Flights, etc.
+    Will also categorize multiplpe queries with counts of each served as popularity count and spit out normalized output.
     """
     
     def __init__(self, icao_file_path: Optional[str] = None):
         """
-        Initialize the classifier with ICAO airline codes.
-        
+        Initialize the classifier with ICAO airline codes and regex pattern
         Args:
             icao_file_path: Path to the pickle file containing ICAO codes and their counts
         """
         self.classified_suggestions = {}
-        self.icao_codes_separated = "UA|AA|DL|G7|GJS|UAX"  # Default common codes
+        self.icao_codes_separated = "UA|AA|DL|G7|GJS|UCA|UAX"  # Default common codes
 
         # Load ICAO codes if provided
         if icao_file_path:
             self.load_icao_codes(icao_file_path)
-            
+
         # Compile regex patterns for better performance
         self.airport_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
         self.flight_pattern = re.compile(rf"^({self.icao_codes_separated})\s?(\d{{1,5}}[A-Z]?$)")
+
 
     def initialize_collections(self,test_suggestions=True):
         limit = 100
@@ -44,6 +45,7 @@ class QueryClassifier:
                 print("loading csti test from pickle")
                 self.c_sti_docs = pickle.load(f)
         else:
+            # search index finds - sorted ph returns from the sti.
             self.count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
             self.c_sti_docs = list(cts.find(self.count_crit).sort('ph',-1))     # Reverse sort
         # print('initialized.', self.c_sti_docs)
@@ -93,7 +95,6 @@ class QueryClassifier:
             
         query = query.strip().upper()
         flight_match = self.flight_pattern.match(query)
-        
         # Check if it's an airport code
         if self.airport_pattern.match(query):
             # self.classified_suggestions.setdefault('Airports', []).append(query)
@@ -103,13 +104,10 @@ class QueryClassifier:
         elif flight_match:
             airline_code = flight_match.group(1)
             flight_number = flight_match.group(2)
-            if flight_number[0] == '4' and len(flight_number) == 4:
-                airline_code = 'GJS'
             flight_info = {'airline_code': airline_code, 'flight_number': flight_number}
             # self.classified_suggestions.setdefault('Flights', []).append(flight_info)
             return {'category': 'Flights', 'value': flight_info}
         elif query.isdigit():
-            
             if query[0] == '4' and len(query) == 4:
                 airline_code = 'GJS'
                 flight_number = query
@@ -130,12 +128,26 @@ class QueryClassifier:
             return {'category': 'Others', 'value': query}
     
 
+    def prepare_flight_id_for_webscraping(self, flightID: str) -> Optional[Tuple[str, str]]:
+        """Prepare a flight ID for webscraping by replacing 'UAL', 'GJS', and 'UCA' with 'UA'."""
+        parsed_query = self.parse_query(flightID)
+        if parsed_query.get("category") == "Flights":
+            airline_code = parsed_query["value"]["airline_code"]
+            flightID_digits = parsed_query["value"]["flight_number"]
+            if airline_code in ["UAL", "GJS", "UCA"]:
+                airline_code = "UA"
+            return airline_code, flightID_digits
+        print("Error within qc_webscrape. parse_query failed to return categorized data")
+        return None
+
+
     def classify_batch(self, queries: List[Tuple]) -> Dict:
         """
         Classify a batch of queries.
         
         Args:
-            queries: List of query strings or tuples where first element is the query
+            queries: List of query strings or tuples where first element is the query,
+                        second the count, served as popularity hit
             
         Returns:
             Dictionary with classified suggestions

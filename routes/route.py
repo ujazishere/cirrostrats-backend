@@ -96,7 +96,7 @@ class SearchData(BaseModel):
 
 
 @router.get('/searches/suggestions/{email}')
-# @functools.lru_cache(maxsize=100)
+# @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
 # def fuzzy_search_cached(query, limit=100):
 async def fetch_most_searched(email: str, query: str, limit=5):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
@@ -238,9 +238,6 @@ async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: 
 
 
 
-
-
-
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
 async def initial_query_processing_react(passed_variable: str = None, search: str = None):
@@ -341,22 +338,16 @@ async def aws_jms(flight_number, mock=False):
         print(e)
         return {}
 
+
 @router.get("/flightViewGateInfo/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
     flt_info = Pull_flight_info()
-
     flightID = flightID.upper()
-    if flightID.startswith(("UA", "UAL", "GJS")):
-        airline_code = "UA"  # Always use "UA" even if it starts with "UAL"
-        if flightID.startswith("GJS"):
-            flightID = flightID[3:]
-        elif flightID.startswith("UAL"):
-            flightID = flightID[3:]  # "UAL" is 3 chars
-        elif flightID.startswith("UA"):  # "UA" case
-            flightID = flightID[2:]
 
-    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID, departure_airport=None)
+    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID="UCA492")
+
+    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID_digits, departure_airport=None)
     # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
     # print('depdes united_dep_dest',united_dep_dest)
     return united_dep_dest
@@ -365,20 +356,12 @@ async def ua_dep_dest_flight_status(flightID):
 @router.get("/flightStatsTZ/{flightID}")
 async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
     flt_info = Pull_flight_info()
-    
     flightID = flightID.upper()
-    icao_codes = ("UA", "UAL", "GJS", "DL", "AA", "AAL", "DAL")
-    if flightID.startswith(icao_codes):
-        airline_code = "UA"  # Always use "UA" even if it starts with "UAL"
-        if flightID.startswith("GJS"):
-            flightID = flightID[3:]
-        elif flightID.startswith("UAL"):
-            flightID = flightID[3:]  # "UAL" is 3 chars
-        elif flightID.startswith("UA"):  # "UA" case
-            flightID = flightID[2:]
 
+    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID="UCA492")
+    
     fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
-        airline_code=airline_code,flt_num_query=flightID,)
+        airline_code=airline_code,flt_num_query=flightID_digits,)
     print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
 
     return fs_departure_arr_time_zone
