@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import pickle
 import re
 from typing import Dict, Union
 from fastapi import APIRouter,FastAPI
@@ -11,6 +12,8 @@ import requests
 from decouple import config
 from bson import ObjectId
 
+from routes.root.weather_parse import Weather_parse
+
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
 except Exception as e:
@@ -18,7 +21,7 @@ except Exception as e:
 
 from routes.root.search.query_classifier import QueryClassifier
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
-from .root.test_data_imports import test_data_imports
+from .root.test_data_imports import MockTestDataImports
 from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
@@ -62,27 +65,6 @@ This serialize_document_list return is a list type with each item a dict.
 Each list item is a mdb document
 Check individual_serial to see the dict format.
 """
-# TODO: Delete these 3-airports,flightNumbers,gates. Probably dont need it anymore.
-@router.get('/airports')
-async def get_airports():
-    # Returns '_id','name' and 'code' as document field keys and values as its values.
-    # print('Triggered /airports')
-    all_results = collection_airports.find({})
-    return serialize_document_list(all_results)
-
-
-@router.get('/flightNumbers')
-async def get_flight_numbers():
-    # TODO VHP: Need to add associated details in this collection-dep/des, STD's, gates, weather. Setup celery scheduler to constantly updatae this data. once sent, look for updated info. 
-        # Might want to exclude the gates since it can be delayed.
-    all_results = collection_flights.find({})
-    return serialize_document_list(all_results)
-
-
-@router.get('/gates')
-async def get_us_concourses():
-    all_results = collection_gates.find({})
-    return serialize_document_list(all_results)
 
 #_____________________________________________________________________________
 """ Tracking, saving and retrieving searches"""
@@ -256,15 +238,6 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     #     # TODO: Do something here to process the raw search query and return it to the frontend.
     #     return None
 
-@router.get('/airport/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
-async def get_airport_data(airport_id, search: str = None):
-    # This is a drop down selection item that is an airprot.
-    # mdb id for airport is passed from react when user selects a drop down item that is an airport.
-    # serialized_return = serialize_airport_input_data(res)
-    res = collection_weather.find_one(
-        {"airport_id": ObjectId(airport_id)})
-    res = res['weather']
-    return res
 
 
 # ___________________________________________________________________________
@@ -274,6 +247,7 @@ async def aws_jms(flight_number, mock=False):
     # TODO: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
+    returns = {}
     try:
         if mock:
             data = mock
@@ -301,18 +275,18 @@ async def aws_jms(flight_number, mock=False):
                 print('mongo clearance found')
                 second_latest_mongo = mongo[-2]
                 merged_dict = {**latest_mogno,**second_latest_mongo}
-                return merged_dict
+                returns = merged_dict
                 # print('here', mongo)
             else:
                 print('no latest, no clearance found in mongo, returinng latest mongo only')
-                return latest_mogno
+                returns = latest_mogno
             # print(mongo)
             # print('found mongo but not latest')
         elif latest:
             print('found latest checking if it has clearance')
             if not latest.get('clearance'):
                 print('Latest doesnt have clearance, returning it as is')
-                return latest
+                returns = latest
             else:
                 print('found clearance in latest')
                 if mongo:
@@ -321,22 +295,24 @@ async def aws_jms(flight_number, mock=False):
                     if not latest_mogno.get('clearance'):
                         merged_dict = {**latest,**latest_mogno}
                         # print('latest', latest)
-                        return merged_dict
+                        returns =  merged_dict
                     else:
                         print('!!! found clearance in latest as well as latest_mongo')
                         # TODO: log this data for inspection and notification later on.
                         second_latest_mongo = mongo[-2] if len(mongo)>=2 else {}
                         print('second_latest_mogno',second_latest_mongo)
 
-                        return {**latest, **second_latest_mongo}
+                        returns = {**latest, **second_latest_mongo}
                 elif not mongo:
                     print('NOMAD,No old mongo data for this flight!, investigate!')
                     # This should never be the case unless a flight has never had a history in mongo and flight data has very recently been born and put into latest.
-                    return latest
+                    returns =  latest
                     
     except Exception as e:
         print(e)
-        return {}
+
+    
+    return returns
 
 
 @router.get("/flightViewGateInfo/{flightID}")
@@ -388,9 +364,34 @@ async def flight_aware_w_auth(airline_code, flight_number):
     return flight_aware_data
 
 
-@router.get("/Weather/{airport_id}")
-async def Weather_raw(airport_id):
-    print('airport_id', airport_id)
+@router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
+async def get_airport_data(airport_id, search: str = None):
+
+    # TODO: Temp fix. Find better wayto do this.
+    if len(airport_id)<=4:   # airport ID can be bson id itself from mongo or a icao airportID code.
+        airport_id = airport_id[1:] if len(airport_id)==4 else airport_id
+        find_crit = {"code": airport_id}
+    else:
+        find_crit = {"airport_id": ObjectId(airport_id)}
+
+    return_crit = {'weather':1,'code':1,'_id':0}
+
+    res = collection_weather.find_one(find_crit, return_crit)
+    code = res.get('code') if res else None
+    if res:
+        res = res.get('weather')
+        # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
+        # weather = weather.scrape(weather_query, datis_arr=True)
+        weather = Weather_parse()
+        weather = weather.processed_weather(weather_raw=res)
+        weather.update({'code':code})
+
+
+        return weather
+
+@router.get("/liveAirportWeather/{airportCode}")
+async def Weather_raw(airportCode):
+    # TODO: Tests - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
 
     fm = Fetching_Mechanism()
     rsl = Root_source_links
@@ -399,10 +400,9 @@ async def Weather_raw(airport_id):
         wl = rsl.weather(weather_type,airport_id)
         return wl
     
-    wl_dict = {weather_type:link_returns(weather_type,airport_id) for weather_type in ('metar', 'taf','datis')}
+    wl_dict = {weather_type:link_returns(weather_type,airportCode) for weather_type in ('metar', 'taf','datis')}
     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airport_id)
-    
+    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airportCode)
     return weather_dict
 
 @router.get("/NAS/{departure_id}/{destination_id}")
@@ -424,31 +424,21 @@ async def nas(departure_id, destination_id):
 
 @router.get("/testDataReturns")
 def test_flight_deet_data():
-    test_data_imports_tuple = test_data_imports()
 
-    # bulk_flight_deets = dummy_imports_tuple[0]
-    bulk_flight_deets = test_data_imports_tuple
+    bulk_flight_deets:dict = MockTestDataImports()
 
-    print('test_flight_deet_data, test data is being sent')
-    bulk_flight_deet_returns = bulk_flight_deets
-    
-    test_nas_data = {'nas_departure_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}},
-     'nas_destination_affected': {'Airport Closure': {'Departure': 'BOS', 'Reason': '!BOS 10/204 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2410081559-2411152359', 'Start': 'Oct 08 at 15:59 UTC.', 'Reopen': 'Nov 15 at 23:59 UTC.'}, 'Ground Stop': {'Departure': 'BOS', 'Reason': 'aircraft emergency', 'End Time': '8:45 pm EDT'}}}
+    return bulk_flight_deets
 
-    test_weather_data = {
-    "datis": """EWR <span class="box_around_text">ATIS INFO E</span> 1951Z. 15006KT 10SM FEW250 28/10 <span class="box_around_text">A3020</span> (THREE ZERO TWO ZERO). <span class="box_around_text">ILS RWY 22L APCH IN USE.</span> DEPARTING RY 22R FROM INT W 10,150 FEET TODA. HI-SPEED BRAVO 4 CLSD. TWY NOTAMS, TWY C CLOSED BTWN TWY P AND TWY B. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO E.""",
-    "datis_zt": "N/A",
-    "metar": "KINL 221954Z AUTO 30010G18KT 10SM <span class=\"red_text_color\">BKN008</span> OVC065 11/09 <span class=\"box_around_text\">A2971</span> RMK AO2 RAE1859B24E41 SLP064 P0000 T01060089 ?\n",
-    "metar_zt": "21 mins ago",
-    "taf": "KINL 221727Z 2218/2318 28009G16KT 5SM -SHRA OVC025 \n  TEMPO 2218/2220 <span class=\"red_text_color\">2SM</span> -SHRA <span class=\"red_text_color\">BKN008</span> \n  <br>    FM222300 30011G23KT 6SM -SHRA <span class=\"yellow_highlight\">OVC013</span> \n  <br>    FM230900 31009G17KT 6SM BR BKN035\n",
-    "taf_zt": "168 mins ago"
-    }
-    
-    bulk_flight_deet_returns.update(test_nas_data)
-    bulk_flight_deet_returns['dep_weather'] = test_weather_data
-    bulk_flight_deet_returns['dest_weather'] = test_weather_data
 
-    return bulk_flight_deet_returns
+
+
+
+
+
+
+
+
+
 
 
 
@@ -593,10 +583,6 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
 
     return bulk_flight_deets
 
-
-@router.get('/dummy')
-async def get_airports():
-    return test_flight_deet_data()
 
 @router.get('/test')
 async def get_airports():

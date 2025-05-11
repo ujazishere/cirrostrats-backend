@@ -4,7 +4,7 @@ def get_search_suggestion_data(c_docs, limit=1000,):         # cta- collection t
     search_index = []
     
     # add airport entries
-    print('len of total docs',len(c_docs))
+    # print('len of total docs',len(c_docs))
     for doc in c_docs:
         val,val_field,val_type = doc.get('airport_st'), 'airport','airport'
         if not val:

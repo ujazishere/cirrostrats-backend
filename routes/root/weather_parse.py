@@ -70,11 +70,12 @@ class Weather_parse:
             return incoming_weather_data
         
 
-    def datis_processing(self,datis_raw_fetch,datis_arr=None):
+    def datis_processing(self,datis_raw,datis_arr=None):
+        datis = datis_raw
 
-        datis_raw = 'N/A'       # Need this to be declared to avoid error when datis is not available
-        datis = datis_raw_fetch
-        # D-ATIS processing for departure vs arrival
+        if isinstance(datis, dict) and  datis.get('error'):         # datis that gives error handled here.
+            datis = 'N/A'
+        # D-ATIS processing for departure and arrival - for e.g PHL spits out two separate DATIS. This section accounts for it.
         if type(datis) == list and 'datis' in datis[0].keys():
             if len(datis) == 1:
                 datis_raw = datis[0]['datis']
@@ -96,6 +97,10 @@ class Weather_parse:
             else:
                 print('Impossible else in DATIS')
                 datis_raw = 'N/A'
+        else:
+            datis_raw = datis       # TODO: This is a tempp fix.
+        # if not datis_raw:
+        #     datis_raw = 'N/A'
         return datis_raw
 
 
@@ -116,34 +121,25 @@ class Weather_parse:
         datis_api =  f"https://datis.clowd.io/api/{airport_id}"
         datis = requests.get(datis_api)
         datis = datis.json()
-        datis_raw = self.datis_processing(datis_raw_fetch=datis,datis_arr=datis_arr)
+        datis_raw = self.datis_processing(datis_raw=datis,datis_arr=datis_arr)
         return dict({ 'datis': datis_raw,
                         'metar': metar_raw, 
                         'taf': taf_raw,
                         })
     
 
-    def processed_weather(self, query=None, dummy=None, datis_arr=None,
+    def processed_weather(self, query=None, mock_test_data=None, datis_arr=None,
                           weather_raw=None,
                           ):
-        if dummy:
-            
-            datis_raw = dummy['D-ATIS']
-            metar_raw = dummy['METAR']
-            taf_raw = dummy['TAF']
-            # print('RAW DUMMY WEATHER', dummy)
-            vis1 = 'FM030500 09004KT 00SM -RA BR OVC004'
-            vis_frac = 'FM031300 19005KT 1 1/2SM BR OVC004'
-            
-            datis_raw = datis_raw + vis1 + vis_frac 
+        if mock_test_data:
+            metar_raw = mock_test_data['metar']
             datis_raw = r"DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L."
-
             # taf_raw = metar_raw + sfc_vis + vis_half
             taf_raw = 'KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015 FM030300 00000KT 1SM -SHRA FG OVC002 FM031300 19005KT 3/4SM BR OVC004 FM031500 23008KT 1/26SM OVC005 FM031800 25010KT 1/4SM OVC015 FM032100 25010KT M1/4SM BKN040'
         
         elif weather_raw:
             raw_return = weather_raw        # This wont do the datis processing.
-            datis_raw = self.datis_processing(datis_raw_fetch=raw_return['datis'],datis_arr=datis_arr)
+            datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'),datis_arr=datis_arr)
             metar_raw = raw_return['metar']
             taf_raw = raw_return['taf']
         else:
@@ -152,9 +148,6 @@ class Weather_parse:
             datis_raw = raw_return['datis']
             metar_raw = raw_return['metar']
             taf_raw = raw_return['taf']
-
-
-            
 
         def zulu_extracts(weather_input, datis=None, taf=None):
             
@@ -201,9 +194,6 @@ class Weather_parse:
                 zulu_weather = 'N/A'
                 return zulu_weather
             
-            
-
-        
         # Exporting raw weather data for color code processing
         # raw_weather_dummy_data = { 'D-ATIS': datis_raw, 'METAR': metar_raw, 'TAF': taf_raw} 
         # with open(f'raw_weather_dummy_data{airport_id}.pkl', 'wb') as f:
@@ -211,7 +201,7 @@ class Weather_parse:
             # pickle.dump(raw_weather_dummy_data, f)
 
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
-        
+
         low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
         # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
         low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
