@@ -242,8 +242,8 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
 
 # ___________________________________________________________________________
 
-@router.get("/ajms/{flight_number}")
-async def aws_jms(flight_number, mock=False):
+@router.get("/ajms/{flightID}")
+async def aws_jms(flightID, mock=False):
     # TODO: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
@@ -253,7 +253,7 @@ async def aws_jms(flight_number, mock=False):
             data = mock
             # print('test data', data)
         else:
-            data = requests.get(f'http://3.146.107.112:8000/flights/{flight_number}?days_threshold=1')
+            data = requests.get(f'http://3.146.107.112:8000/flights/{flightID}?days_threshold=1')
             data = json.loads(data.text)
         mongo,latest = data.get('mongo'),data.get('latest')
 
@@ -318,10 +318,10 @@ async def aws_jms(flight_number, mock=False):
 @router.get("/flightViewGateInfo/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
-    flt_info = Pull_flight_info()
     flightID = flightID.upper()
 
-    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID="UCA492")
+    flt_info = Pull_flight_info()
+    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID=flightID)
 
     united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID_digits, departure_airport=None)
     # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
@@ -331,14 +331,13 @@ async def ua_dep_dest_flight_status(flightID):
 
 @router.get("/flightStatsTZ/{flightID}")
 async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
-    flt_info = Pull_flight_info()
     flightID = flightID.upper()
 
-    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID="UCA492")
+    flt_info = Pull_flight_info()
+    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID=flightID)
     
     fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
         airline_code=airline_code,flt_num_query=flightID_digits,)
-    print('fs_departure_arr_time_zone',fs_departure_arr_time_zone)
 
     return fs_departure_arr_time_zone
 
@@ -385,7 +384,6 @@ async def get_airport_data(airport_id, search: str = None):
         weather = Weather_parse()
         weather = weather.processed_weather(weather_raw=res)
         weather.update({'code':code})
-
 
         return weather
 

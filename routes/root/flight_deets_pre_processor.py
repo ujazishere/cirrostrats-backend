@@ -60,7 +60,6 @@ def raw_resp_weather_processing(resp_dict, airport_id):
     # dep_weather = wp.processed_weather(weather_raw=dep_weather)
     
     wp = Weather_parse()            
-    print('raw weather rets',raw_weather_returns)
     wpp = wp.processed_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
     return wpp
 
