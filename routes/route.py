@@ -405,12 +405,11 @@ async def Weather_raw(airportCode):
 
 @router.get("/NAS/{departure_id}/{destination_id}")
 async def nas(departure_id, destination_id):
-
-    # Probably wont work. If it doesnt its probably because of the reesp_sec_returns
-    # does not account for just nas instead going whole mile to get and process weather(unnecessary)
+    # TODO: NAS takes departure and des, unnecessary. just give it one.
+    # TODO: does not account for just nas instead going whole mile to get and process weather(unnecessary)
     fm = Fetching_Mechanism()
     sl = Source_links_and_api()
-    
+    print('dep', departure_id)
     resp_dict: dict = await fm.async_pull([sl.nas()])
     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     
@@ -420,8 +419,20 @@ async def nas(departure_id, destination_id):
     return nas_returns
 
 
+@router.get("/gates/{gate_id}")
+async def gate_returns(gate_id):
+
+    return_crit = {'_id':0}
+    find_crit = {"_id": ObjectId(gate_id)}
+    res = collection_gates.find_one(find_crit, return_crit)
+    # code = res.get('code') if res else None
+    print('Gate resposne',res)
+    if res:
+        return res
+
+
 @router.get("/testDataReturns")
-def test_flight_deet_data():
+async def test_flight_deet_data():
 
     bulk_flight_deets:dict = MockTestDataImports()
 

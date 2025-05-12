@@ -6,7 +6,11 @@ def get_search_suggestion_data(c_docs, limit=1000,):         # cta- collection t
     # add airport entries
     # print('len of total docs',len(c_docs))
     for doc in c_docs:
-        val,val_field,val_type = doc.get('airport_st'), 'airport','airport'
+        tg = doc.get('Terminal/Gate')
+        if tg:
+            val,val_field,val_type = tg, 'Terminal/Gate','Terminal/Gate'
+        else:
+            val,val_field,val_type = doc.get('airport_st'), 'airport','airport'
         if not val:
             val = doc.get('fid_st')
             val_field = 'flightID'
