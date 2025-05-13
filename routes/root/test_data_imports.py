@@ -17,7 +17,6 @@ def MockTestDataImports():
     # nas_data, summary box, weather_data, and dummy function takes this dummy bulk_flight_deets to the front end.
     
     def pickle_imports_and_processing():
-        # TODO: Need to account for titles for dep and dest that has time gate and airport id.
 
         bulk_flight_deets_path = getting_the_path_right(r"mockTestDataFull.pkl")
         # bulk_flight_deets_path = getting_the_path_right(r"example_flight_deet_full_packet.pkl")       # Old legacy Django

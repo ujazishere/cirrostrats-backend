@@ -7,10 +7,10 @@ from collections import Counter
 # CONCLUSION: Majors:
 
 # use METAR DECODER on https://e6bx.com/metar-decoder/
-# TODO: Attempt to derive the Typical_met pattern on the metar and the taf to determine prominent outstanding info and get notification for those outlaws:
+# TODO LP Feature: Attempt to derive the Typical_met pattern on the metar and the taf to determine prominent outstanding info and get notification for those outlaws:
          # VFR/IFR/LIFR; Freezing conditions, icing, stronger winds with gusts, reduce font size of less important information.
          # give ability to decode individual complex items.  
-# TODO: determine each item for typicality in the metar list form and put them all together in a seperate container.
+# TODO VHP Feature: determine each item for typicality in the metar list form and put them all together in a seperate container.
     # Once that is done, sort the non-typical ones for typicality.
         # Repeat the process until exhaustion. sort these by most typical to the least typical.
         # The goal is to make use of the most typical metar items then color code by them

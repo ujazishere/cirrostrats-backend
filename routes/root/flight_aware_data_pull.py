@@ -8,7 +8,7 @@ except:     # Just so it's easier to import outside of django
 # from dj.dj_app.root.root_class import Root_class
 import re
 
-# TODO: Fix wrong flights showing up. One way is to make the flight aware data prominent
+# TODO VHP: Fix wrong flights showing up. One way is to make the flight aware data prominent
         # But that will cause utc and local time clashes.  redundancies to cross check and verify and use reliable sources.
         # Maybe crosscheck it with other source as primary rathar than other  way around.
 
@@ -28,7 +28,7 @@ class Flight_aware_pull(Root_class):
         apiKey = "mAcMRTxklbWPhTciyaUD9FtCz88klfxk"         # ujasvaghani
         apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
         auth_header = {'x-apikey':apiKey}
-        # TODO: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
+        # TODO LP: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
             # Try searching here use /route for specific routes maybe to reduce pull
             # https://www.flightaware.com/aeroapi/portal/documentation#get-/flights/-id-/map
         """
@@ -240,7 +240,7 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
                 if current_UTC == date_out:     # zulu time clashes with local time from other source
                     pass
                 
-                # TODO: use the Cirrostrats\dj\dummy_flight_aware_packet.pkl to get the `flights` section then do the pre-processing on this.
+                # TODO LP: use the Cirrostrats\dj\dummy_flight_aware_packet.pkl to get the `flights` section then do the pre-processing on this.
                 # print("scheduled out Z: ", scheduled_out_raw_fa)
                 scheduled_out = re.search(r"T(\d{2}:\d{2})", scheduled_out_raw_fa).group(1).replace(":","") + "Z"
                 estimated_out = flights[i]['estimated_out']     # Rename this to date or time or both 

@@ -7,13 +7,10 @@ from .root_class import Root_class,Fetching_Mechanism
 from datetime import datetime
 
 
-# TODO: add the ability to see the departure as well as the arrival datis
-# TODO: extract all airpoirts METAR and TAF  in the airport database
+# TODO VHP Weather: add the ability to see the departure as well as the arrival datis
+# TODO Feature: extract all airpoirts METAR and TAF  in the airport database
             # compare all unique values and group identical ones
             # analyze data for format patterns to make a template for output
-# TODO: seperate raw data from html highlight. 
-        # should have ability to return both raw(for externam use) and highlighted data for use in web.
-
 
 class Weather_parse:
     def __init__(self) -> None:
@@ -81,7 +78,8 @@ class Weather_parse:
                 datis_raw = datis[0]['datis']
             elif len(datis) == 2:       # Departure and arrival datis separated
                 if datis[0]['type'] == 'arr':
-                    print('Returned Arrival D-ATIS through weather_parse.py')           # TODO: need to properly send this seperately for departure vs arrial for mdb.
+                    # TODO VHP: need to properly send this seperately for departure vs arrial for mdb.
+                    print('Returned Arrival D-ATIS through weather_parse.py')           
                     arr_datis = datis[0]['datis']
                 else:
                     arr_datis = datis[1]['datis']
@@ -98,7 +96,8 @@ class Weather_parse:
                 print('Impossible else in DATIS')
                 datis_raw = 'N/A'
         else:
-            datis_raw = datis       # TODO: This is a tempp fix.
+            # TODO Test: This is a tempp fix.
+            datis_raw = datis
         # if not datis_raw:
         #     datis_raw = 'N/A'
         return datis_raw

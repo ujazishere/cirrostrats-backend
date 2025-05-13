@@ -1,7 +1,7 @@
 
 def tests():
     """
-    TODO: This is for testing to see the data returns from fv and fs are reliable. needs more work.
+    TODO VHP Test: This is for testing to see the data returns from fv and fs are reliable. needs more work.
     """
     airline_code = 'UA'
     # flt_num = '4546'

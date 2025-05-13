@@ -34,17 +34,16 @@ class Gates_mdb_ops:
     
 
     def mdb_updates(self,incoming_data: list):
-        # TODO: WIP to update gates in bulk
-        # TODO: Need mechanism to update flight numbers, scheduled departure and scheduled arrival consistently and more frequently.
+        # TODO LP: Gates - Need mechanism to update flight numbers, scheduled departure and scheduled arrival consistently and more frequently.
         
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
-        # TODO: account for new airport codes, maybe upsert or maybe just none for now.
+        # TODO VHP: Weather account for new airport codes, maybe upsert or maybe just none for now.
         print('Updating mdb in Gates')
         update_operations = []
 
         for i in incoming_data:
             if i:           # i is supposed to be a dict, but is sometimes NoneType
-                # TODO 10/29/24 handle this with regex. This can be error prone since there is a magic number.
+                # TODO VHP 10/29/24 handle this with regex. This can be error prone since there is a magic number.
                 i['gate'] = "Terminal " + i['gate'][8:]         # Accounting for no space issue between `Terminal` and trailing data.
 
                 # Neeed to add notes on how to use UpdateOne as arg without the curly braces including identifying the field and what they do.

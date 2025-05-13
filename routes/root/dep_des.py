@@ -36,7 +36,6 @@ class Pull_flight_info(Root_class):
 
             date = self.date_time(raw=True)     # Root_class inheritance format yyyymmdd
             
-            #  TODO: pull information on flight numners from the info web and use that to pull info through flightview.
             # attempt to only pull departure and destination from the united from the info web.
             flight_stats_url = f"https://www.flightstats.com/v2/flight-tracker/{airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
             soup_fs = self.request(flight_stats_url)
@@ -64,7 +63,7 @@ class Pull_flight_info(Root_class):
         else:
             print("no departure_arrival time zone found using flight_stats")
 
-        # TODO: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
+        # TODO Test: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
         bulk_flight_deet = {'flightStatsFlightID': airline_code+flt_num,            # This flt_num is probably misleading since the UA attached manually. Try pulling it from the flightstats web
                             'flightStatsOrigin':origin_fs,
                             'flightStatsDestination':destination_fs,
@@ -87,7 +86,7 @@ class Pull_flight_info(Root_class):
         Returns:
             Dictionary with departure and arrival and associated gate information, or 'None' values if unsuccessful
         """
-        # TODO: flightview can give reliable origin and destination info. It's what google uses. Repo flights still dont show up tho - Use flightstats instead for repo flights.
+        # TODO Test: flightview can give reliable origin and destination info However it a 3 char airport code return. It's what google uses. Repo flights still dont show up tho - Use flightstats instead for repo flights.
             # flightview format  https://www.flightview.com/flight-tracker/UA/4437
         # date format in the url is YYYYMMDD. For testing, you can find flt_nums on https://www.airport-ewr.com/newark-departures
         if pre_process:     # it doesn't feed in the pre-process if it cannt find the
@@ -143,7 +142,7 @@ class Pull_flight_info(Root_class):
             for script in scripts:
                 # looks up text 'var sdepapt' which is associated with departure airport.
                     # then splits all lines into list form then just splits the departure and destination in string form (")
-                # TODO: It is important to get airport names along with identifiers to seperate international flights for metar view.
+                # TODO Weather: It is important to get airport names along with identifiers to seperate international flights for metar view.
                         # Since the whole of html is being supplied might as well get the city and state in.
                 if 'var sdepapt' in script.get_text():
                     departure = script.get_text().split('\n')[1].split('\"')[1]
@@ -178,7 +177,7 @@ class Pull_flight_info(Root_class):
 
 
     def nas_final_packet(self,dep_ID, dest_ID=None):
-        # TODO: airport closures remaining.
+        # TODO LP: airport closures remaining.
         departure_ID = dep_ID[1:]       # Stripping off the 'K' since NAS uses 3 letter airport ID
         destination_ID = dest_ID[1:]
 
@@ -366,13 +365,14 @@ class Pull_flight_info(Root_class):
 
         # table = soup.find('div', {'class': 'a2'})
         try: 
-            # TODO: This is prone to throwing list index out of range errors. add if statement on airport_id befor processing departure_ID and destination_ID since airport_ID can be None.
+            # TODO Test: This is prone to throwing list index out of range errors. add if statement on airport_id befor processing departure_ID and destination_ID since airport_ID can be None.
             airport_id = soup.find_all('div', {'class': 'a2_ak'})
             airport_id = [i.text for i in airport_id if 'ICAO' in i.text]
             if airport_id:
                 departure_ID = airport_id[0].split()[2]
                 destination_ID = airport_id[1].split()[2]
-                # TODO: WIP for getting scheduled times since the flight stats one is unreliable
+                # TODO: WIP for getting scheduled times since the flight stats one can be unreliable at times 
+                # TODO Test: ^^ setup scheduled tasks to fetch in bulk setup tests to trigger notif for times when fetch tests fails.
                 scheduled_times = soup.find_all('div', {'class': 'tb2'})
                 scheduled_times = [i.text for i in scheduled_times]
                 scheduled_times = [i for i in scheduled_times if 'Scheduled' in i]

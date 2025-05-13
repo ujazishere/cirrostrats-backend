@@ -244,9 +244,9 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):
-    # TODO: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
+    # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
-    # TODO: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
+    # TODO Test: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
     returns = {}
     try:
         if mock:
@@ -263,11 +263,11 @@ async def aws_jms(flightID, mock=False):
             return {}
         
         elif mongo:     # if mongo availbalem, temporarily fix that cunt first! process it later
-            # TODO: This needs fixing. mongo base that is a list type is redundant. just pass the insider dict instead of dict inside of the list since theres only one dict with `flightID` and `matching_versions` for its keys. 
+            # TODO HP: This needs fixing. mongo base that is a list type is redundant. just pass the insider dict instead of dict inside of the list since theres only one dict with `flightID` and `matching_versions` for its keys. 
             # Check all areas that it reachs and account for all areas. 
             mongo:dict =  mongo[0]['matching_versions']            # mongo is a list type at the base that has only one dict with keys `flightID` and `matching_versions`. hence magic number 0 to get rid of the base list.
             
-        # TODO: Again hazardous!! ****CAUTION*** FIX ASAP! clearance subdoc may not reflect the same as the secondary flight data subdoc..
+        # TODO HP: Again hazardous!! ****CAUTION*** FIX ASAP! clearance subdoc may not reflect the same as the secondary flight data subdoc..
         if not latest:      # Idea is to get clearance and if found in latest return that and mongo
             print('no latest w mongo')
             latest_mogno = mongo[-1]
@@ -298,7 +298,7 @@ async def aws_jms(flightID, mock=False):
                         returns =  merged_dict
                     else:
                         print('!!! found clearance in latest as well as latest_mongo')
-                        # TODO: log this data for inspection and notification later on.
+                        # TODO Test: log this data for inspection and notification later on.
                         second_latest_mongo = mongo[-2] if len(mongo)>=2 else {}
                         print('second_latest_mogno',second_latest_mongo)
 
@@ -342,7 +342,7 @@ async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
     return fs_departure_arr_time_zone
 
 
-# TODO: Need to account for aviation stack
+# TODO LP: Need to account for aviation stack
 @router.get("/flightAware/{airline_code}/{flight_number}")
 async def flight_aware_w_auth(airline_code, flight_number):
     return None
@@ -366,7 +366,7 @@ async def flight_aware_w_auth(airline_code, flight_number):
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id, search: str = None):
 
-    # TODO: Temp fix. Find better wayto do this.
+    # TODO VHP Weather: Temp fix. Find better wayto do this. Handle prepend at source find it in celery rabit hole in metar section
     if len(airport_id)<=4:   # airport ID can be bson id itself from mongo or a icao airportID code.
         airport_id = airport_id[1:] if len(airport_id)==4 else airport_id
         find_crit = {"code": airport_id}
@@ -379,7 +379,7 @@ async def get_airport_data(airport_id, search: str = None):
     code = res.get('code') if res else None
     if res:
         res = res.get('weather')
-        # TODO: Need to be able to add the ability to see the departure as well as the arrival datis
+        # TODO VHP Weather: Need to be able to add the ability to see the departure as well as the arrival datis
         # weather = weather.scrape(weather_query, datis_arr=True)
         weather = Weather_parse()
         weather = weather.processed_weather(weather_raw=res)
@@ -388,8 +388,8 @@ async def get_airport_data(airport_id, search: str = None):
         return weather
 
 @router.get("/liveAirportWeather/{airportCode}")
-async def Weather_raw(airportCode):
-    # TODO: Tests - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
+async def liveAirportWeather(airportCode):
+    # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
 
     fm = Fetching_Mechanism()
     rsl = Root_source_links
@@ -405,8 +405,8 @@ async def Weather_raw(airportCode):
 
 @router.get("/NAS/{departure_id}/{destination_id}")
 async def nas(departure_id, destination_id):
-    # TODO: NAS takes departure and des, unnecessary. just give it one.
-    # TODO: does not account for just nas instead going whole mile to get and process weather(unnecessary)
+    # TODO Cleanup: NAS takes departure and des, unnecessary. just give it one.
+    # TODO Cleanup: does not account for just nas instead going whole mile to get and process weather(unnecessary)
     fm = Fetching_Mechanism()
     sl = Source_links_and_api()
     print('dep', departure_id)
@@ -455,7 +455,7 @@ async def test_flight_deet_data():
 
 @router.get('/query')       # /query/{passed_variable} can be used tp get the passed variable from frontend
 async def initial_query_processing_react(passed_variable: str = None, search: str = None):
-    # TODO: Make this function run only when user hits submit. right now it runs soon as the drop down is exhausted.
+    # TODO LP: Make this function run only when user hits submit. right now it runs soon as the drop down is exhausted.
 
     # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
     # This code is present in the react as last resort when dropdown is exhausted.
@@ -468,7 +468,6 @@ async def initial_query_processing_react(passed_variable: str = None, search: st
     return qc.parse_query(search)
     # if (passed_variable != "airport"):
     #     print('passed_variable is not airport. It is:', passed_variable)
-    #     # TODO: Do something here to process the raw search query and return it to the frontend.
     #     return None
 
 
@@ -479,7 +478,6 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
 
     bulk_flight_deets = {}
 
-    # TODO: Priority: Consider Separation of concern. Each individual scrape should be separate function . Also separate scrape from api fetch
     ''' *****VVI******  
     Logic: resp_dict gets all information fetched from root_class.Fetching_Mechanism().async_pull(). Look it up and come back.
     pre-processes it using resp_initial_returns and resp_sec_returns for inclusion in the bulk_flight_deets..
@@ -533,7 +531,6 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
         # also get flight-stats data. Compare them all for information.
 
         # fetching weather, nas and gate info since those required departure, destination
-        # TODO: Probably take out nas_data from here and put it in the initial pulls.
         resp_dict: dict = await fm.async_pull(list(wl_dict.values())+[sl.nas(),])
 
         # /// End of the second and last async await.
@@ -549,7 +546,7 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
             flt_num=flight_number_query, departure_airport=fa_data['origin'])
         bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
                              **weather_dict, **fa_data, **gate_returns}
-    # If flightaware data is not available use this scraped data. Very unstable. TODO: Change this. Have 3 sources for redundencies
+    # If flightaware data is not available use this scraped data. Very unstable.
     elif united_dep_dest['departure_ID']:
         fm = Fetching_Mechanism(
             flight_number_query, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
@@ -560,7 +557,6 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
         # also get flight-stats data. Compare them all for information.
 
         # fetching weather, nas and gate info since those required departure, destination
-        # TODO: Probably take out nas_data from here and put it in the initial pulls.
         resp_dict: dict = await fm.async_pull(list(wl_dict.values())+[sl.nas()])
 
         # /// End of the second and last async await.

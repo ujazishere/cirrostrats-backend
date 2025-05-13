@@ -27,9 +27,6 @@ class Gate_Scrape(Root_class):
         airline_code = flt_num[:2]      # first 2 characters of airline code eg. UA, DL
         flight_number_without_airline_code = flt_num[2:]
         
-        # TODO: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
-            # Scheduled ones are usually very much planned. Repo and non-scheduled have been accounted for.
-            # Highlight late ones in red
         eastern = pytz.timezone('US/eastern')
         now = datetime.now(eastern)
         raw_date = now.strftime('%Y%m%d')       # formatted as YYYYMMDD
@@ -64,7 +61,7 @@ class Gate_Scrape(Root_class):
                 # return {flt_num: [gate, scheduled, actual]} # This is the old and depricated way of doing things.
             else:
                 print('unreliable matches:','gate:',gate, 'flt_num:', flt_num)
-                # TODO WIP: Have to deal with these outlaws and feed it back into the system. Dont suppose it is being used right now.
+                # TODO VHP WIP: Have to deal with these outlaws and feed it back into the system. Dont suppose it is being used right now.
                     # Sometimes gate goes into scheduled or actual.
                 self.outlaws_reliable.append({
                     'flight_number': flt_num,
@@ -114,9 +111,6 @@ class Gate_Scrape(Root_class):
 
         troubled_flights = exec_output['troubled']
         
-        # TODO: This is where the results are returned. since its the `update` method its {flt_num:[gate,sch,act]} 
-            # TODO: you want to change it to the format thats being used by gate_checker 
-        # TODO: Change name and use case from master to- gate_query_database collection update.
         self.troubled.update(troubled_flights)  # This is a safer write since it will load the master first and then update with the new data then dump write.
         
         # get all the troubled flight numbers
@@ -124,14 +118,6 @@ class Gate_Scrape(Root_class):
         
         if self.troubled:
             self.tro()
-
-        # Dumping master dict into the root folder in order to be accessed by ewr_UA_gate func later on.
-        # TODO: Need to add mdb collection here. maybe instead of the gate collection it should be the flight collection. since the flight number is primary one here.
-        # gf = Gate_fetch()
-
-        # gf.mdb_updates(master, 'ewr_united').
-        # with open('gate_query_database.pkl', 'wb') as f:
-            # pickle.dump(master, f) 
 
         # Redo the troubled flights
 

@@ -88,7 +88,7 @@ class Root_class():
 
     def exec(self, input1, multithreader):
     
-    # TODO: VVI: Have a solid understanding and extract this blueprint for future use.
+    # TODO: VHP: Have a solid understanding and extract this blueprint for future use.
 
     # executor blueprint: In this case input1 argument of this exec funtion are a bunch of flight numbers in list form while,
         # `input1` is the list of all flight numbers that need to be fetched.
@@ -238,12 +238,12 @@ class Source_links_and_api:
 
 
 class Fetching_Mechanism(Root_class):
-    # TODO:first rest should account for airline code and flight number, next init of this class needs dep_id
+    # TODO VHP:first rest should account for airline code and flight number, next init of this class needs dep_id
     def __init__(self,airline_code=None,flt_num=None,
                  dep_airport_id=None,dest_airport_id=None):
         super().__init__()
         
-        # TODO: need to get rid of this. Search should find the appropriate flight number, w airline code, of all the flight numbers for that day
+        # TODO VHP: need to get rid of this. Search should find the appropriate flight number, w airline code, of all the flight numbers for that day
         if not airline_code:
             airline_code = 'UAL'
 

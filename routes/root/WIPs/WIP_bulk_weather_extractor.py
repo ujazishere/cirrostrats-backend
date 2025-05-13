@@ -42,7 +42,7 @@ import pickle
 from bs4 import BeautifulSoup as bs4
 import requests
 
-# TODO: TAF is still remianing
+# TODO LP: TAF is still remianing
 # Extracts METARs and TAFs. Heavy pull with 2000+ airport ID and each airport pulls big chunk of data
 # DONT USE THIS SCRIPT IF YOU DONT NEED TO. METAR_stack.pkl has the output for it
 # Shorten the airport_ID list if you are to use it. Get rid of No_mets and no_tafs. Those consists of airports that return null vals.

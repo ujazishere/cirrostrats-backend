@@ -7,7 +7,7 @@ from typing import Dict, List, Union, Optional, Tuple
 
 from pymongo import UpdateOne
 from config.database import collection_airports, collection_flights, db_UJ
-from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO
+from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""
 cts = db_UJ['test_st']   # create/get a collection
@@ -119,7 +119,7 @@ class QueryClassifier:
             else:
                 # self.classified_suggestions.setdefault('Digits', []).append(query)
                 return {'category': 'Digits', 'value': query}
-            # TODO: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction forn now.
+            # TODO VHP Feature: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction forn now.
                 # once the complexity increases more digits can be accounted for.
         # elif for gate
         #     self.classified_suggestions.setdefault('Gates', []).append(query)

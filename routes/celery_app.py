@@ -16,7 +16,8 @@ celery_app = Celery(
     backend='redis://redis:6379/0'
 )
 
-# celery_app.conf.broker_url = 'redis://redis:6379/0'     # TODO: Do I need this since I already have it in the Celery args.
+# TODO LP: Do I need this since I already have it in the Celery args.
+# celery_app.conf.broker_url = 'redis://redis:6379/0'
 
 @celery_app.task
 def MetarFetch():
@@ -58,7 +59,7 @@ celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
-    # TODO: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every minute or so.
+    # TODO Test: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every minute or so.
     'run-metarfetch-every-53-mins-past-hour': {
         'task': 'routes.celery_app.MetarFetch',      # The task function that needs to be scheduled
         'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.

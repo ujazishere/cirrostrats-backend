@@ -46,7 +46,8 @@ collection_flights = db_UJ['flights']
 
 # This function creates data within the datbase. Currently/previously only used to feed data into database through
     # Python rather than having to manually create items on the mongoDB server through browser.
-# TODO: investigate this class. Its supposedely a `type` of the object thing that feeds into mdb.
+
+# This is data type validation. saying create_airport args should have name and code and their restricted type
 class Airport(BaseModel):
     name: str
     code: str

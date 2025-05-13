@@ -15,14 +15,9 @@ from pymongo import UpdateOne
 from routes.root.weather_parse import Weather_parse
 
 
-"""
- Check mdb_doc.py for set and unset operation.
-# TODO: user collections - weather.metar if there  is a achange.
-"""
-# TODO: bandaid - quick fix for path. find better and clean this.
 class Weather_fetch:
     """
-    TODO: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
+    TODO Feature: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
     """
 
     def __init__(self) -> None:
@@ -37,9 +32,10 @@ class Weather_fetch:
         # Returns weather links for all airports with code.
         all_mdb_airport_codes = [i['code'] for i in collection_airports.find({})]
 
+        # TODO VHP: bandaid - quick fix for path. find better and clean this.
         import os
         cwd = os.getcwd()
-        # TODO: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
+        # TODO VHP: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
         all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
         print('PATHHHH:', all_datis_airports_path)
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
@@ -88,36 +84,23 @@ class Weather_fetch:
 
     def mdb_updates(self,resp_dict: dict, weather_type):
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
-        # TODO: account for new airport codes, maybe upsert or maybe just none for now.
+        # TODO Test: account for new airport codes, maybe upsert or maybe just none for now.
         print('Updating mdb')
         update_operations = []
 
         for url, weather in resp_dict.items():
+            # TODO VHP: Dangerous! fix magic number and 3 vs 4 char airport code issue.
             airport_code_trailing = str(url)[-3:]
 
             update_operations.append(
                 UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code 
                           {'$set': {f'weather.{weather_type}': weather},}
-                        #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     # TODO: Check if this can work since it has be used to pick out the airports that are not fetched more frequently and notify devs.
+
+                        # TODO Test: Check if this can work since it has be used to pick out the airports that are not fetched more frequently and notify devs.
+                        #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     
                           )       # sets the weather subfield of that document
             )
 
-        result = collection_weather.bulk_write(update_operations)
-        print(result)
-
-
-    def flight_mdb_updates(self, flightNumbers, scheduledDeparture, scheduledArrival,):
-        # TODO: account for new airport codes for scheduled departure/arriva, maybe upsert or maybe just none for now.
-        print('Updating flights mdb')
-        update_operations = []
-    
-        for flightNumber in  flightNumbers:
-            
-            update_operations.append(
-                UpdateOne({'flightNumber': flightNumber},
-                          {'$set': {'flightNumber': flightNumber}}
-                          )
-            )
         result = collection_weather.bulk_write(update_operations)
         print(result)
 
@@ -126,7 +109,6 @@ class Weather_fetch:
         print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
         # This function processess the raw list and returns just the pure datis
-        # TODO: Need to account for ARR/DEP datis.
         for url,datis in resp_dict.items():
             if not 'error' in datis:
                 raw_datis_from_api = json.loads(datis)
@@ -134,7 +116,7 @@ class Weather_fetch:
                 resp_dict[url]=raw_datis
             else:
                 # ending up in this block means the code is broken somewhere.
-                # TODO: checkpoint here for notification- track how many times the code ends up here.
+                # TODO Test: checkpoint here for notification- track how many times the code ends up here.
                 print('Datis processing error')
                 pass
         return resp_dict
@@ -142,7 +124,8 @@ class Weather_fetch:
 
     async def fetch_and_store_by_type(self,weather_type):
         print(f'{weather_type} async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
         
         if weather_type == 'datis':
             processed_datis = self.datis_processing(resp_dict=resp_dict)
@@ -158,13 +141,13 @@ class Weather_fetch:
 
     async def fetch_and_store_datis(self,):         # Unused
         print('DATIS async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])
         print('Fetch done.')
         self.mdb_updates(resp_dict=resp_dict,weather_type='datis')
     
     async def fetch_and_store_TAF(self,):           # Unused
         print('DATIS async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['taf'])        # TODO: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['taf'])
         print('Fetch done.')
         self.mdb_updates(resp_dict=resp_dict,weather_type='taf')
 
