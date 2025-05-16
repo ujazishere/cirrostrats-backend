@@ -119,7 +119,7 @@ class QueryClassifier:
             else:
                 # self.classified_suggestions.setdefault('Digits', []).append(query)
                 return {'category': 'Digits', 'value': query}
-            # TODO VHP Feature: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction forn now.
+            # TODO VHP Feature: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction for now.
                 # once the complexity increases more digits can be accounted for.
         # elif for gate
         #     self.classified_suggestions.setdefault('Gates', []).append(query)

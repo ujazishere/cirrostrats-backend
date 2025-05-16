@@ -12,6 +12,7 @@ import requests
 from decouple import config
 from bson import ObjectId
 
+from routes.root.search.fuzz_find import fuzz_find
 from routes.root.weather_parse import Weather_parse
 
 try:        # This is in order to keep going when collections are not available
@@ -26,12 +27,11 @@ from .root.gate_checker import Gate_checker
 from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
-from .root.search.search_data import get_search_suggestion_data
+from .root.search.suggestions_format import search_suggestion_format
 
 app = FastAPI()
+
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
-
-
 test_suggestions = True if config('test_suggestions')=='1' else False
 qc.initialize_collections(test_suggestions=test_suggestions)
 
@@ -80,49 +80,19 @@ class SearchData(BaseModel):
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
 # def fuzzy_search_cached(query, limit=100):
-async def fetch_most_searched(email: str, query: str, limit=5):  # Default page and page size
+async def get_search_suggestions(email: str, query: str, limit=5):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
-    data = get_search_suggestion_data(c_docs=qc.c_sti_docs)
+    formatted_suggestions = search_suggestion_format(c_docs=qc.c_sti_docs)
+    sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
 
-    # For very short queries, prioritize prefix matching
-    if len(query) <= 2:
-
-        # First find exact prefix matches
-        prefix_matches = [item for item in data 
-                         if item['search_text'].startswith(query.lower())]
-        # Return prefix matches if we have enough
-
-        if len(prefix_matches) >= limit:
-            return prefix_matches[:limit]
-            
-        # Otherwise, supplement with fuzzy matches
-        remaining = limit - len(prefix_matches)
-        search_universe = [item for item in data if item not in prefix_matches]
-
-    else:
-        prefix_matches = []
-        search_universe = data
-        remaining = limit
-        parsed_query = qc.parse_query(query)           # Attempt to run the parse query when suggestions are exhausted.
-        print('pq', parsed_query)
-
-    # Get search text from all items
-    choices = [item['search_text'] for item in search_universe]
-    
-    # Get fuzzy matches using fuzzywuzzy
-    fuzzy_matches = process.extract(
-        query.lower(), 
-        choices,
-        limit=remaining,
-        scorer=fuzz.partial_ratio  # Better for autocomplete scenarios
-    )
-    
-    # Get the corresponding items
-    fuzzy_items = [search_universe[choices.index(match)] for match, score in fuzzy_matches 
-                  if score > 60]  # Minimum similarity threshold
-    
-    # Combine prefix and fuzzy matches
-    return prefix_matches + fuzzy_items
+    # If sti is exhausted, direct query to appropriate index.
+    if not sti_items_match_w_query:
+        # TODO: This will never be triggered. fuzz_find will always send atleast 5 items regardless of matches.
+                # Find a way to show raw organic ones only.
+                # Check TODO in fuzz_find parse_query
+        parsed_query = qc.parse_query(query=query)
+        print('Exhausted parsed query',parsed_query)
+    return sti_items_match_w_query
 
 
 
@@ -169,7 +139,7 @@ async def get_user_searches(email):
 
 
 # @router.get('/searches/suggestions/{email}')
-async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
+async def fetch_most_searched_OG(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
     regex_pattern: str = query.upper()
 
     # Calculate skip value for pagination
@@ -222,22 +192,29 @@ async def fetch_most_searched(email: str, query: str, page: int = 0, page_size: 
 
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
-async def initial_query_processing_react(passed_variable: str = None, search: str = None):
-    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
-    # This code is present in the react as last resort when dropdown is exhausted.
-    # The only reason I have left passed_variable here is for future use of similar variable case.
-    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
-    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
-    print('search value:', search)
-    # As user types in the search bar this if statement gets triggered.
+async def initial_query_processing_react(search: str = None):
+    parsed_query = qc.parse_query(query=search)
+    print('SUBMIT: Raw search value:', search, parsed_query)
+    # TODO VHP: This is bad!! Take care of this formatting in the /suggestions_format area.
+            # Its adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
+                # For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID`
+    if parsed_query.get('category') == 'Airports':
+        val,val_field,val_type = parsed_query.get('value'), 'airport','airport'
+        pass
+    elif parsed_query.get('category') == 'Flights':
+        parsed_query_value = parsed_query.get('value')
+        fid_st = parsed_query_value.get('airline_code') + parsed_query_value.get('flight_number')
+        val,val_field,val_type = fid_st, 'flightID', 'flight'
+        pass
     
-    return None
-    # return qc.parse_query(search)
-    # if (passed_variable != "airport"):
-    #     print('passed_variable is not airport. It is:', passed_variable)
-    #     # TODO: Do something here to process the raw search query and return it to the frontend.
-    #     return None
-
+    formatted_data = { 
+        f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
+        'display': val,             # This is manipulated later hence the duplicate.
+        'type': val_type,
+        # 'search_text': val.lower()
+        }
+    print(formatted_data)
+    return formatted_data
 
 
 # ___________________________________________________________________________
