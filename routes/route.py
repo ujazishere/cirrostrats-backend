@@ -80,7 +80,7 @@ class SearchData(BaseModel):
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
 # def fuzzy_search_cached(query, limit=100):
-async def get_search_suggestions(email: str, query: str, limit=5):  # Default page and page size
+async def get_search_suggestions(email: str, query: str, limit=2500):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
     formatted_suggestions = search_suggestion_format(c_docs=qc.c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
@@ -154,7 +154,6 @@ async def fetch_most_searched_OG(email: str, query: str, page: int = 0, page_siz
         results = [doc for doc in cursor]
         # for doc in cursor:
             # doc['type']=
-            
         return results
 
     # results_flights = call_collection_page(collection_flights,regex_pattern,skip,page_size)
