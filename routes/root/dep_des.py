@@ -22,7 +22,7 @@ class Pull_flight_info(Root_class):
             'flightViewArrivalGate': "None",
         }
 
-    def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, pre_process=None):
+    def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, pre_process=None, return_bs4=False):
         if type(flt_num_query) == list:
             flt_num_query = flt_num_query[1]
 
@@ -39,19 +39,25 @@ class Pull_flight_info(Root_class):
             # attempt to only pull departure and destination from the united from the info web.
             flight_stats_url = f"https://www.flightstats.com/v2/flight-tracker/{airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
             soup_fs = self.request(flight_stats_url)
+            if return_bs4:
+                return soup_fs 
 
         # fs_juice = soup_fs.select('[class*="TicketContainer"]')     # This is the whole packet not needed now
         
         # If there is a valid active flight its time zone will show up in TimeGroupContainer
         departure_time_zone,arrival_time_zone = [None]*2
+        # TODO VHP: Departure and arrival are 3 char returns theyre not ICAO and hence the weathre lookup doesn't work.
+        # TODO Test: validation at source - make sure there 3 chars .isalpha mostly but 
+                #  can be isnumeric.
+                # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
         origin_fs,destination_fs = [None]*2
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
         fs_time_zone = soup_fs.select('[class*="TimeGroupContainer"]')
         if fs_time_zone and Ticket_Card:
             origin_fs = Ticket_Card[0]
-            origin_fs = "K"+origin_fs.select('[class*="Airport"]')[0].text
+            origin_fs = origin_fs.select('[class*="Airport"]')[0].text
             destination_fs = Ticket_Card[1]
-            destination_fs = "K"+destination_fs.select('[class*="Airport"]')[0].text
+            destination_fs = destination_fs.select('[class*="Airport"]')[0].text
             
             departure_time_zone = fs_time_zone[0].get_text()        #  format is HH:MM XXX timezone(eg.EST)
             departure_time_zone = departure_time_zone[9:18]
@@ -153,7 +159,7 @@ class Pull_flight_info(Root_class):
                     # departure_time = 
             # return dict({flt_num: [departure, destination]})
             
-            print('dep_des.py flight_view_gate_info - SUCCESS at pull_dep_des for gate info')
+            # print('dep_des.py flight_view_gate_info - SUCCESS at pull_dep_des for gate info')
             return self.fv_attrs
         except Exception as e:
             print('dep_des.py flight_view_gate_info !!!UNSUCCESSFUL!!!, Error:',e)
@@ -279,7 +285,7 @@ class Pull_flight_info(Root_class):
                                                 'Maximum': max_delay,
                                                 'Trend': trend}})
 
-        print('dep_des.py nas_final_packer. Providing NAS final packet dict.')
+        # print('dep_des.py nas_final_packer. Providing NAS final packet dict.')
         return {'nas_departure_affected': departure_affected,
                 'nas_destination_affected': destination_affected}
 
@@ -301,7 +307,7 @@ class Pull_flight_info(Root_class):
         affected_airports = [i.text for i in root.iter('ARPT')]
         affected_airports = list(set(affected_airports))
         affected_airports.sort()
-        print('dep_des.py nas_pre_processing. NAS affected airports:', affected_airports)
+        # print('dep_des.py nas_pre_processing. NAS affected airports:', affected_airports)
 
         airport_closures = []
         closure = root.iter('Airport_Closure_List')
@@ -335,7 +341,7 @@ class Pull_flight_info(Root_class):
                     for a in x:
                         arr_dep_del_list.append([a.tag, a.text])
         
-        print('dep_des.py Done NAS pull through nas_packet_pull')
+        # print('dep_des.py Done NAS pull through nas_packet_pull')
         return {'update_time': update_time,
                 'affected_airports': affected_airports,
                 'ground_stop_packet': ground_stop_packet, 
@@ -351,7 +357,7 @@ class Pull_flight_info(Root_class):
 
     def united_departure_destination_scrape(self,airline_code=None, flt_num=None,pre_process=None):         # Depricate. Link doesn't work
         # !!! Depricate! Link doesn't work
-        print('dep_des.py united_departure_destination_scrape', flt_num, airline_code)
+        # print('dep_des.py united_departure_destination_scrape', flt_num, airline_code)
         departure_scheduled_time,destination_scheduled_time = [None]*2
         if not airline_code:
             airline_code = 'UA'
@@ -359,7 +365,7 @@ class Pull_flight_info(Root_class):
             soup = pre_process
         else:
             info = f"https://united-airlines.flight-status.info/{airline_code}-{flt_num}"               # This web probably contains incorrect information.
-            print('info',info)
+            # print('info',info)
             soup = self.request(info)
         # Airport distance and duration can be misleading. Be careful with using these. 
 
@@ -380,11 +386,11 @@ class Pull_flight_info(Root_class):
                 if scheduled_times: 
                     departure_scheduled_time = scheduled_times[0]
                     destination_scheduled_time = scheduled_times[1]
-                print('dep_des.py united_departure_destination_scrape. Found scheduled times using flight_stats.')
+                # print('dep_des.py united_departure_destination_scrape. Found scheduled times using flight_stats.')
         except Exception as e:
             departure_ID, destination_ID = [None]*2
-            print('dep_des.py Unable united_departure_destination_scrape', e)
-        print('dep_des.py united_departure_destination_scrape for departure and destination: ', departure_ID, destination_ID)
+            print('Error!!! dep_des.py Unable united_departure_destination_scrape', e)
+        # print('dep_des.py united_departure_destination_scrape for departure and destination: ', departure_ID, destination_ID)
         return {'departure_ID': departure_ID,
                 'destination_ID': destination_ID,
                 'departure_scheduled_time': departure_scheduled_time,

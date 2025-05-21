@@ -347,7 +347,7 @@ class Fetching_Mechanism(Root_class):
 
 
     async def async_pull(self, list_of_links:list):
-        print('***** async_pull in progress...')
+        # print('***** async_pull in progress...')
         async def get_tasks(session):
             tasks = []
             for url in list_of_links:
@@ -378,7 +378,7 @@ class Fetching_Mechanism(Root_class):
                     resp_return_list[resp.url] = response_output
                 return resp_return_list
 
-        print("*** async pull completion")
+        # print("*** async pull completion")
         #1 Temporary. Works when function calling within jupyter.
         return await main()         
 

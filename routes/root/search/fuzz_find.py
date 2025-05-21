@@ -42,5 +42,4 @@ def fuzz_find(query, data, qc, limit=5):
     
     # Combine prefix and fuzzy matches
     sti_items_match_w_query =  prefix_matches + fuzzy_items
-
     return sti_items_match_w_query

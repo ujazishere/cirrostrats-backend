@@ -22,7 +22,7 @@ class QueryClassifier:
     Will also categorize multiplpe queries with counts of each served as popularity count and spit out normalized output.
     """
     
-    def __init__(self, icao_file_path: Optional[str] = None):
+    def __init__(self, icao_file_path: Optional[str] = "unique_icao.pkl"):
         """
         Initialize the classifier with ICAO airline codes and regex pattern
         Args:
@@ -44,13 +44,13 @@ class QueryClassifier:
         limit = 100
         if test_suggestions:
             with open('sti_test.pkl', 'rb') as f: 
-                print("loading csti test from pickle")
                 self.c_sti_docs = pickle.load(f)
         else:
             # search index finds - sorted ph returns from the sti.
             self.count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
+            self.return_crit = {'ph':0}       # return only flightID and ph
             self.c_sti_docs = list(cts.find(self.count_crit).sort('ph',-1))     # Reverse sort
-        # print('initialized.', self.c_sti_docs)
+        # print('initialized.', self.c_sti_docs[:5])
 
         # self.lcf = list(ctf.find(self.count_crit,{'flightID':1, 'count':1}).limit(limit))
         # print('loaded', len(lcf))
@@ -311,7 +311,7 @@ class QC_base_popularity_hits(QueryClassifier):
             fids_to_upload.append({'r_id':doc['_id'],'fid_st':doc['flightID'],'ph':ph})
         
         # difference btwn requests and collection returns. difference are the unsuccessfull ones.
-        print(len(fids), len(cfid))
+        print('difference btwn requests and colelction returns',len(fids), len(cfid))
         
         """Airports ratings"""
         airports_p_hits = nn['Airports']
@@ -329,7 +329,7 @@ class QC_base_popularity_hits(QueryClassifier):
             # print(nn['Airports'].get("K"+a))
         
         # difference btwn requests and returns. difference are the unsuccessfull ones.
-        print(len(airports_p_hits),len(cacodes))
+        print('difference btwn requests and colelction returns',len(airports_p_hits),len(cacodes))
         
 
 

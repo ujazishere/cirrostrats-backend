@@ -85,7 +85,7 @@ class Weather_fetch:
     def mdb_updates(self,resp_dict: dict, weather_type):
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
         # TODO Test: account for new airport codes, maybe upsert or maybe just none for now.
-        print('Updating mdb')
+        # print('Updating mdb')
         update_operations = []
 
         for url, weather in resp_dict.items():
@@ -102,11 +102,11 @@ class Weather_fetch:
             )
 
         result = collection_weather.bulk_write(update_operations)
-        print(result)
+        # print(result)
 
 
     def datis_processing(self, resp_dict:dict):
-        print('Processing Datis')
+        # print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
         # This function processess the raw list and returns just the pure datis
         for url,datis in resp_dict.items():
@@ -117,40 +117,28 @@ class Weather_fetch:
             else:
                 # ending up in this block means the code is broken somewhere.
                 # TODO Test: checkpoint here for notification- track how many times the code ends up here.
-                print('Datis processing error')
+                print('Error: Datis processing')
                 pass
         return resp_dict
 
 
     async def fetch_and_store_by_type(self,weather_type):
-        print(f'{weather_type} async fetch in progress..')
+        # print(f'{weather_type} async fetch in progress..')
         # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
         
         if weather_type == 'datis':
             processed_datis = self.datis_processing(resp_dict=resp_dict)
             self.weather_returns[weather_type] = processed_datis
-            print('processed datis')
+            # print('processed datis')
             self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
         else:
             self.weather_returns[weather_type] = resp_dict
             self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
-
         
-        print(f'{weather_type} fetch done.')
+        # print(f'{weather_type} fetch done.')
 
-    async def fetch_and_store_datis(self,):         # Unused
-        print('DATIS async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['datis'])
-        print('Fetch done.')
-        self.mdb_updates(resp_dict=resp_dict,weather_type='datis')
     
-    async def fetch_and_store_TAF(self,):           # Unused
-        print('DATIS async fetch in progress..')
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict['taf'])
-        print('Fetch done.')
-        self.mdb_updates(resp_dict=resp_dict,weather_type='taf')
-
 # Only for use on fastapi if celery doesn't work.
 # class Weather_fetch_thread(threading.Thread):
 #     def __init__(self):

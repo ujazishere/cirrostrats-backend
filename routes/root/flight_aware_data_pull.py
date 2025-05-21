@@ -49,7 +49,7 @@ class Flight_aware_pull(Root_class):
         if response.status_code == 200:
             return response.json()['flights']
         else:
-            print('FLIGHT_AWARE RESPONSE STATUS CODE NOT 200!!!', response.status_code)
+            print('UNSUCCESSFUL!! FLIGHT_AWARE RESPONSE STATUS CODE NOT 200!!!', response.status_code)
             return None    
 
 
@@ -266,12 +266,12 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
 
                 # sv = f"https://skyvector.comi/api/lchart?fpl=%20{origin}{rh}%20{destination}"     # This is for api
 
-                print('\nSuccessfully fetched and processed Flight Aware data')
+                # print('\nSuccessfully fetched and processed Flight Aware data')
                 break
 
 
     else:
-        print('flight_aware_data_pull.pull FLIGHT_AWARE_DATA UNSUCCESSFUL, no `flights` available')
+        print('UNSUCCESSFUL!! flight_aware_data_pull.pull FLIGHT_AWARE_DATA, no `flights` available')
         return fa_object.attrs
 
     try:
@@ -296,7 +296,7 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
                 'sv': sv,
                         }
     except Exception as e:
-        print('flight_aware_data_pull.pull FLIGHT_AWARE_DATA UNSUCCESSFUL, no `flights` available')
+        print('UNSUCCESSFUL!! flight_aware_data_pull.pull FLIGHT_AWARE_DATA, no `flights` available')
         print(e)
         return fa_object.attrs
                         

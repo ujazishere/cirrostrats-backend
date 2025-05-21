@@ -20,6 +20,7 @@ def search_suggestion_format(c_docs, limit=1000,):         # cta- collection tes
             val,val_field,val_type = fid_st, 'flightID', 'flight'
 
         passed_data = { 
+            'stId': str(doc['_id']),
             'id': str(doc['r_id']),
             f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
             'display': val,             # This is manipulated later hence the duplicate.

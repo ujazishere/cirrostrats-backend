@@ -19,7 +19,7 @@ class Newark_departures_scrape(Root_class):
 
         #  This code pulls out all the flight numbers departing out of EWR
         
-        print('working on united departures out of Newark')
+        # print('working on united departures out of Newark')
         day_times = {'very_early_morn': '?tp=0',
                      'morning': '?tp6',
                      'noon': '?tp=12',
@@ -55,8 +55,8 @@ class Newark_departures_scrape(Root_class):
         united_departures_newark = [each_dep for each_dep in all_EWR_deps if each_dep.startswith('UA') ]
         
         # TODO: Log these on a file and setup a scheduler to send email notifications.
-        print('Successfully pulled United departures out of Newark at', self.date_time())
-        print(f'Total United departures: {len(united_departures_newark)}')
+        # print('Successfully pulled United departures out of Newark at', self.date_time())
+        # print(f'Total United departures: {len(united_departures_newark)}')
         
         return united_departures_newark
 

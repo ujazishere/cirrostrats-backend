@@ -63,7 +63,7 @@ class Weather_parse:
         if processed_incoming_data:
             return processed_incoming_data
         else:
-            print('Nothing to process in visibility_color_code func')
+            # print('Nothing to process in visibility_color_code func')
             return incoming_weather_data
         
 
@@ -79,7 +79,7 @@ class Weather_parse:
             elif len(datis) == 2:       # Departure and arrival datis separated
                 if datis[0]['type'] == 'arr':
                     # TODO VHP: need to properly send this seperately for departure vs arrial for mdb.
-                    print('Returned Arrival D-ATIS through weather_parse.py')           
+                    # print('Returned Arrival D-ATIS through weather_parse.py')           
                     arr_datis = datis[0]['datis']
                 else:
                     arr_datis = datis[1]['datis']
@@ -139,14 +139,14 @@ class Weather_parse:
         elif weather_raw:
             raw_return = weather_raw        # This wont do the datis processing.
             datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'),datis_arr=datis_arr)
-            metar_raw = raw_return['metar']
-            taf_raw = raw_return['taf']
+            metar_raw = raw_return.get('metar')
+            taf_raw = raw_return.get('taf')
         else:
             # Pulls raw weather and will also do the datis processing within the function.
             raw_return = self.raw_weather_pull(query=query,datis_arr=datis_arr)     
-            datis_raw = raw_return['datis']
-            metar_raw = raw_return['metar']
-            taf_raw = raw_return['taf']
+            datis_raw = raw_return.get('datis')
+            metar_raw = raw_return.get('metar')
+            taf_raw = raw_return.get('taf')
 
         def zulu_extracts(weather_input, datis=None, taf=None):
             

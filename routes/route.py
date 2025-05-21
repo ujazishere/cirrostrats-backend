@@ -17,6 +17,7 @@ from routes.root.weather_parse import Weather_parse
 
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
+    from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
@@ -67,20 +68,11 @@ Check individual_serial to see the dict format.
 """
 
 #_____________________________________________________________________________
-""" Tracking, saving and retrieving searches"""
-# Define a Pydantic model to validate incoming request data
-class SearchData(BaseModel):
-    email: str
-    searchTerm: Union[str, None]
-    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
-    submitId: Union[str, None]
-    timestamp: datetime
 
 
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
-# def fuzzy_search_cached(query, limit=100):
-async def get_search_suggestions(email: str, query: str, limit=2500):  # Default page and page size
+async def get_search_suggestions(email: str, query: str, limit=1000):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
     formatted_suggestions = search_suggestion_format(c_docs=qc.c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
@@ -95,25 +87,41 @@ async def get_search_suggestions(email: str, query: str, limit=2500):  # Default
     return sti_items_match_w_query
 
 
+""" Tracking, saving and retrieving searches"""
+# Define a Pydantic model to validate incoming request data
+class SearchData(BaseModel):
+    email: str
+    stId: Union[str, None]        # submitTerm can be string or null type of variable from react
+    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
+    timestamp: datetime
+
 
 @router.post('/searches/track')
 def track_search(data: SearchData):
     
     # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
-
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
         "$set": {"lastUpdated": data.timestamp},  # Update timestamp
     }
 
-    # Create update operation using MongoDB's atomic operators
-    if data.submitTerm is None:     # disregard submitTerm if submission is not made and just pass keystrokes
-        update_query.update({"$inc": {f"searchTerm.{data.searchTerm}": 1}})     # Increment count
+    # Update operation -- MongoDB's atomic operators
+
+    # Deprecated: searchTerm is not being saved anymore.
+    # if data.submitTerm is None:     # disregard submitTerm if submission is not made and just pass keystrokes
+    #     update_query.update({"$inc": {f"searchTerm.{data.searchTerm}": 1}})     # Increment count
+
+    if data.stId is not None:     # disregard submitTerm if submission is not made and just pass keystrokes
+        pass
+        # update_query.update({"$inc": {f"stId.{data.stId}": 1}})     # Increment count
     elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
-        update_query.update({"$inc": {f"submits.{data.submitTerm}.count": 1}})        # Increment count
-        if data.submitId is not None:       # if submission contains ID.
-            # TODO: Removed objectId from the database. Keeps frontend and backend in sync without ObjectId conversion issue.
-            update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.submitId}})  # Ensure ID is stored
+        pass
+        # update_query.update({"$inc": {f"submitTerm.{data.submitTerm}.count": 1}})        # Increment count
+
+        # Deprecated: submitId is not being saved anymore.
+        # if data.submitId is not None:       # if submission contains ID.
+        #     # TODO: Removed objectId from the database. Keeps frontend and backend in sync without ObjectId conversion issue.
+        #     update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.submitId}})  # Ensure ID is stored
     
     # result = collection_searchTrack.update_one(
     #     {"email": data.email},
@@ -205,6 +213,8 @@ async def initial_query_processing_react(search: str = None):
         fid_st = parsed_query_value.get('airline_code') + parsed_query_value.get('flight_number')
         val,val_field,val_type = fid_st, 'flightID', 'flight'
         pass
+    elif parsed_query.get('category') == 'Others':
+        val,val_field,val_type = parsed_query.get('value'), 'others','others'
     
     formatted_data = { 
         f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
@@ -212,7 +222,6 @@ async def initial_query_processing_react(search: str = None):
         'type': val_type,
         # 'search_text': val.lower()
         }
-    print(formatted_data)
     return formatted_data
 
 
@@ -223,19 +232,32 @@ async def aws_jms(flightID, mock=False):
     # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO Test: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
+
+    # qc = QueryClassifier()
+    # TODO: This airlinecode parsing is dangerous. Fix it. 
+    value = qc.parse_query(flightID).get('value')
+    ac = value.get('airline_code')
+    fn = value.get('flight_number')
+    if ac =='UA':
+        flightID = "UAL"+fn
+    elif ac == 'DL':
+        flightID = "DAL"+fn
+    elif ac == 'AA':
+        flightID = "AAL"+fn
+
     returns = {}
     try:
         if mock:
             data = mock
-            # print('test data', data)
+            print('test data', data)
         else:
             data = requests.get(f'http://3.146.107.112:8000/flights/{flightID}?days_threshold=1')
             data = json.loads(data.text)
         mongo,latest = data.get('mongo'),data.get('latest')
-
         # This is throughly sought! if mongo and latest both not availbale just return. if either is available just fix them!
         # Data is flowing in popularity increments - latest is the best, mongo is second best
         if not mongo and not latest:
+            print('No mongo or latest found')
             return {}
         
         elif mongo:     # if mongo availbalem, temporarily fix that cunt first! process it later
@@ -245,38 +267,36 @@ async def aws_jms(flightID, mock=False):
             
         # TODO HP: Again hazardous!! ****CAUTION*** FIX ASAP! clearance subdoc may not reflect the same as the secondary flight data subdoc..
         if not latest:      # Idea is to get clearance and if found in latest return that and mongo
-            print('no latest w mongo')
+            # print('no latest w mongo')
             latest_mogno = mongo[-1]
             if latest_mogno.get('towerAircraftID') and len(mongo)>=2:
-                print('mongo clearance found')
+                # ('mongo clearance found')
                 second_latest_mongo = mongo[-2]
                 merged_dict = {**latest_mogno,**second_latest_mongo}
                 returns = merged_dict
-                # print('here', mongo)
             else:
-                print('no latest, no clearance found in mongo, returinng latest mongo only')
+                # print('no latest, no clearance found in mongo, returinng latest mongo only')
                 returns = latest_mogno
-            # print(mongo)
             # print('found mongo but not latest')
         elif latest:
-            print('found latest checking if it has clearance')
+            # print('found latest checking if it has clearance')
             if not latest.get('clearance'):
-                print('Latest doesnt have clearance, returning it as is')
+                # print('Latest doesnt have clearance, returning it as is')
                 returns = latest
             else:
-                print('found clearance in latest')
+                # print('found clearance in latest')
                 if mongo:
-                    print('have clearance from latest now updating latest mongo to it')
+                    # print('have clearance from latest now updating latest mongo to it')
                     latest_mogno = mongo[-1]
                     if not latest_mogno.get('clearance'):
                         merged_dict = {**latest,**latest_mogno}
                         # print('latest', latest)
                         returns =  merged_dict
                     else:
-                        print('!!! found clearance in latest as well as latest_mongo')
+                        # print('!!! found clearance in latest as well as latest_mongo')
                         # TODO Test: log this data for inspection and notification later on.
                         second_latest_mongo = mongo[-2] if len(mongo)>=2 else {}
-                        print('second_latest_mogno',second_latest_mongo)
+                        # print('second_latest_mogno',second_latest_mongo)
 
                         returns = {**latest, **second_latest_mongo}
                 elif not mongo:
@@ -286,7 +306,6 @@ async def aws_jms(flightID, mock=False):
                     
     except Exception as e:
         print(e)
-
     
     return returns
 
@@ -340,7 +359,7 @@ async def flight_aware_w_auth(airline_code, flight_number):
 
 
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
-async def get_airport_data(airport_id, search: str = None):
+async def get_airport_data(airport_id,):
 
     # TODO VHP Weather: Temp fix. Find better wayto do this. Handle prepend at source find it in celery rabit hole in metar section
     if len(airport_id)<=4:   # airport ID can be bson id itself from mongo or a icao airportID code.
@@ -362,6 +381,8 @@ async def get_airport_data(airport_id, search: str = None):
         weather.update({'code':code})
 
         return weather
+    else:
+        return {}
 
 @router.get("/liveAirportWeather/{airportCode}")
 async def liveAirportWeather(airportCode):
@@ -385,12 +406,10 @@ async def nas(departure_id, destination_id):
     # TODO Cleanup: does not account for just nas instead going whole mile to get and process weather(unnecessary)
     fm = Fetching_Mechanism()
     sl = Source_links_and_api()
-    print('dep', departure_id)
     resp_dict: dict = await fm.async_pull([sl.nas()])
     resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
     
     nas_returns = resp_sec
-    print(nas_returns)
 
     return nas_returns
 
@@ -402,7 +421,6 @@ async def gate_returns(gate_id):
     find_crit = {"_id": ObjectId(gate_id)}
     res = collection_gates.find_one(find_crit, return_crit)
     # code = res.get('code') if res else None
-    print('Gate resposne',res)
     if res:
         return res
 
@@ -428,24 +446,6 @@ async def test_flight_deet_data():
 
 
 # ____________________________________________________________________________________
-
-@router.get('/query')       # /query/{passed_variable} can be used tp get the passed variable from frontend
-async def initial_query_processing_react(passed_variable: str = None, search: str = None):
-    # TODO LP: Make this function run only when user hits submit. right now it runs soon as the drop down is exhausted.
-
-    # This function runs when the auto suggest is exhausted. Intent: processing queries in python, that are unaccounted for in react.
-    # This code is present in the react as last resort when dropdown is exhausted.
-    # The only reason I have left passed_variable here is for future use of similar variable case.
-    # you can store the airport_id thats coming from the react as a variable to be used here in this case it is passed_variable
-    print('Last resort since auto suggestion is exhausted. passed_variable:', passed_variable,)
-    print('search value:', search)
-    # As user types in the search bar this if statement gets triggered.
-    # return None
-    return qc.parse_query(search)
-    # if (passed_variable != "airport"):
-    #     print('passed_variable is not airport. It is:', passed_variable)
-    #     return None
-
 
 async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=True):
     # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
@@ -576,6 +576,7 @@ async def get_airports():
         name = i['name']
         code = i['code']
         # print(1,id,name,code)
+
 
 
     result = collection_airports.find({})

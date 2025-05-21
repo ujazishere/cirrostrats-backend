@@ -13,30 +13,30 @@ def resp_initial_returns(resp_dict: dict, airline_code, flight_number_query,):
     united_dep_dest,flight_stats_arr_dep_time_zone = [None]*2       # declaring so it doesn't throw error
     for url,resp in resp_dict.items():
         if "flight-status.com" in str(url):
-            print("11.resp_intitial_return flight-status")
+            # print("11.resp_intitial_return flight-status")
             soup = fm.requests_processing(resp,bs=True)
-            print("11Sending raw data to unuted_departure_destination_scrape for cleaning")
+            # print("11Sending raw data to unuted_departure_destination_scrape for cleaning")
             united_dep_dest = flt_info.united_departure_destination_scrape(pre_process=soup)
             if not united_dep_dest:
                 united_dep_dest = None
-            print("11.united_dep_dest",united_dep_dest)
+            # print("11.united_dep_dest",united_dep_dest)
         elif "flightstats.com" in str(url):
-            print("22.resp_intitial_return flightstats.com")
+            # print("22.resp_intitial_return flightstats.com")
             soup = fm.requests_processing(resp,bs=True)
-            print("22Sending raw data to fs_dep_arr_timezone_pull for timezone data cleaning")
+            # print("22Sending raw data to fs_dep_arr_timezone_pull for timezone data cleaning")
             flight_stats_arr_dep_time_zone = flt_info.flightstats_dep_arr_timezone_pull(flt_num_query=flight_number_query,pre_process=soup)
             # print(flight_stats_arr_dep_time_zone)
 
 
         elif "flightaware" in str(url):
-            print("33.resp_intitial_return flightaware")
+            # print("33.resp_intitial_return flightaware")
             fa_return = json.loads(resp)
             fa_return = fa_return['flights']
-            print("33Sending data to fa_data_pull for cleaning.")
+            # print("33Sending data to fa_data_pull for cleaning.")
             flight_aware_data = flt_info.fa_data_pull(airline_code=airline_code, flt_num=flight_number_query,pre_process=fa_return)
         #TODO LP: aviation stack needs work. That is another source to cross-check with flightaware and others. Design the logic to cross-check and verify.
         elif "aviationstack" in str(url):       
-            print("resp_intitial_return aviationstack:", resp)
+            # print("resp_intitial_return aviationstack:", resp)
             av_stack = json.loads(resp)
             # soup = fm.requests_processing(resp,json=True)
             # aviation_stack_data = flt_info.aviation_stack_pull(airline_code=airline_code, flt_num=flight_number_query)
@@ -121,7 +121,6 @@ def resp_sec_returns(resp_dict,dep_airport_id,dest_airport_id):
 
     if gate_info:
         gate_info_return = flt_info.flight_view_gate_info(pre_process=gate_info)
-        print(gate_info_return)
     else:
         gate_info_return = {'departure_gate': None,
                             'arrival_gate': None, }

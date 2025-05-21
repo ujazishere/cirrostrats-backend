@@ -39,5 +39,5 @@ def departures_EWR_UA():
 
     # extracting all united flights and putting them all in list to return it in the function.
     united_flights =[each for each in all_EWR_deps if 'UA' in each]
-    print(f'total flights {len(all_EWR_deps)} of which UA flights: {len(united_flights)}')
+    # print(f'total flights {len(all_EWR_deps)} of which UA flights: {len(united_flights)}')
     return united_flights
