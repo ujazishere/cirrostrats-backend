@@ -99,11 +99,43 @@ class SearchData(BaseModel):
 @router.post('/searches/track')
 def track_search(data: SearchData):
     
+    cts = db_UJ['test_st']   # create/get a collection
     # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
+    quick_view_st = data.submitTerm if data.submitTerm else cts.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
         "$set": {"lastUpdated": data.timestamp},  # Update timestamp
     }
+    oid = {"_id": ObjectId(data.stId)}
+    if data.stId is not None:
+        doc = cts.find_one(oid)
+        print('doc:', doc)
+        if doc:
+            if "submits" in doc:
+                # If submits exists, just push the new timestamp
+                cts.update_one(
+                    {"_id": ObjectId(data.stId)},
+                    {"$push": {"submits": data.timestamp}}
+                )
+            else:
+                # If submits doesn't exist, set it as new array with the timestamp
+                cts.update_one(
+                    {"_id": ObjectId(data.stId)},
+                    {"$set": {"submits": [data.timestamp]}}
+                )
+        doc = cts.find_one(oid)
+        print('update doc:', doc)
+        # update_query.update({"$inc": {f"stId.{data.stId}": 1}})     # Increment count
+    elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
+        pass
+
+
+
+    # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
+    # update_query = {
+        # "$setOnInsert": {"email": data.email},  # Only set email on document creation
+        # "$set": {"lastUpdated": data.timestamp},  # Update timestamp
+    # }
 
     # Update operation -- MongoDB's atomic operators
 
@@ -135,7 +167,8 @@ def track_search(data: SearchData):
 @router.get('/searches/all')
 async def get_all_searches():
     # Shows all the searches that have been made.
-    all_results = collection_searchTrack.find({})
+    searchTermsCollection = db_UJ['SearchTerms']
+    all_results = searchTermsCollection.find({})
     
     return serialize_document_list(all_results)
 
