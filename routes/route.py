@@ -106,6 +106,7 @@ def track_search(data: SearchData):
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
         "$set": {"lastUpdated": data.timestamp},  # Update timestamp
     }
+
     oid = {"_id": ObjectId(data.stId)}
     if data.stId is not None:
         doc = cts.find_one(oid)
@@ -167,10 +168,13 @@ def track_search(data: SearchData):
 @router.get('/searches/all')
 async def get_all_searches():
     # Shows all the searches that have been made.
-    searchTermsCollection = db_UJ['SearchTerms']
-    all_results = searchTermsCollection.find({})
+    # searchTermsCollection = db_UJ['SearchTerms']
+    # all_results = searchTermsCollection.find({})
     
-    return serialize_document_list(all_results)
+    cts = db_UJ['test_st']   # create/get a collection
+    all_results = list(cts.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+    transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
+    return serialize_document_list(transformed)
 
 @router.get('/searches/{email}')
 async def get_user_searches(email):
