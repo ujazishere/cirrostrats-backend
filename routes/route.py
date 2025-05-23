@@ -100,20 +100,23 @@ class SearchData(BaseModel):
 def track_search(data: SearchData):
     
     cts = db_UJ['test_st']   # create/get a collection
-    # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
-    quick_view_st = data.submitTerm if data.submitTerm else cts.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
+    ctrs = db_UJ['test_rst']   # create/get a collection
+
+    # quick view of the search term. dropdown selection or raw search term
+    # quick_view_st = data.submitTerm if data.submitTerm else cts.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
+    # 
+    # TODO: query should be saved by user.
     update_query = {
         "$setOnInsert": {"email": data.email},  # Only set email on document creation
         "$set": {"lastUpdated": data.timestamp},  # Update timestamp
     }
 
     oid = {"_id": ObjectId(data.stId)}
-    if data.stId is not None:
+    if data.stId:       # if submission with dropdown selection
         doc = cts.find_one(oid)
-        print('doc:', doc)
         if doc:
             if "submits" in doc:
-                # If submits exists, just push the new timestamp
+                # If submits exists, just push the new timestamp -- append to the submits array
                 cts.update_one(
                     {"_id": ObjectId(data.stId)},
                     {"$push": {"submits": data.timestamp}}
@@ -125,54 +128,52 @@ def track_search(data: SearchData):
                     {"$set": {"submits": [data.timestamp]}}
                 )
         doc = cts.find_one(oid)
-        print('update doc:', doc)
-        # update_query.update({"$inc": {f"stId.{data.stId}": 1}})     # Increment count
-    elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
-        pass
+    elif data.submitTerm:       # if submission with raw search term
+        ctrs.update_one(
+            {"rst": data.submitTerm},
+            {"$push": {"submits": data.timestamp}},
+            upsert=True
+        )
+    else:
+        print("Impossible return!")
 
 
+@router.get('/searches/timeline')
+async def get_search_timeline():
 
-    # This function is called when a user searches for a term. it stores the search term based on email and tracks the count.
-    # update_query = {
-        # "$setOnInsert": {"email": data.email},  # Only set email on document creation
-        # "$set": {"lastUpdated": data.timestamp},  # Update timestamp
-    # }
+    cts = db_UJ['test_st']   # create/get a collection
+    crts = db_UJ['test_rst']   # create/get a collection
 
-    # Update operation -- MongoDB's atomic operators
+    cts_returns =  list(cts.aggregate([
+            { "$match": { "submits": { "$exists": True} } },
+            { "$unwind": "$submits" },
+            { "$addFields": { "timestamp": "$submits" } },
+            { "$unset": ["_id", "r_id", "ph", "submits"] }
+        ]))
+    crts_returns =  list(crts.aggregate([
+            { "$unwind": "$submits" },
+            { "$project": {
+                "_id": 0,
+                "rst": 1,
+                "timestamp": "$submits"
+            }}
+        ]))
+    returns = cts_returns + crts_returns
+    return returns
 
-    # Deprecated: searchTerm is not being saved anymore.
-    # if data.submitTerm is None:     # disregard submitTerm if submission is not made and just pass keystrokes
-    #     update_query.update({"$inc": {f"searchTerm.{data.searchTerm}": 1}})     # Increment count
-
-    if data.stId is not None:     # disregard submitTerm if submission is not made and just pass keystrokes
-        pass
-        # update_query.update({"$inc": {f"stId.{data.stId}": 1}})     # Increment count
-    elif data.submitTerm is not None:       # if submission is made disregard keystrokes(SearchTerm)
-        pass
-        # update_query.update({"$inc": {f"submitTerm.{data.submitTerm}.count": 1}})        # Increment count
-
-        # Deprecated: submitId is not being saved anymore.
-        # if data.submitId is not None:       # if submission contains ID.
-        #     # TODO: Removed objectId from the database. Keeps frontend and backend in sync without ObjectId conversion issue.
-        #     update_query.update({"$set": {f"submits.{data.submitTerm}.id": data.submitId}})  # Ensure ID is stored
-    
-    # result = collection_searchTrack.update_one(
-    #     {"email": data.email},
-    #     update_query,
-    #     upsert=True
-    # )
-    print("update_query: ", update_query)
-
-    # return {"status": "success", "matched_count": result.matched_count, "modified_count": result.modified_count}
 
 @router.get('/searches/all')
 async def get_all_searches():
-    # Shows all the searches that have been made.
-    # searchTermsCollection = db_UJ['SearchTerms']
-    # all_results = searchTermsCollection.find({})
     
     cts = db_UJ['test_st']   # create/get a collection
-    all_results = list(cts.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+    crts = db_UJ['test_rst']   # create/get a collection
+
+    cts_all_results = list(cts.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+    crts_call_results = list(crts.find({'submits': {'$exists': True}},{"_id":0}))
+    all_results = cts_all_results + crts_call_results
+
+    # transformed converts all_results:
+    # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
     transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
     return serialize_document_list(transformed)
 
