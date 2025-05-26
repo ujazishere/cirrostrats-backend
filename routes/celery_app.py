@@ -56,7 +56,10 @@ def GateFetch():
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
-
+# TODO VHP: There have been times when the task is not running - celery-beat inadvertently shutsoff...
+        # Retries should be made for unsuccessful tasks - consistent outlaws should be flagged and trashed to save processing power.
+            # Design tests to consistently check output of the task...
+            # Something that resembles a supervisor or a watchdog that checks for data validation.
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
     # TODO Test: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every minute or so.

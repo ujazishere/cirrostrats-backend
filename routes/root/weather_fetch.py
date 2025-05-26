@@ -56,6 +56,7 @@ class Weather_fetch:
 
     def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
+        # TODO: collection_airports code issue fix
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
@@ -90,6 +91,9 @@ class Weather_fetch:
 
         for url, weather in resp_dict.items():
             # TODO VHP: Dangerous! fix magic number and 3 vs 4 char airport code issue.
+            # TODO: collection_airports code issue fix -- thinking about getting rid of the 3 char altogether.
+                # This wont fix the issue of needing 3 char airport codes for suggestion mix.
+                    # To fix this would need to supply 3 char if its not the same as the 4 char airport code[1:].
             airport_code_trailing = str(url)[-3:]
 
             update_operations.append(

@@ -38,7 +38,7 @@ def fuzz_find(query, data, qc, limit=5):
     
     # Get the corresponding items
     fuzzy_items = [search_universe[choices.index(match)] for match, score in fuzzy_matches 
-                  if score > 60]  # Minimum similarity threshold
+                  if score > 90]  # Minimum similarity threshold
     
     # Combine prefix and fuzzy matches
     sti_items_match_w_query =  prefix_matches + fuzzy_items

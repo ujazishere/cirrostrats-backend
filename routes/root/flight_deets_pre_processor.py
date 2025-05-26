@@ -46,7 +46,12 @@ def resp_initial_returns(resp_dict: dict, airline_code, flight_number_query,):
             #  aviation_stack_data
 
 
-def raw_resp_weather_processing(resp_dict, airport_id):
+def weather_html_injection(weather_raw):
+    wp = Weather_parse()            
+    return wp.processed_weather(weather_raw=weather_raw)     # Doing this to avoid nested weather dictionaries
+    
+
+def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
     metar,taf,datis = ['']*3
 
     for url,resp in resp_dict.items():
@@ -60,9 +65,13 @@ def raw_resp_weather_processing(resp_dict, airport_id):
     raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
     # dep_weather = wp.processed_weather(weather_raw=dep_weather)
     
-    wp = Weather_parse()            
-    wpp = wp.processed_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
-    return wpp
+    if html_injection:
+        return weather_html_injection(raw_weather_returns)
+    else:
+        wp = Weather_parse()
+        datis_raw = wp.datis_processing(datis_raw=raw_weather_returns.get('datis','N/A'))
+        raw_weather_returns['datis'] = datis_raw
+        return raw_weather_returns
 
     
 def resp_sec_returns(resp_dict,dep_airport_id,dest_airport_id):

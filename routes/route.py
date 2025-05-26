@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import pickle
 import re
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
@@ -69,7 +69,7 @@ Check individual_serial to see the dict format.
 
 #_____________________________________________________________________________
 
-
+# SearhTracking section
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
 async def get_search_suggestions(email: str, query: str, limit=1000):  # Default page and page size
@@ -78,13 +78,12 @@ async def get_search_suggestions(email: str, query: str, limit=1000):  # Default
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
 
     # If sti is exhausted, direct query to appropriate index.
-    if not sti_items_match_w_query:
-        # TODO: This will never be triggered. fuzz_find will always send atleast 5 items regardless of matches.
-                # Find a way to show raw organic ones only.
-                # Check TODO in fuzz_find parse_query
-        parsed_query = qc.parse_query(query=query)
-        print('Exhausted parsed query',parsed_query)
-    return sti_items_match_w_query
+    if sti_items_match_w_query:
+        return sti_items_match_w_query
+    elif not sti_items_match_w_query:
+        if len(query)>=3:
+            parsed_query = qc.parse_query(query=query)
+            print('Exhausted parsed query',parsed_query)
 
 
 """ Tracking, saving and retrieving searches"""
@@ -98,6 +97,7 @@ class SearchData(BaseModel):
 
 @router.post('/searches/track')
 def track_search(data: SearchData):
+    # Save the search term and timestamp to the database
     
     cts = db_UJ['test_st']   # create/get a collection
     ctrs = db_UJ['test_rst']   # create/get a collection
@@ -128,6 +128,7 @@ def track_search(data: SearchData):
                     {"$set": {"submits": [data.timestamp]}}
                 )
         doc = cts.find_one(oid)
+    # TODO: This wont account for uniques. Every store is a new store.
     elif data.submitTerm:       # if submission with raw search term
         ctrs.update_one(
             {"rst": data.submitTerm},
@@ -140,6 +141,7 @@ def track_search(data: SearchData):
 
 @router.get('/searches/timeline')
 async def get_search_timeline():
+    # Returns a timeline of all searches made by users in exploded fashion.
 
     cts = db_UJ['test_st']   # create/get a collection
     crts = db_UJ['test_rst']   # create/get a collection
@@ -172,81 +174,41 @@ async def get_all_searches():
     crts_call_results = list(crts.find({'submits': {'$exists': True}},{"_id":0}))
     all_results = cts_all_results + crts_call_results
 
-    # transformed converts all_results:
+    # transformed converts `all_results` which is a list of dicts. Conversions are such:
     # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
     transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
     return serialize_document_list(transformed)
 
 @router.get('/searches/{email}')
 async def get_user_searches(email):
-    # Shows all the searches that have been made by the user.
+    # Supposed to show all the searches that have been made by the user.
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
 
 
-# @router.get('/searches/suggestions/{email}')
-async def fetch_most_searched_OG(email: str, query: str, page: int = 0, page_size: int = 20):  # Default page and page size
-    regex_pattern: str = query.upper()
-
-    # Calculate skip value for pagination
-    skip = page * page_size
-    def call_collection_page(c,regex_pattern,skip,page_size):
-        # Perform the query with pagination
-        cursor = c.find(
-            {'flightID': {'$regex': regex_pattern}},
-            {'flightID': 1}
-        ).skip(skip).limit(page_size)
-        # Convert cursor to list of documents
-        results = [doc for doc in cursor]
-        # for doc in cursor:
-            # doc['type']=
-        return results
-
-    # results_flights = call_collection_page(collection_flights,regex_pattern,skip,page_size)
-    results_airports = call_collection_page(collection_airports,regex_pattern,skip,page_size)
-    # results_gates = call_collection_page(collection_gates,regex_pattern,skip,page_size)
-    # merged_results = results_flights + results_airports + results_gates
-    # results = merged_results
-    
-    # Get total count for pagination metadata
-    total_count = collection_airports.count_documents({'flightID': {'$regex': regex_pattern}})
-    total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
-    print('TOTALS *****',total_count, total_pages)
-    print('results:',results_airports)
-    results = results_airports
-    results = [i for i in serialize_document_list(results)]  # serialize_document_list(suggestions]  # serialize_document_list(suggestions)
-
-    # Return paginated results with metadata
-    data = {"results": results,
-        "pagination": {
-            "page": page,
-            "page_size": page_size,
-            "total_count": total_count,
-            "total_pages": total_pages,
-            "has_next": page < total_pages - 1,
-            "has_prev": page > 0
-        }
-    }
-
-    return results
-
-
 # ____________________________________________________________________________
 
-
-
+# RAW SEARCH submit handler
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
 async def initial_query_processing_react(search: str = None):
+    
+    # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
+        # If found return that, if not found request on flightAware - e.g N917PG
+
     parsed_query = qc.parse_query(query=search)
-    print('SUBMIT: Raw search value:', search, parsed_query)
     # TODO VHP: This is bad!! Take care of this formatting in the /suggestions_format area.
-            # Its adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
-                # For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID`
+            # It is adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
+    # TODO VHP: For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID` for `flightId`
     if parsed_query.get('category') == 'Airports':
+        # TODO VHP: Return airport data from the collection_airports on this submit
+        # TODO HP: request from collection_airports if found, return it whilst fetching new data, if new data found update database. 
         val,val_field,val_type = parsed_query.get('value'), 'airport','airport'
+        weather_returns = collection_weather.find_one({'code':val},{'_id':0,'weather':1})  # This is to ensure that the airport code exists in the collection.
+        # return weather_returns
         pass
     elif parsed_query.get('category') == 'Flights':
+        # TODO: account for flightID from within the collection_flights. if found return that, if not reqeuest on flightAware - e.g N917PG
         parsed_query_value = parsed_query.get('value')
         fid_st = parsed_query_value.get('airline_code') + parsed_query_value.get('flight_number')
         val,val_field,val_type = fid_st, 'flightID', 'flight'
@@ -260,6 +222,7 @@ async def initial_query_processing_react(search: str = None):
         'type': val_type,
         # 'search_text': val.lower()
         }
+    print('SUBMIT: Raw search value:', search, parsed_query, formatted_data)
     return formatted_data
 
 
@@ -435,7 +398,7 @@ async def liveAirportWeather(airportCode):
     
     wl_dict = {weather_type:link_returns(weather_type,airportCode) for weather_type in ('metar', 'taf','datis')}
     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    weather_dict = raw_resp_weather_processing(resp_dict, airport_id=airportCode)
+    weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=airportCode, html_injection=True)
     return weather_dict
 
 @router.get("/NAS/{departure_id}/{destination_id}")
@@ -470,8 +433,62 @@ async def test_flight_deet_data():
 
     return bulk_flight_deets
 
+# _____________________________________________________________________
 
+# Post 
+@router.post("/storeLiveWeather")
+async def store_live_weather(
+    mdbId: Optional[str] = None,
+    rawCode: Optional[str] = None,
+):
+    print('mdbAirportId', mdbId)
+    print('rawCode', rawCode)
+    ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
+    if mdbId:
+        find_crit = {"_id": ObjectId(mdbId)}
+        # Check if the mdbId exists in the collection
+        mdb_weather_data = collection_airports.find_one(find_crit, {"code": 1})
+        print('mdb_weather_data', mdb_weather_data)
+        if mdb_weather_data:
+            ICAO_code_to_fetch = 'K' + mdb_weather_data.get('code')
+        else:
+            # Throw a python error if the mdbId is not found
+            print("Error: Airport ID not found in the weather collection.")
+    elif rawCode:
+        # TODO: This section is intentionally left blank to handle the case where mdbId is not provided.
+            # If saved in the db, it will interfere with celery task since it uses 3 char airport code.
+            # This will probably require either a separate collection or meticulous manipulating legacy code(interferers with celery task)
+            # Better with a separate collection. Since airport collection will be primary containing popular US airports.
+        # If mdbId is not found, use the rawCode to fetch the ICAO code
+        # ICAO_code_to_fetch = rawCode
+        return
 
+    fm = Fetching_Mechanism()
+    rsl = Root_source_links
+
+    def link_returns(weather_type, airport_id):
+        wl = rsl.weather(weather_type,airport_id)
+        return wl
+
+    wl_dict = {weather_type:link_returns(weather_type,ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
+    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
+    
+    weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=ICAO_code_to_fetch, html_injection=False)
+
+    cwaid = collection_weather.find_one({'code': mdb_weather_data.get('code')},{'airport_id':1,'_id':0})
+    if cwaid and cwaid.get('airport_id'):
+        if str(cwaid.get('airport_id')) == mdbId:
+            print('Already in the database, updating it')
+            collection_weather.update_one(
+                {'code': mdb_weather_data.get('code')},
+                {'$set': {'weather': weather_dict},}
+            )
+
+    
+
+    # result = collection_weather.bulk_write(update_operations)
+# Your processing logic here
+    return {"status": "success"}
 
 
 
@@ -601,22 +618,3 @@ async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=Tr
         # It was an inefficient fucntion to bypass the futures error on EC2
 
     return bulk_flight_deets
-
-
-@router.get('/test')
-async def get_airports():
-
-    # list_serial only returns id
-    mdb = (serialize_document_list(collection_airports.find({})))
-    print(mdb[:2])
-    for i in mdb[:2]:
-        id = i['id']
-        name = i['name']
-        code = i['code']
-        # print(1,id,name,code)
-
-
-
-    result = collection_airports.find({})
-
-    return serialize_document_list(result)

@@ -1,7 +1,16 @@
 
+def format_returns():
+    """
+    # Unused currently. Need mechanism to format the suggestions to be returned to the frontend.
+    this is supposed to account for suggestions as well as parseQuery results
+    """
+    return
+
 def search_suggestion_format(c_docs, limit=1000,):         # cta- collection test airports; ctf- collection test flights
-    # TODO: Fix this fuckery! This formatting is terrible - cant re-use it like this. Separate formating logic from returning logic.
-    
+
+    # TODO VHP: Fix this fuckery! This formatting is terrible - unable to re-use it with this approach.
+            # Separate formating logic from returning logic.
+            
     # create unified search index
     search_index = []
     
@@ -13,11 +22,11 @@ def search_suggestion_format(c_docs, limit=1000,):         # cta- collection tes
 
         # logic to separaate out flightID from airport and terminal/gates.
         if terminanl_gate_st:
-            val,val_field,val_type = terminanl_gate_st, 'Terminal/Gate','Terminal/Gate'
+            val_field,val,val_type = 'Terminal/Gate', terminanl_gate_st, 'Terminal/Gate'
         elif airport_st:
-            val,val_field,val_type = airport_st, 'airport','airport'
+            val_field,val,val_type = 'airport', airport_st, 'airport'
         elif fid_st:
-            val,val_field,val_type = fid_st, 'flightID', 'flight'
+            val_field,val,val_type = 'flightID', fid_st, 'flight'
 
         passed_data = { 
             'stId': str(doc['_id']),
