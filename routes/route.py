@@ -12,6 +12,7 @@ import requests
 from decouple import config
 from bson import ObjectId
 
+from models.model import SearchData
 from routes.root.search.fuzz_find import fuzz_find
 from routes.root.weather_parse import Weather_parse
 
@@ -22,19 +23,17 @@ except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
 from routes.root.search.query_classifier import QueryClassifier
-from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
-from .root.test_data_imports import MockTestDataImports
-from .root.gate_checker import Gate_checker
-from .root.root_class import Root_class, Fetching_Mechanism, Root_source_links, Source_links_and_api
+from schema.schemas import serialize_document_list
+from .root.tests.mock_test_data import Mock_data
+from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
-from .root.flight_deets_pre_processor import resp_initial_returns, resp_sec_returns, response_filter, raw_resp_weather_processing
+from .root.flight_deets_pre_processor import resp_sec_returns, response_filter, raw_resp_weather_processing
 from .root.search.suggestions_format import search_suggestion_format
 
 app = FastAPI()
 
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
-test_suggestions = True if config('test_suggestions')=='1' else False
-qc.initialize_collections(test_suggestions=test_suggestions)
+c_sti_docs = qc.initialize_c_sti_collections()      # Caching sti collecion docs;
 
 # Define the origins that are allowed to access the backend
 origins = [
@@ -72,9 +71,9 @@ Check individual_serial to see the dict format.
 # SearhTracking section
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
-async def get_search_suggestions(email: str, query: str, limit=1000):  # Default page and page size
+async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries."""
-    formatted_suggestions = search_suggestion_format(c_docs=qc.c_sti_docs)
+    formatted_suggestions = search_suggestion_format(c_docs=c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
 
     # If sti is exhausted, direct query to appropriate index.
@@ -87,13 +86,6 @@ async def get_search_suggestions(email: str, query: str, limit=1000):  # Default
 
 
 """ Tracking, saving and retrieving searches"""
-# Define a Pydantic model to validate incoming request data
-class SearchData(BaseModel):
-    email: str
-    stId: Union[str, None]        # submitTerm can be string or null type of variable from react
-    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
-    timestamp: datetime
-
 
 @router.post('/searches/track')
 def track_search(data: SearchData):
@@ -190,9 +182,9 @@ async def get_user_searches(email):
 
 # RAW SEARCH submit handler
 @router.get('/query')       
-# @router.get('/query/{passed_variable}')       # This can be used to get the passed variable.
-async def initial_query_processing_react(search: str = None):
-    
+# @router.get('/query/{passed_variable}')       # This can be used to get the passed variable but search already takes care of that.
+async def raw_search_handler(search: str = None):
+
     # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
         # If found return that, if not found request on flightAware - e.g N917PG
 
@@ -205,7 +197,7 @@ async def initial_query_processing_react(search: str = None):
         # TODO HP: request from collection_airports if found, return it whilst fetching new data, if new data found update database. 
         val,val_field,val_type = parsed_query.get('value'), 'airport','airport'
         weather_returns = collection_weather.find_one({'code':val},{'_id':0,'weather':1})  # This is to ensure that the airport code exists in the collection.
-        # return weather_returns
+        # return weather_returns        #TODO: This needs to be returned in case weather is found.
         pass
     elif parsed_query.get('category') == 'Flights':
         # TODO: account for flightID from within the collection_flights. if found return that, if not reqeuest on flightAware - e.g N917PG
@@ -214,7 +206,14 @@ async def initial_query_processing_react(search: str = None):
         val,val_field,val_type = fid_st, 'flightID', 'flight'
         pass
     elif parsed_query.get('category') == 'Others':
-        val,val_field,val_type = parsed_query.get('value'), 'others','others'
+        # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
+        # account for N numbers here! this is dangerous but can act as a bandaid for now. 
+        query = parsed_query.get('value')
+        val,val_field,val_type = query, 'others','others'
+        if qc.temporary_n_number_parse_query(query=query):
+            val,val_field,val_type = query, 'nnumber','others'
+            pass
+
     
     formatted_data = { 
         f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
@@ -222,7 +221,7 @@ async def initial_query_processing_react(search: str = None):
         'type': val_type,
         # 'search_text': val.lower()
         }
-    print('SUBMIT: Raw search value:', search, parsed_query, formatted_data)
+    print('SUBMIT: Raw search submit:', 'search: ', search,'pq: ', parsed_query,'formatted-data', formatted_data)
     return formatted_data
 
 
@@ -230,21 +229,22 @@ async def initial_query_processing_react(search: str = None):
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):
-    # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value} -- redis duplcates anomaly
+    # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
-    # TODO Test: Mock data and mock testing crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
+    # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
 
     # qc = QueryClassifier()
     # TODO: This airlinecode parsing is dangerous. Fix it. 
-    value = qc.parse_query(flightID).get('value')
-    ac = value.get('airline_code')
-    fn = value.get('flight_number')
-    if ac =='UA':
-        flightID = "UAL"+fn
-    elif ac == 'DL':
-        flightID = "DAL"+fn
-    elif ac == 'AA':
-        flightID = "AAL"+fn
+    if flightID:
+        value = qc.parse_query(flightID).get('value')
+        ac = value.get('airline_code')
+        fn = value.get('flight_number')
+        if ac =='UA':
+            flightID = "UAL"+fn
+        elif ac == 'DL':
+            flightID = "DAL"+fn
+        elif ac == 'AA':
+            flightID = "AAL"+fn
 
     returns = {}
     try:
@@ -301,8 +301,8 @@ async def aws_jms(flightID, mock=False):
 
                         returns = {**latest, **second_latest_mongo}
                 elif not mongo:
-                    print('NOMAD,No old mongo data for this flight!, investigate!')
-                    # This should never be the case unless a flight has never had a history in mongo and flight data has very recently been born and put into latest.
+                    print('NOMAD,No old mongo data for this flight, just latest!, investigate!')
+                    # This shouldn't exist unless a flight has never had a history in mongo and flight data has very recently been born and put into latest.
                     returns =  latest
                     
     except Exception as e:
@@ -326,7 +326,7 @@ async def ua_dep_dest_flight_status(flightID):
 
 
 @router.get("/flightStatsTZ/{flightID}")
-async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
+async def flight_stats_url(flightID):      # time zone pull
     flightID = flightID.upper()
 
     flt_info = Pull_flight_info()
@@ -338,22 +338,33 @@ async def flight_stats_url(flightID,airline_code="UA"):      # time zone pull
     return fs_departure_arr_time_zone
 
 
-# TODO LP: Need to account for aviation stack
-@router.get("/flightAware/{airline_code}/{flight_number}")
-async def flight_aware_w_auth(airline_code, flight_number):
-    return None
+@router.get("/aviationStack/{flight_number}")
+async def aviation_stack(flight_number):
+    fm = Fetching_Mechanism(flt_num=flight_number)
+    sl = Source_links_and_api()
+    flt_info = Pull_flight_info()
+
+    link = sl.aviation_stack(flight_number)
+    link = sl.flight_aware_w_auth(flight_number)
+    resp_dict: dict = await fm.async_pull([link])
+    # TODO: This data returns need to handpicked for aviation stack. similar to flt_info.fa_data_pull(pre_process=fa_return)
+    return list(resp_dict.values())[0]['data'] 
+
+
+@router.get("/flightAware/{flight_number}")
+async def flight_aware_w_auth(flight_number):
+    print('flightaware', flight_number)
     # sl.flight_stats_url(flight_number_query),])
     fm = Fetching_Mechanism(flt_num=flight_number)
     sl = Source_links_and_api()
     flt_info = Pull_flight_info()
 
-    link = sl.flight_aware_w_auth(airline_code, flight_number)
+    link = sl.flight_aware_w_auth(flight_number)
     resp_dict: dict = await fm.async_pull([link])
-
+    # return resp_dict
     resp = response_filter(resp_dict, "json",)
     fa_return = resp['flights']
-    flight_aware_data = flt_info.fa_data_pull(
-        airline_code=airline_code, flt_num=flight_number, pre_process=fa_return)
+    flight_aware_data = flt_info.fa_data_pull(pre_process=fa_return)
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
@@ -395,7 +406,7 @@ async def liveAirportWeather(airportCode):
     def link_returns(weather_type, airport_id):
         wl = rsl.weather(weather_type,airport_id)
         return wl
-    
+
     wl_dict = {weather_type:link_returns(weather_type,airportCode) for weather_type in ('metar', 'taf','datis')}
     resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
     weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=airportCode, html_injection=True)
@@ -427,11 +438,13 @@ async def gate_returns(gate_id):
 
 
 @router.get("/testDataReturns")
-async def test_flight_deet_data():
-
-    bulk_flight_deets:dict = MockTestDataImports()
-
-    return bulk_flight_deets
+async def test_flight_deet_data(airportLookup: str = None):
+    md = Mock_data()
+    if not airportLookup:
+        return md.flight_data(html_injected_weather=True)
+    else:
+        xx = md.flight_data(html_injected_weather=True)
+        return {**md.departure_weather['dep_weather'], **md.nas_departure}
 
 # _____________________________________________________________________
 
@@ -484,137 +497,5 @@ async def store_live_weather(
                 {'$set': {'weather': weather_dict},}
             )
 
-    
-
     # result = collection_weather.bulk_write(update_operations)
-# Your processing logic here
     return {"status": "success"}
-
-
-
-
-
-
-
-
-
-
-
-# ____________________________________________________________________________________
-
-async def flight_deets(airline_code=None, flight_number_query=None, bypass_fa=True):
-    # You dont have to turn this off(False) running lengthy scrape will automatically enable fa pull
-    if config('env') == 'production':       # to restrict fa api use: for local use keep it False.       
-        bypass_fa = False
-
-    bulk_flight_deets = {}
-
-    ''' *****VVI******  
-    Logic: resp_dict gets all information fetched from root_class.Fetching_Mechanism().async_pull(). Look it up and come back.
-    pre-processes it using resp_initial_returns and resp_sec_returns for inclusion in the bulk_flight_deets..
-    first async response returs origin and destination through united's flight-status since their argument only
-    takes in flightnumber and it als, also gets scheduled times in local time zones through flightstats,
-    and the packet from flightaware.
-    This origin and destination is then used to make another async request that requires additional arguments
-    This is the second resp_dict that returns weather and nas in the resp_sec,
-    '''
-
-    sl = Source_links_and_api()
-    fm = Fetching_Mechanism(airline_code=airline_code, flt_num=flight_number_query)
-    if bypass_fa:
-
-        resp_dict: dict = await fm.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
-                                              sl.flight_stats_url(flight_number_query),])
-        # """
-        # This is just for testing
-        # fa_test_path = r"C:\Users\ujasv\OneDrive\Desktop\codes\Cirrostrats\dj\fa_test.pkl"
-        # with open(fa_test_path, 'rb') as f:
-        # resp = pickle.load(f)
-        # fa_resp = json.loads(resp)
-        # resp_dict.update({'https://aeroapi.flightaware.com/aeroapi/flights/UAL4433':fa_resp})
-        # """
-    else:
-        resp_dict: dict = await fm.async_pull([sl.ua_dep_dest_flight_status(flight_number_query),
-                                              sl.flight_stats_url(
-                                                  flight_number_query),
-                                              sl.flight_aware_w_auth(
-                                                  airline_code, flight_number_query),
-                                               ])
-    # /// End of the first async await, next one is for weather and nas ///.
-
-    # flight_deet preprocessing. fetched initial raw data gets fed into their respective pre_processors through this function that iterates through the dict
-    resp_initial = resp_initial_returns(
-        resp_dict=resp_dict, airline_code=airline_code, flight_number_query=flight_number_query)
-    # assigning the resp_initial to their respective variables that will be fed into bulk_flight_deets and..
-    # the departure and destination gets used for weather and nas pulls in the second half of the response pu
-
-    united_dep_dest, flight_stats_arr_dep_time_zone, fa_data = resp_initial
-    # united_dep_dest,flight_stats_arr_dep_time_zone,flight_aware_data,aviation_stack_data = resp_initial
-
-    # This will init the flight_view for gate info
-    # Flightaware data is prefered as source for other data.
-    if fa_data['origin']:
-        fm = Fetching_Mechanism(flight_number_query,
-                        fa_data['origin'], fa_data['destination'])
-        sl = Source_links_and_api()
-        wl_dict = sl.weather_links(fa_data['origin'], fa_data['destination'])
-        # OR get the flightaware data for origin and destination airport ID as primary then united's info.
-        # also get flight-stats data. Compare them all for information.
-
-        # fetching weather, nas and gate info since those required departure, destination
-        resp_dict: dict = await fm.async_pull(list(wl_dict.values())+[sl.nas(),])
-
-        # /// End of the second and last async await.
-
-        # Weather and nas information processing
-        resp_sec = resp_sec_returns(
-            resp_dict, fa_data['origin'], fa_data['destination'])
-
-        weather_dict = resp_sec
-
-        # This gate stuff is a not async because async is throwig errors when doing async
-        gate_returns = Pull_flight_info().flight_view_gate_info(
-            flt_num=flight_number_query, departure_airport=fa_data['origin'])
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
-                             **weather_dict, **fa_data, **gate_returns}
-    # If flightaware data is not available use this scraped data. Very unstable.
-    elif united_dep_dest['departure_ID']:
-        fm = Fetching_Mechanism(
-            flight_number_query, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
-        sl = Source_links_and_api()
-        wl_dict = sl.weather_links(
-            united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
-        # OR get the flightaware data for origin and destination airport ID as primary then united's info.
-        # also get flight-stats data. Compare them all for information.
-
-        # fetching weather, nas and gate info since those required departure, destination
-        resp_dict: dict = await fm.async_pull(list(wl_dict.values())+[sl.nas()])
-
-        # /// End of the second and last async await.
-        # /// End of the second and last async await.
-
-        # Weather and nas information processing
-        resp_sec = resp_sec_returns(
-            resp_dict, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
-
-        # Weather and nas information processing
-        resp_sec = resp_sec_returns(
-            resp_dict, united_dep_dest['departure_ID'], united_dep_dest['destination_ID'])
-
-        weather_dict = resp_sec
-        gate_returns = Pull_flight_info().flight_view_gate_info(
-            flt_num=flight_number_query, departure_airport=united_dep_dest['departure_ID'])
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
-                             **weather_dict, **fa_data, **gate_returns}
-
-    else:
-        print('No Departure/Destination ID')
-        bulk_flight_deets = {**united_dep_dest, **flight_stats_arr_dep_time_zone,
-                             **fa_data, }
-    # More streamlined to merge dict than just the typical update method of dict. update wont take multiple dictionaries
-
-    # If youre looking for without_futures() that was used prior to the async implementation..
-        #  you fan find it in Async milestone on hash dd7ebd0efa3b5a62798c88bcfe77cc43f8c0048c
-        # It was an inefficient fucntion to bypass the futures error on EC2
-
-    return bulk_flight_deets

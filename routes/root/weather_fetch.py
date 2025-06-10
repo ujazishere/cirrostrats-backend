@@ -1,14 +1,9 @@
-import threading
 from config.database import collection_weather,collection_airports
-from bson import ObjectId
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
     print('jupyter import for root_class')
     from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-import datetime as dt
-import asyncio
-import requests
 import json
 import pickle
 from pymongo import UpdateOne
@@ -47,7 +42,7 @@ class Weather_fetch:
         with open(taf_positive_path, 'rb') as f:
             taf_positive_airport_codes = pickle.load(f)
 
-        #  All airport codes from mongo db
+        #  All airport codes from mongo db and pickle
         return {
             "datis": self.list_of_weather_links('datis',all_datis_airport_codes),
             "metar": self.list_of_weather_links('metar',all_mdb_airport_codes),
@@ -78,6 +73,7 @@ class Weather_fetch:
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
                 
                 {'$unset': {'weather':weather}},
+                # {'$unset': {'weather':''}},        # Use this instead since the whole weather will be removed anyway
                 # When you use $unset with the key weather, it removes the entire weather field, not just the contents inside it.
                 upsert=True
                 )
@@ -110,6 +106,9 @@ class Weather_fetch:
 
 
     def datis_processing(self, resp_dict:dict):
+        # TODO Test: a similar function exists in -- weather_parse().datis_processing().
+                    # Better to change label to 'bulk_datis_processing'
+
         # print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
         # This function processess the raw list and returns just the pure datis
@@ -130,7 +129,7 @@ class Weather_fetch:
         # print(f'{weather_type} async fetch in progress..')
         # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
-        
+
         if weather_type == 'datis':
             processed_datis = self.datis_processing(resp_dict=resp_dict)
             self.weather_returns[weather_type] = processed_datis
@@ -144,6 +143,8 @@ class Weather_fetch:
 
     
 # Only for use on fastapi if celery doesn't work.
+# import datetime as dt
+# import threading
 # class Weather_fetch_thread(threading.Thread):
 #     def __init__(self):
 #         super().__init__()

@@ -1,34 +1,8 @@
+from datetime import datetime
+from typing import Union
 from pydantic import BaseModel
 
-
-
-
-# {
-#     'name': 'San Fran',
-#     'code': 'SFO',
-#     'weather': 
-#             {
-#                 'datis': '',
-#                 'metar': '',
-#                 'taf': '',
-#             }
-# }
-
-# {
-#     'flight-number': 'UA4433',
-#             'departue': '',
-#             'arrival': '',
-#             'route':'',
-#             'ETA':'',
-#             'STD'
-
-
-
-# }
-
-
-
-class FlightNumber(BaseModel):
+class FlightData(BaseModel):
     flight_number: str
     origin: str
     destination: str
@@ -49,8 +23,14 @@ class FlightNumber(BaseModel):
     gate: str
     destination: str
 
-
 class Airport (BaseModel):
     id: str
     name: str
     code: str
+
+# Define a Pydantic model to validate incoming SearchData request
+class SearchData(BaseModel):
+    email: str
+    stId: Union[str, None]        # submitTerm can be string or null type of variable from react
+    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
+    timestamp: datetime

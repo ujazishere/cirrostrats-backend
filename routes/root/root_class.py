@@ -166,35 +166,21 @@ class Source_links_and_api:
         return f"{base_url}UA/{flight_number}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
 
 
-    def aviation_stack(self,airline_code, flight_number):
-        # TODO: Fix airline code issue. This is not used yet. Find use case.
+    def aviation_stack(self,flightID):
         # Aviation Stack api call. 3000 requests per month
-        """
-        aviation_stack_url = 'http://api.aviationstack.com/v1/flights'
-        aviation_stack_params = {
-                            'access_key': '65dfac89c99477374011de39d27e290a',
-                            'flight_icao': f"{airline_code}{flight_number}"}
-        # aviationstack is just like flight_aware
-        av_stack_url_w_auth = {aviation_stack_url:aviation_stack_params}
-        return  av_stack_url_w_auth
-        """
-        print('Within av stack sl')
         base_url = "http://api.aviationstack.com/v1/flights"
         access_key = "65dfac89c99477374011de39d27e290a"
-        flight_icao = f"{airline_code}{flight_number}"
         
-        url = f"{base_url}?access_key={access_key}&flight_icao={flight_icao}"
+        url = f"{base_url}?access_key={access_key}&flight_icao={flightID}"
         
-        return {url: {}}  
+        return {url: {}}    # Is  the value supposed to serve as auth header?
 
 
-    def flight_aware_w_auth(self,airline_code, flight_number):
-        if not airline_code:
-            airline_code = "UA"
-        fa_apiKey = "G43B7Izssvrs8RYeLozyJj2uQyyH4lbU"         # New Key from Ismail
+    def flight_aware_w_auth(self,flight_number):
+        fa_apiKey = config("ujazzzmay0525api")      # apple login 
         fa_auth_header = {'x-apikey':fa_apiKey}
         fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
-        fa_url = fa_base_apiUrl + f"flights/{airline_code}{flight_number}"
+        fa_url = fa_base_apiUrl + f"flights/{flight_number}"
         fa_url_w_auth = {fa_url:fa_auth_header}
         return fa_url_w_auth
 

@@ -1,3 +1,4 @@
+from decouple import config
 import requests
 import pickle
 from time import sleep
@@ -24,10 +25,13 @@ class Flight_aware_pull(Root_class):
         print("null_flightaware_attrs")
 
     def initial_pull(self, airline_code=None, flt_num=None):
-        # apiKey = "G43B7Izssvrs8RYeLozyJj2uQyyH4lbU"         # New Key from Ismail
-        apiKey = "mAcMRTxklbWPhTciyaUD9FtCz88klfxk"         # ujasvaghani
-        apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
-        auth_header = {'x-apikey':apiKey}
+        fa_apiKey = config("ujazzzmay0525api")      # apple login 
+        fa_auth_header = {'x-apikey':fa_apiKey}
+        fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
+        fa_url = fa_base_apiUrl + f"flights/{airline_code}{flt_num}"
+        fa_url_w_auth = {fa_url:fa_auth_header}
+        return fa_url_w_auth
+
         # TODO LP: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
             # Try searching here use /route for specific routes maybe to reduce pull
             # https://www.flightaware.com/aeroapi/portal/documentation#get-/flights/-id-/map
@@ -42,18 +46,9 @@ class Flight_aware_pull(Root_class):
         # response = requests.get(apiUrl + f"flights/{fa_flight_id}/route", headers=auth_header)
         
         """
-        if not airline_code:
-            airline_code = 'UAL'
-        response = requests.get(apiUrl + f"flights/{airline_code}{flt_num}", headers=auth_header) 
-        
-        if response.status_code == 200:
-            return response.json()['flights']
-        else:
-            print('UNSUCCESSFUL!! FLIGHT_AWARE RESPONSE STATUS CODE NOT 200!!!', response.status_code)
-            return None    
-
 
 def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, return_example=None):
+    # TODO: Dangerous, bad code and unnecessary stuff here. What fuckery is this. Clean it!
     """
     return_example is only to check dummy an example data from flightaware and thats used in jupyter. 
     pre_process data is the raw flightaware data through their api thats delivered from the async function.
@@ -76,6 +71,7 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
             print('Received flight aware data as pre_process')
             flights = pre_process
         elif flt_num:
+            
             flights = fa_object.initial_pull(airline_code=airline_code,flt_num=flt_num)
         else:
             # Reason here is to return none items when no flight aware data is found. It eventually returns fa_object.attrs that just declares all keys and vals
@@ -276,24 +272,24 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
 
     try:
         return {
-                'ident_icao': ident_icao,
-                'origin':origin, 
-                'destination':destination, 
-                'registration':registration, 
-                'date_out': date_out,
-                'scheduled_out':scheduled_out, 
-                'estimated_out':estimated_out, 
-                'scheduled_in':scheduled_in, 
-                'estimated_in':estimated_in, 
-                "terminal_origin": terminal_origin,
-                "terminal_destination": terminal_destination,
-                "gate_origin": gate_origin,
-                "gate_destination": gate_destination,
-                "terminal_origin": terminal_origin,
-                'filed_altitude':filed_altitude, 
-                'filed_ete':filed_ete,
-                'route': route,
-                'sv': sv,
+                'fa_ident_icao': ident_icao,
+                'fa_origin':origin, 
+                'fa_destination':destination, 
+                'fa_registration':registration, 
+                'fa_date_out': date_out,
+                'fa_scheduled_out':scheduled_out, 
+                'fa_estimated_out':estimated_out, 
+                'fa_scheduled_in':scheduled_in, 
+                'fa_estimated_in':estimated_in, 
+                "fa_terminal_origin": terminal_origin,
+                "fa_terminal_destination": terminal_destination,
+                "fa_gate_origin": gate_origin,
+                "fa_gate_destination": gate_destination,
+                "fa_terminal_origin": terminal_origin,
+                'fa_filed_altitude':filed_altitude, 
+                'fa_filed_ete':filed_ete,
+                'fa_route': route,
+                'fa_sv': sv,
                         }
     except Exception as e:
         print('UNSUCCESSFUL!! flight_aware_data_pull.pull FLIGHT_AWARE_DATA, no `flights` available')

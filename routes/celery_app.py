@@ -20,6 +20,16 @@ celery_app = Celery(
 # celery_app.conf.broker_url = 'redis://redis:6379/0'
 
 @celery_app.task
+def DatisFetch():
+    # Read caution note for explanation on asyncio use here.
+    asyncio.run(run_datis_fetch())           # run_datis_fetch() is an async function. DatisFetch() is a celery task that cannot be an async function.
+
+async def run_datis_fetch():    
+    Wf = Weather_fetch()
+    await Wf.fetch_and_store_by_type(weather_type='datis')
+
+
+@celery_app.task
 def MetarFetch():
     asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
@@ -28,15 +38,6 @@ async def run_metar_fetch_async_function():
     await Wf.fetch_and_store_by_type(weather_type='metar')
 
     return 'Celery task completed for fetching metar'
-
-
-@celery_app.task
-def DatisFetch():
-    asyncio.run(run_datis_fetch())
-
-async def run_datis_fetch():    
-    Wf = Weather_fetch()
-    await Wf.fetch_and_store_by_type(weather_type='datis')
 
 
 @celery_app.task
@@ -60,9 +61,15 @@ celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
         # Retries should be made for unsuccessful tasks - consistent outlaws should be flagged and trashed to save processing power.
             # Design tests to consistently check output of the task...
             # Something that resembles a supervisor or a watchdog that checks for data validation.
+
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
-    # TODO Test: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every minute or so.
+    # TODO Test: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every min or so increasing every iteration and stop when it becomes available.
+                # once stopped return to original schedule of 53 past. 
+                # If data unavailable for extended period then stop fetching completely and return to original schedule, notify about issue after 3 hours of inactive fetch.
+                # -- This maybe too complicated and may require constant mx--> Maybe decrease variables and loose endpoints to reduce complexity.
+                # What is important? weather should exist and should be accurate. If its not send notification at a threshold and continue fetch.
+                #  Only attend to it when critical failure occurs.
     'run-metarfetch-every-53-mins-past-hour': {
         'task': 'routes.celery_app.MetarFetch',      # The task function that needs to be scheduled
         'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.

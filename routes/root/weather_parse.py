@@ -68,10 +68,12 @@ class Weather_parse:
         
 
     def datis_processing(self,datis_raw,datis_arr=None):
+        # TODO VHP: Account for departure as well as arrival datis for return.
         datis = datis_raw
 
         if isinstance(datis, dict) and  datis.get('error'):         # datis that gives error handled here.
             datis = 'N/A'
+
         # D-ATIS processing for departure and arrival - for e.g PHL spits out two separate DATIS. This section accounts for it.
         if type(datis) == list and 'datis' in datis[0].keys():
             if len(datis) == 1:

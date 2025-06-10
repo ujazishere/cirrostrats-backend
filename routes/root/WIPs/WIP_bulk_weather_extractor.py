@@ -299,6 +299,7 @@ class Bulk_weather_extractor:
     async def datis_extractor(self, jupyter):
         print('Initiating DATIS extractor')
         all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+        self.all_76_datis = None
         with open(all_datis_airports_path, 'rb') as f:
             all_datis_airports = pickle.load(f)
         
@@ -332,7 +333,7 @@ class Bulk_weather_extractor:
         elif __name__ == "__main__":
             # This .run() works when calling the file from terminal but wont work in jupyter interactive. 
             all_76_datis = asyncio.run(main())
-
+        self.all_76_datis = all_76_datis
         
         
         

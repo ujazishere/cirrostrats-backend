@@ -86,6 +86,6 @@ def icao_regional_to_major_match():
     icao= []
     for i in test_rpa_aa_9000[:5]:
         flightID = str(i)
-        icao.append(await flight_stats_url(flightID,airline_code='AA'))
+        icao.append(await flight_stats_url(flightID,airline_code='AA'))     # This airline code is supposed to be deprecated. it accounts for parsing airline code from flightID
         mc = collection_flights.find_one({'flightID': 'RPA'+flightID},{'versions':v, '_id':0})
         print(mc['versions'][0]['departure'],mc['versions'][0]['arrival'])

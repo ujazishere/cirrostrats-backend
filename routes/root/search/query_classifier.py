@@ -1,5 +1,6 @@
 # Claude parse query
 from collections import defaultdict
+from decouple import config
 import math
 import re
 import pickle
@@ -20,6 +21,8 @@ class QueryClassifier:
     """
     A class for classifying search queries into categories like Airports, Flights, etc.
     Will also categorize multiplpe queries with counts of each served as popularity count and spit out normalized output.
+    Usage in base popularity hits and route.
+
     """
     
     def __init__(self, icao_file_path: Optional[str] = "unique_icao.pkl"):
@@ -40,24 +43,21 @@ class QueryClassifier:
         self.flight_pattern = re.compile(rf"^({self.icao_codes_separated})\s?(\d{{1,5}}[A-Z]?$)")
 
 
-    def initialize_collections(self,test_suggestions=True):
-        limit = 100
+    def initialize_c_sti_collections(self):
+        """ Cache the collections for searchbar dropdown"""
+        test_suggestions = True if config('test_suggestions')=='1' else False
         if test_suggestions:
             with open('sti_test.pkl', 'rb') as f: 
                 self.c_sti_docs = pickle.load(f)
         else:
             # search index finds - sorted ph returns from the sti.
-            self.count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
-            self.return_crit = {'ph':0}       # return only flightID and ph
-            self.c_sti_docs = list(cts.find(self.count_crit).sort('ph',-1))     # Reverse sort
+            count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
+            # return_crit = {'ph':0}       # return only...
+            self.c_sti_docs = list(cts.find(count_crit).sort('ph',-1))     # Reverse sort
+            return self.c_sti_docs
         # print('initialized.', self.c_sti_docs[:5])
 
-        # self.lcf = list(ctf.find(self.count_crit,{'flightID':1, 'count':1}).limit(limit))
-        # print('loaded', len(lcf))
-        # self.lca = list(cta.find({'count':{"$exists":True}},{'code':1, 'name':1, 'count':1}))
-        # self.lca = list(cta.find({},{'code':1, 'name':1, 'count':1}).limit(limit))
 
-    
     def load_icao_codes(self, file_path: str) -> None:
         """
         Load ICAO codes from a pickle file.
@@ -129,6 +129,13 @@ class QueryClassifier:
         else:
             return {'category': 'Others', 'value': query}
     
+
+    def temporary_n_number_parse_query(self,query):
+        n_pattern = re.compile("^N[a-zA-Z0-9]{5}$")
+        
+        if n_pattern.match(query):
+            return {'category': 'N-Number', 'value': query}
+        
 
     def prepare_flight_id_for_webscraping(self, flightID: str) -> Optional[Tuple[str, str]]:
         """Prepare a flight ID for webscraping by replacing 'UAL', 'GJS', and 'UCA' with 'UA'."""
