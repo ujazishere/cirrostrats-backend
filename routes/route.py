@@ -1,7 +1,5 @@
 from datetime import datetime
 import json
-import pickle
-import re
 from typing import Dict, Optional, Union
 from fastapi import APIRouter,FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +25,7 @@ from schema.schemas import serialize_document_list
 from .root.tests.mock_test_data import Mock_data
 from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
-from .root.flight_deets_pre_processor import resp_sec_returns, response_filter, raw_resp_weather_processing
+from .root.flight_deets_pre_processor import async_resp_returns_processing, response_filter, raw_resp_weather_processing
 from .root.search.suggestions_format import search_suggestion_format
 
 app = FastAPI()
@@ -302,6 +300,7 @@ async def aws_jms(flightID, mock=False):
                         returns = {**latest, **second_latest_mongo}
                 elif not mongo:
                     print('NOMAD,No old mongo data for this flight, just latest!, investigate!')
+
                     # This shouldn't exist unless a flight has never had a history in mongo and flight data has very recently been born and put into latest.
                     returns =  latest
                     
@@ -353,7 +352,7 @@ async def aviation_stack(flight_number):
 
 @router.get("/flightAware/{flight_number}")
 async def flight_aware_w_auth(flight_number):
-    print('flightaware', flight_number)
+
     # sl.flight_stats_url(flight_number_query),])
     fm = Fetching_Mechanism(flt_num=flight_number)
     sl = Source_links_and_api()
@@ -419,8 +418,7 @@ async def nas(departure_id, destination_id):
     fm = Fetching_Mechanism()
     sl = Source_links_and_api()
     resp_dict: dict = await fm.async_pull([sl.nas()])
-    resp_sec = resp_sec_returns(resp_dict, departure_id, destination_id)
-    
+    resp_sec = async_resp_returns_processing(resp_dict, departure_id, destination_id)
     nas_returns = resp_sec
 
     return nas_returns
@@ -441,8 +439,10 @@ async def gate_returns(gate_id):
 async def test_flight_deet_data(airportLookup: str = None):
     md = Mock_data()
     if not airportLookup:
+        # Sends compolete test flight data
         return md.flight_data(html_injected_weather=True)
     else:
+        # Sends for test data for airport lookups only -- returns test weather and nas data.
         xx = md.flight_data(html_injected_weather=True)
         return {**md.departure_weather['dep_weather'], **md.nas_departure}
 
@@ -454,8 +454,7 @@ async def store_live_weather(
     mdbId: Optional[str] = None,
     rawCode: Optional[str] = None,
 ):
-    print('mdbAirportId', mdbId)
-    print('rawCode', rawCode)
+    """ fetches and saves weather based on airport code provided from frontend. Is called at user request to update old data in mongo if it exists."""
     ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbId:
         find_crit = {"_id": ObjectId(mdbId)}

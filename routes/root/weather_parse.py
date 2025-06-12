@@ -134,15 +134,15 @@ class Weather_parse:
                           ):
         if mock_test_data:
             metar_raw = mock_test_data['metar']
-            datis_raw = r"DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L."
-            # taf_raw = metar_raw + sfc_vis + vis_half
-            taf_raw = 'KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015 FM030300 00000KT 1SM -SHRA FG OVC002 FM031300 19005KT 3/4SM BR OVC004 FM031500 23008KT 1/26SM OVC005 FM031800 25010KT 1/4SM OVC015 FM032100 25010KT M1/4SM BKN040'
+            datis_raw = mock_test_data['datis']
+            taf_raw = mock_test_data['taf']
         
         elif weather_raw:
             raw_return = weather_raw        # This wont do the datis processing.
             datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'),datis_arr=datis_arr)
             metar_raw = raw_return.get('metar')
             taf_raw = raw_return.get('taf')
+
         else:
             # Pulls raw weather and will also do the datis processing within the function.
             raw_return = self.raw_weather_pull(query=query,datis_arr=datis_arr)     
@@ -151,11 +151,12 @@ class Weather_parse:
             taf_raw = raw_return.get('taf')
 
         def zulu_extracts(weather_input, datis=None, taf=None):
-            
+            """ TODO: This is a hazard such that if the weather is over a month old or even day, the zt may not be way off. """
+
             # This could be work intensive. Make your own conversion if you can avoid using datetime
             raw_utc = Root_class().date_time(raw_utc='HM')[-4:]
             raw_utc_dt = datetime.strptime(raw_utc,"%H%M")
-            
+
             if datis:
                 zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
             else:

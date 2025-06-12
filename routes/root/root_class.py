@@ -252,29 +252,6 @@ class Fetching_Mechanism(Root_class):
         # Old requests code: api_result = requests.get(aviation_stack_url, self.aviation_stack_params)
 
 
-    def requests_processing(self, 
-                        requests_raw_extract: requests.models.Response,
-                        json=None,
-                        awc=None,
-                        bs=None,
-                        bs_flight_view=None,
-                        ):
-        if awc:
-            
-            awc_raw = requests_raw_extract        # Trying this asraw see if it works
-            # awc_raw = requests_raw_extract.text
-            # awc_raw = awc_raw.decode("utf-8")
-            return awc_raw
-        elif json:
-            return requests_raw_extract.json()
-        elif bs:
-            # Might need to change this to requests_raw_extract.content depending on the use case.
-            return bs4(requests_raw_extract,'html.parser')
-        elif bs_flight_view:
-            # Might need to change this to requests_raw_extract.content depending on the use case.
-            return bs4(requests_raw_extract.content,'html.parser')
-
-
     def weather_links(self, dep_airport_id, dest_airport_id, ):
         
         return {

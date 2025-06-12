@@ -28,23 +28,23 @@ class Mock_data:
     def flight_data(self,html_injected_weather):
 
         self.jms_STDDS_clearance = {
-            "towerAircraftID": "UAL2480",
+            "towerAircraftID": "UAL4458",
             "timestamp": "2025-05-10T15:10:03.243000",
-            "destinationAirport": "KSFO",
+            "destinationAirport": "KDEN",
             "clearance": "003 UAL2480\t7737\tKLAX A320/L\tP1540 239\t280 KLAX SUMMR2 STOKD SERFR SERFR4 KSFO             CLEARED SUMMR2 DEPARTURE STOKD TRSN   CLB VIA SID EXC MAINT 5000FT EXP 280 5 MIN AFT DP,DPFRQ 125.2     ",
             "towerBeaconCode": "7737",
             "version_created_at": "2025-05-10T15:11:32.611000"
         }
         
         self.jms_FDPS_base = {
-            "flightID": "UAL2075",
+            "flightID": "UAL4458",
             "timestamp": "2025-05-10T15:51:23.088000",
             "organization": "UAL",
             "aircraftType": "A320",
             "registration": "N445UA",
-            "departure": "KLAX",
-            "departureAlternate": "KORD",
-            "arrival": "KSFO",
+            "departure": "KDEN",
+            "departureAlternate": "KSFO",
+            "arrival": "KDEN",
             'arrivalAlternate': 'KBNA',
             'estimatedDepartureTime': '2025-06-05T18:00:00Z',
             "route": "KLAX.SUMMR2.STOKD..SERFR.SERFR4.KSFO/1646",
@@ -72,8 +72,8 @@ class Mock_data:
 
         self.flightAware = {
                 'fa_ident_icao': 'GJS4558',
-                'fa_origin': 'KGSO',
-                'fa_destination': 'KEWR',
+                'fa_origin': 'KDEN',
+                'fa_destination': 'KDEN',
                 'fa_registration': 'N551GJ',
                 'fa_date_out': '20250606',
                 'fa_scheduled_out': '1530Z',
@@ -93,12 +93,13 @@ class Mock_data:
         self.departure_weather_raw = {
             'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
-            'taf': 'KRIC 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015\n    FM030300 00000KT 1SM -SHRA FG OVC002\n    FM031300 19005KT 3/4SM BR OVC004\n    FM031500 23008KT 1/26SM OVC005\n    FM031800 25010KT 1/4SM OVC015\n    FM032100 25010KT M1/4SM BKN040',
+            'taf': 'KDEN 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015\n    FM030300 00000KT 1SM -SHRA FG OVC002\n    FM031300 19005KT 3/4SM BR OVC004\n    FM031500 23008KT 1/26SM OVC005\n    FM031800 25010KT 1/4SM OVC015\n    FM032100 25010KT M1/4SM BKN040',
         }
 
         # Just mocking/copying departure weather into destination as well 
         self.destination_weather_raw = self.departure_weather_raw
-        
+
+
         if html_injected_weather:
             weather = Weather_parse()
             self.departure_weather_html = weather.processed_weather(
@@ -107,8 +108,12 @@ class Mock_data:
             # Just mocking/copying departure weather into destination as well 
             self.destination_weather_html= self.departure_weather_html
             self.departure_weather, self.destination_weather = {'dep_weather':self.departure_weather_html}, {'dest_weather': self.destination_weather_html}
+            self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_html}
+            self.arrivalAlternateWeather = {'ariival_alternate_weather':self.departure_weather_html}
         else:
             self.departure_weather, self.destination_weather = {'dep_weather': self.departure_weather_raw}, {'dest_weather':self.destination_weather_raw}
+            self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_raw}
+            self.arrivalAlternateWeather = {'ariival_alternate_weather':self.departure_weather_raw}
 
 
         self.nas_departure = {
@@ -125,6 +130,7 @@ class Mock_data:
             'Maximum Delay': '1 hour and 46 minutes'}},
         }
 
+
         self.collective = {
                         **self.jms_STDDS_clearance,
             **self.jms_FDPS_base,
@@ -133,9 +139,10 @@ class Mock_data:
             **self.flightAware,
             **self.departure_weather,
             **self.destination_weather,
+            **self.departureAlternateWeather,
+            **self.arrivalAlternateWeather,
             **self.nas_departure,
             **self.nas_destination,
-
         }
         return self.collective
 
