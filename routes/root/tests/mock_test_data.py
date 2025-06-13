@@ -111,11 +111,11 @@ class Mock_data:
             self.destination_weather_html= self.departure_weather_html
             self.departure_weather, self.destination_weather = {'dep_weather':self.departure_weather_html}, {'dest_weather': self.destination_weather_html}
             self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_html}
-            self.arrivalAlternateWeather = {'ariival_alternate_weather':self.departure_weather_html}
+            self.arrivalAlternateWeather = {'arrival_alternate_weather':self.departure_weather_html}
         else:
             self.departure_weather, self.destination_weather = {'dep_weather': self.departure_weather_raw}, {'dest_weather':self.destination_weather_raw}
             self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_raw}
-            self.arrivalAlternateWeather = {'ariival_alternate_weather':self.departure_weather_raw}
+            self.arrivalAlternateWeather = {'arrival_alternate_weather':self.departure_weather_raw}
 
 
         self.nas_departure = {
