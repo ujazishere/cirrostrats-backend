@@ -8,6 +8,7 @@ from typing import Dict, List, Union, Optional, Tuple
 
 from pymongo import UpdateOne
 from config.database import collection_airports, collection_flights, db_UJ
+from config.database import collection_weather
 from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""
@@ -129,6 +130,7 @@ class QueryClassifier:
         else:
             return {'category': 'Others', 'value': query}
     
+
 
     def temporary_n_number_parse_query(self,query):
         n_pattern = re.compile("^N[a-zA-Z0-9]{5}$")

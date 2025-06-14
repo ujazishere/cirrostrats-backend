@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 from typing import Dict, Optional, Union
-from fastapi import APIRouter,FastAPI
+from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
 # from levenshtein import levenshtein  # type: ignore
@@ -20,13 +20,13 @@ try:        # This is in order to keep going when collections are not available
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
-from routes.root.search.query_classifier import QueryClassifier
+from .root.search.query_classifier import QueryClassifier
 from schema.schemas import serialize_document_list
 from .root.tests.mock_test_data import Mock_data
 from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import async_resp_returns_processing, response_filter, raw_resp_weather_processing
-from .root.search.suggestions_format import search_suggestion_format
+from .root.search.suggestions_format import FrontendFormatter
 
 app = FastAPI()
 
@@ -68,19 +68,39 @@ Check individual_serial to see the dict format.
 
 # SearhTracking section
 @router.get('/searches/suggestions/{email}')
-# @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements
+# @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements fuzzfind
 async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
-    """Cached fuzzy search to improve performance for repeated queries."""
-    formatted_suggestions = search_suggestion_format(c_docs=c_sti_docs)
-    sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc,limit=limit)
+    """Cached fuzzy search to improve performance for repeated queries.
+        The Idea is to have some sort of a bucket that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
+        If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
+        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this bucket and return those to the frontend exhausting the 3500 items."""
 
-    # If sti is exhausted, direct query to appropriate index.
-    if sti_items_match_w_query:
-        return sti_items_match_w_query
-    elif not sti_items_match_w_query:
-        if len(query)>=3:
+    ff = FrontendFormatter()
+    # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
+    formatted_suggestions = ff.search_suggestion_format(c_docs=c_sti_docs)
+    sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc, limit=limit)
+
+
+    if not sti_items_match_w_query and len(query)>=3:
             parsed_query = qc.parse_query(query=query)
             print('Exhausted parsed query',parsed_query)
+            # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
+            val_field,val,val_type = ff.format_conversion(doc=parsed_query)
+
+    else:
+        return sti_items_match_w_query
+
+
+
+    # # If sti is exhausted, direct query to appropriate index.
+    # if sti_items_match_w_query:
+    #     print('len if sti',len(sti_items_match_w_query))
+
+    #     return sti_items_match_w_query
+    # elif not sti_items_match_w_query:
+    #     if len(query)>=3:
+    #         parsed_query = qc.parse_query(query=query)
+    #         print('Exhausted parsed query',parsed_query)
 
 
 """ Tracking, saving and retrieving searches"""
@@ -178,11 +198,13 @@ async def get_user_searches(email):
 
 # ____________________________________________________________________________
 
-# RAW SEARCH submit handler
+# Raw search submit handler
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable but search already takes care of that.
 async def raw_search_handler(search: str = None):
 
+    # Check FrontendFormatter.format to see the same usage. avoid this code and reuse from the frontendFormatter.
+    """ handles the submit that is NOT the drop down suggestion. so just willy nilly organic search submit"""
     # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
         # If found return that, if not found request on flightAware - e.g N917PG
 
@@ -217,7 +239,7 @@ async def raw_search_handler(search: str = None):
         f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
         'display': val,             # This is manipulated later hence the duplicate.
         'type': val_type,
-        # 'search_text': val.lower()
+        # 'fuzz_find_search_text': val.lower()
         }
     print('SUBMIT: Raw search submit:', 'search: ', search,'pq: ', parsed_query,'formatted-data', formatted_data)
     return formatted_data
@@ -411,16 +433,17 @@ async def liveAirportWeather(airportCode):
     weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=airportCode, html_injection=True)
     return weather_dict
 
-@router.get("/NAS/{departure_id}/{destination_id}")
-async def nas(departure_id, destination_id):
-    # TODO Cleanup: NAS takes departure and des, unnecessary. just give it one.
-    # TODO Cleanup: does not account for just nas instead going whole mile to get and process weather(unnecessary)
-    fm = Fetching_Mechanism()
-    sl = Source_links_and_api()
-    resp_dict: dict = await fm.async_pull([sl.nas()])
-    resp_sec = async_resp_returns_processing(resp_dict, departure_id, destination_id)
-    nas_returns = resp_sec
-
+@router.get("/NAS")
+async def nas(
+    airport: Optional[str]  = None,
+    departure: Optional[str] = None,
+    destination: Optional[str] = None
+):
+    pfi = Pull_flight_info()
+    if airport:
+        nas_returns = pfi.nas_final_packet(airport=airport)
+    else:
+        nas_returns = pfi.nas_final_packet(departure=departure,destination=destination)
     return nas_returns
 
 

@@ -25,6 +25,8 @@ async def test_aws_jms():
 class Mock_data:
     def __init__(self):
         pass
+
+
     def flight_data(self,html_injected_weather):
 
         self.jms_STDDS_clearance = {
@@ -147,6 +149,45 @@ class Mock_data:
         return self.collective
 
 
+    def mongo_collection_mock(self,):
+        """ set of mock data from all collections across all mongoDB"""
+
+        """ csti: a collection that servers dropdown suggestions to the frontend, keeps track of popularity hits and submits.
+            Fields:
+                r_id: is the reference ID of the associated collection for associated data retrival.
+                type: type of search term(st) -- associated with a particular type of collection - airport, fid(flightID), terminal/gate
+                ph: Popularity hit prorcessed through QueryClassifier's normalization function.
+                submits: the submits on the frontend.
+        """
+        self.csti = [
+            {
+                # airport csti
+                '_id': ObjectId('6821b9805795b7ff557e3153'),
+                'r_id': ObjectId('66176711170d1d57a24df7ce'),
+                'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
+                'ph': 2.4973989440488236,
+                'submits': [datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
+                datetime.datetime(2025, 6, 1, 7, 20, 45, 448000)]},
+
+                # flight csti
+                {'_id': ObjectId('6821b9805795b7ff557e3161'),
+                'r_id': ObjectId('67e4ca4228d60c5468f315c2'),
+                'fid_st': 'GJS4416',
+                'ph': 1.3010847436299786,
+                'submits': [datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
+                datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)]},
+
+                # terminal csti
+                {'_id': ObjectId('6821b9805795b7ff557e3154'),
+                'r_id': ObjectId('66eb8aa5122bd9fc2f88896a'),
+                'Terminal/Gate': 'Terminal C - C71X',
+                'ph': 2.3975190568219413,
+                'submits': [datetime.datetime(2025, 6, 10, 12, 16, 14, 469000)]
+
+            },
+
+        ]
+        
 class MockTestSubmits:
     def __init__(self):
         self.cts = db_UJ['test_st']

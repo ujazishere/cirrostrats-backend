@@ -1,1 +1,30 @@
 TODO: UJ
+June 12
+query Tracking:
+the raw search query submit should be processed within query classifier and have a function named `frontend formatter`.
+    This can be reused by the useSuggestion's search_suggestion function in the backend to display ran out searches.
+
+
+June 13
+Frontend receives first 500 of the 3500 searchtem index collection(csti).
+As the query progresses in the searchbar its suppose to match the remaining.
+but then when its low it should use parse query using the frontend formatter that directs the query to its dedicated collection,
+    again to send it to frontend with limit of upto 500 items at a time.
+The formatter is what I need help with primarily since its suppose to send formatted data frontend for drop down suggestions as well as
+    its supposed to parse_query the raw submits from the frontend, format and deliver the data to the frontend.
+
+
+So the submit should deliver the actually collection data to the frontend?
+and suggestions should deliver the display name only?
+
+Both contains display name for the frontend. The difference is raw submit will contain full flightnumber or airportID  for frontend fetching.
+
+*******VVI*********
+So essentially raw submit should ***query the collection*** based on parseQuery and submit that to the frontend.?
+    But wait, that doesn't make sense since raw flightnumber or code is needed for the frontend to perform live api fetch.
+    So keep it?
+    Dropdown selection of the suggestion has similar functionality where it sends just the mongoID or flightnumber/nnumber from csti.
+*******************
+
+Finally,
+Know and document csti format. Not just that, document the formatting of all the collections in mock test data-- This will give your visibility.

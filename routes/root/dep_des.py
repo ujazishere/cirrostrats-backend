@@ -182,112 +182,154 @@ class Pull_flight_info(Root_class):
         return fa_returns
 
 
-    def nas_final_packet(self,dep_ID, dest_ID=None):
-        # TODO LP: airport closures remaining.
-        departure_ID = dep_ID[1:]       # Stripping off the 'K' since NAS uses 3 letter airport ID
-        destination_ID = dest_ID[1:]
+    def nas_final_packet(self,**kwargs):
+        """
+        Get NAS delay information for airports.
+        
+        Args:
+            airport (str): Single airport ID (4 chars starting with 'K')
+            departure (str): Departure airport ID 
+            destination (str): Destination airport ID
+            
+        Usage examples:
+            nas_final_packet(airport='KJFK')  # Single airport
+            nas_final_packet(departure='KJFK', destination='KLAX')  # Route
+        """
+    
+        # Validate arguments
+        valid_keys = {'airport', 'departure', 'destination'}
+        provided_keys = set(kwargs.keys())
+        print(provided_keys)
+        if not provided_keys.issubset(valid_keys):
+            invalid_keys = provided_keys - valid_keys
+            raise ValueError(f"Invalid arguments: {invalid_keys}. Use either 'airport' or 'departure' and 'destination'")
+        
+        # Determine usage pattern
+        if 'airport' in kwargs:
+            if 'departure' in kwargs or 'destination' in kwargs:
+                raise ValueError("Cannot use 'airport' with 'departure' or 'destination'. Use either single `airport` or `departure` with `destination`.")
+            airport_id = kwargs['airport']
+            is_single_airport = True
+        elif 'departure' in kwargs:
+            departure_id = kwargs['departure']
+            destination_id = kwargs.get('destination')
+            is_single_airport = False
+        else:
+            raise ValueError("Must provide either 'airport' or 'departure' argument")
+        
+        def validate_airport_id(airport_id, param_name):
+            if not isinstance(airport_id, str) or len(airport_id) != 4 or airport_id[0] != 'K':
+                raise ValueError(f"Invalid {param_name} airport ID: must be 4 characters starting with 'K'")
+    
+        # Validate airport IDs
+        if is_single_airport:
+            validate_airport_id(airport_id, 'airport')
+            departure_code = airport_id[1:]  # Strip 'K' for NAS 3-letter code
+            destination_code = None
+        else:
+            validate_airport_id(departure_id, 'departure')
+            departure_code = departure_id[1:]
+            destination_code = None
+            if destination_id:
+                validate_airport_id(destination_id, 'destination')
+                destination_code = destination_id[1:]
 
-        nas_delays = self.nas_pre_processing()          # Doing the scraping here
+        # Get NAS data
+        nas_delays = self.nas_pre_processing()
         airport_closures = nas_delays['Airport Closure']
         ground_stop_packet = nas_delays['ground_stop_packet']
         ground_delay_packet = nas_delays['ground_delay_packet']
         arr_dep_del_list = nas_delays['arr_dep_del_list']
-
-        departure_affected = {}
-        destination_affected = {}
-
-
-        affected_ground_stop = []
-        for i in airport_closures:
-            if i[0] == 'ARPT':
-                airport_identifier = i[1]
-                affected_ground_stop.append(airport_identifier)
-                if airport_identifier == departure_ID or airport_identifier == destination_ID:
-                    airport_index = airport_closures.index(i)
-                    reason = airport_closures[airport_index+1][1]
-                    start = airport_closures[airport_index+2][1]
-                    reopen = airport_closures[airport_index+3][1]
-                    if airport_identifier == departure_ID:
-                        departure_affected.update({'Airport Closure':{'Departure': airport_identifier,
-                                                'Reason': reason,
-                                                'Start': start,
-                                                'Reopen': reopen}})
-                    if airport_identifier == destination_ID:
-                        destination_affected.update({'Airport Closure':{'Destination': airport_identifier,
-                                                'Reason': reason,
-                                                'Start': start,
-                                                'Reopen': reopen}})
-
-        affected_ground_delay_packet = []
-        for i in ground_delay_packet:
-            if i[0] == 'ARPT':
-                airport_identifier = i[1]
-                affected_ground_delay_packet.append(airport_identifier)
-                if airport_identifier == departure_ID or airport_identifier == destination_ID:
-                    airport_index = ground_delay_packet.index(i)
-                    reason = ground_delay_packet[airport_index+1][1]
-                    average_delay = ground_delay_packet[airport_index+2][1]
-                    max_delay = ground_delay_packet[airport_index+3][1]
-                    if airport_identifier == departure_ID:
-                        departure_affected.update({'Ground Delay':{'Departure': airport_identifier,
-                                                'Reason': reason,
-                                                'Average Delay': average_delay,
-                                                'Maximum Delay': max_delay}})
-                    if airport_identifier == destination_ID:
-                        destination_affected.update({'Ground Delay':{'Destination': airport_identifier,
-                                                'Reason': reason,
-                                                'Average Delay': average_delay,
-                                                'Maximum Delay': max_delay}})
-
-                                                
-        affected_ground_stop_packet = []
-        for i in ground_stop_packet:
-            if i[0] == 'ARPT':
-                airport_identifier = i[1]
-                affected_ground_stop_packet.append(airport_identifier)
-                if airport_identifier == departure_ID or airport_identifier == destination_ID:
-                    airport_index = ground_stop_packet.index(i)
-                    reason = ground_stop_packet[airport_index+1][1]
-                    end_time = ground_stop_packet[airport_index+2][1]
-                    if airport_identifier == departure_ID:
-                        departure_affected.update({'Ground Stop':{'Departure': airport_identifier,
-                                                'Reason': reason,
-                                                'End Time': end_time}})
-                    if airport_identifier == destination_ID:
-                        destination_affected.update({'Ground Stop':{'Destination': airport_identifier,
-                                                'Reason': reason,
-                                                'End Time': end_time}})
-
-        affected_arr_dep_del_list = []
-        for i in arr_dep_del_list:
-            if i[0] == 'ARPT':
-                airport_identifier = i[1]
-                affected_arr_dep_del_list.append(airport_identifier)
-                if airport_identifier == departure_ID or airport_identifier == destination_ID:
-                    airport_index = arr_dep_del_list.index(i)
-                    reason = arr_dep_del_list[airport_index+1][1]
-                    arr_or_dep = arr_dep_del_list[airport_index+2][1]
-                    min_delay = arr_dep_del_list[airport_index+3][1]
-                    max_delay = arr_dep_del_list[airport_index+4][1]
-                    trend = arr_dep_del_list[airport_index+5][1]
-                    if airport_identifier == departure_ID:
-                        departure_affected.update({'Arrival/Departure Delay':{'Departure': airport_identifier,
-                                                'Reason': reason,
-                                                'Type': arr_or_dep['Type'],
-                                                'Minimum': min_delay,
-                                                'Maximum': max_delay,
-                                                'Trend': trend}})
-                    if airport_identifier == destination_ID:
-                        destination_affected.update({'Arrival/Departure Delay':{'Destination': airport_identifier,
-                                                'Reason': reason,
-                                                'Type': arr_or_dep['Type'],
-                                                'Minimum': min_delay,
-                                                'Maximum': max_delay,
-                                                'Trend': trend}})
-
-        # print('dep_des.py nas_final_packer. Providing NAS final packet dict.')
-        return {'nas_departure_affected': departure_affected,
-                'nas_destination_affected': destination_affected}
+    
+        def process_airport_data(data_list, airport_code, process_func):
+            """Helper function to process airport data"""
+            for i, item in enumerate(data_list):
+                if item[0] == 'ARPT' and item[1] == airport_code:
+                    return process_func(data_list, i, airport_code)
+            return None
+    
+        # Processing functions for each delay type
+        def process_closure(data_list, index, airport_code):
+            return {
+                'Airport Closure': {
+                    'Airport': airport_code,
+                    'Reason': data_list[index+1][1],
+                    'Start': data_list[index+2][1],
+                    'Reopen': data_list[index+3][1]
+                }
+            }
+    
+        def process_ground_delay(data_list, index, airport_code):
+            return {
+                'Ground Delay': {
+                    'Airport': airport_code,
+                    'Reason': data_list[index+1][1],
+                    'Average Delay': data_list[index+2][1],
+                    'Maximum Delay': data_list[index+3][1]
+                }
+            }
+    
+        def process_ground_stop(data_list, index, airport_code):
+            return {
+                'Ground Stop': {
+                    'Airport': airport_code,
+                    'Reason': data_list[index+1][1],
+                    'End Time': data_list[index+2][1]
+                }
+            }
+    
+        def process_arr_dep_delay(data_list, index, airport_code):
+            arr_or_dep = data_list[index+2][1]
+            return {
+                'Arrival/Departure Delay': {
+                    'Airport': airport_code,
+                    'Reason': data_list[index+1][1],
+                    'Type': arr_or_dep.get('Type') if isinstance(arr_or_dep, dict) else arr_or_dep,
+                    'Minimum': data_list[index+3][1],
+                    'Maximum': data_list[index+4][1],
+                    'Trend': data_list[index+5][1]
+                }
+            }
+    
+        # Data processing pipeline
+        processing_pipeline = [
+            (process_closure, airport_closures),
+            (process_ground_delay, ground_delay_packet),
+            (process_ground_stop, ground_stop_packet),
+            (process_arr_dep_delay, arr_dep_del_list)
+        ]
+    
+        def get_airport_delays(airport_code):
+            """Get all delay information for a single airport"""
+            airport_data = {}
+            for process_func, data_list in processing_pipeline:
+                result = process_airport_data(data_list, airport_code, process_func)
+                if result:
+                    airport_data.update(result)
+            return airport_data
+    
+        # Process based on usage pattern
+        if is_single_airport:
+            # Single airport query
+            airport_data = get_airport_delays(departure_code)
+            return airport_data if airport_data else {}
+        
+        else:
+            # Route query (departure + optional destination)
+            result = {}
+            
+            # Process departure airport
+            departure_data = get_airport_delays(departure_code)
+            if departure_data:
+                result['nas_affected_departure'] = departure_data
+                
+            # Process destination airport if provided
+            if destination_code:
+                destination_data = get_airport_delays(destination_code)
+                if destination_data:
+                    result['nas_affectred_destination'] = destination_data
+            
+            return result
 
 
     def nas_fetch(self,):

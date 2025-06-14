@@ -1,12 +1,13 @@
 from fuzzywuzzy import fuzz, process
 
+""" Uses the frontend formatted csti collection to search and deliver fuzz found results."""
 def fuzz_find(query, data, qc, limit=5):
     # For very short queries, prioritize prefix matching
     if len(query) <= 2:
 
         # First find exact prefix matches
         prefix_matches = [item for item in data 
-                         if item['search_text'].startswith(query.lower())]
+                         if item['fuzz_find_search_text'].startswith(query.lower())]
         # Return prefix matches if we have enough
 
         if len(prefix_matches) >= limit:
@@ -26,8 +27,8 @@ def fuzz_find(query, data, qc, limit=5):
         # print('pq', parsed_query)
 
     # Get search text from all items
-    choices = [item['search_text'] for item in search_universe]
-    
+    choices = [item['fuzz_find_search_text'] for item in search_universe]
+
     # Get fuzzy matches using fuzzywuzzy
     fuzzy_matches = process.extract(
         query.lower(), 
@@ -35,7 +36,7 @@ def fuzz_find(query, data, qc, limit=5):
         limit=remaining,
         scorer=fuzz.partial_ratio  # Better for autocomplete scenarios
     )
-    
+
     # Get the corresponding items
     fuzzy_items = [search_universe[choices.index(match)] for match, score in fuzzy_matches 
                   if score > 90]  # Minimum similarity threshold
