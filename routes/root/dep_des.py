@@ -199,7 +199,6 @@ class Pull_flight_info(Root_class):
         # Validate arguments
         valid_keys = {'airport', 'departure', 'destination'}
         provided_keys = set(kwargs.keys())
-        print(provided_keys)
         if not provided_keys.issubset(valid_keys):
             invalid_keys = provided_keys - valid_keys
             raise ValueError(f"Invalid arguments: {invalid_keys}. Use either 'airport' or 'departure' and 'destination'")

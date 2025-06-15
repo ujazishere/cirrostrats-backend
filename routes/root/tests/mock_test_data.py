@@ -33,7 +33,7 @@ class Mock_data:
             "towerAircraftID": "UAL4458",
             "timestamp": "2025-05-10T15:10:03.243000",
             "destinationAirport": "KDEN",
-            "clearance": "003 UAL2480\t7737\tKLAX A320/L\tP1540 239\t280 KLAX SUMMR2 STOKD SERFR SERFR4 KSFO             CLEARED SUMMR2 DEPARTURE STOKD TRSN   CLB VIA SID EXC MAINT 5000FT EXP 280 5 MIN AFT DP,DPFRQ 125.2     ",
+            "clearance": "003 UAL2480\t7737\tKDEN A320/L\tP1540 239\t280 KDEN SUMMR2 STOKD SERFR SERFR4 KSFO             CLEARED SUMMR2 DEPARTURE STOKD TRSN   CLB VIA SID EXC MAINT 5000FT EXP 280 5 MIN AFT DP,DPFRQ 125.2     ",
             "towerBeaconCode": "7737",
             "version_created_at": "2025-05-10T15:11:32.611000"
         }
@@ -45,11 +45,11 @@ class Mock_data:
             "aircraftType": "A320",
             "registration": "N445UA",
             "departure": "KDEN",
-            "departureAlternate": "KSFO",
+            "departureAlternate": "KDEN",
             "arrival": "KDEN",
-            'arrivalAlternate': 'KBNA',
+            'arrivalAlternate': 'KDEN',
             'estimatedDepartureTime': '2025-06-05T18:00:00Z',
-            "route": "KLAX.SUMMR2.STOKD..SERFR.SERFR4.KSFO/1646",
+            "route": "KDEN.SUMMR2.STOKD..SERFR.SERFR4.KDEN/1646",
             "assignedAltitude": "28000.0",
             "requestedAltitude": "37000.0",
             "currentBeacon": "7737",
@@ -92,59 +92,56 @@ class Mock_data:
                 'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
             }
         
-        self.departure_weather_raw = {
+        self.weather_raw = {
             'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
             'taf': 'KDEN 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015\n    FM030300 00000KT 1SM -SHRA FG OVC002\n    FM031300 19005KT 3/4SM BR OVC004\n    FM031500 23008KT 1/26SM OVC005\n    FM031800 25010KT 1/4SM OVC015\n    FM032100 25010KT M1/4SM BKN040',
         }
 
-        # Just mocking/copying departure weather into destination as well 
-        self.destination_weather_raw = self.departure_weather_raw
-
-
         if html_injected_weather:
-            weather = Weather_parse()
-            self.departure_weather_html = weather.processed_weather(
-                mock_test_data=self.departure_weather_raw)
-        
-            # Just mocking/copying departure weather into destination as well 
-            self.destination_weather_html= self.departure_weather_html
-            self.departure_weather, self.destination_weather = {'dep_weather':self.departure_weather_html}, {'dest_weather': self.destination_weather_html}
-            self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_html}
-            self.arrivalAlternateWeather = {'arrival_alternate_weather':self.departure_weather_html}
+            wp = Weather_parse()
+            self.weather = wp.processed_weather(
+                mock_test_data=self.weather_raw)
         else:
-            self.departure_weather, self.destination_weather = {'dep_weather': self.departure_weather_raw}, {'dest_weather':self.destination_weather_raw}
-            self.departureAlternateWeather = {'departure_alternate_weather':self.departure_weather_raw}
-            self.arrivalAlternateWeather = {'arrival_alternate_weather':self.departure_weather_raw}
+            self.weather = self.weather_raw
+
+        self.nas_singular_mock = {
+                'Ground Delay': {
+                    'Airport': 'DEN',
+                    'Reason': 'other',
+                    'Average Delay': '1 hour and 40 minutes',
+                    'Maximum Delay': '3 hours and 39 minutes',
+                    }}
 
 
-        self.nas_departure = {
-            'nas_departure_affected': {'Ground Delay': {'Departure': 'KDEN',
-            'Reason': 'thunderstorms',
-            'Average Delay': '48 minutes',
-            'Maximum Delay': '1 hour and 46 minutes'}},
-        }
-
-        self.nas_destination = {
-            'nas_destination_affected': {'Ground Delay': {'Departure': 'KDEN',
-            'Reason': 'thunderstorms',
-            'Average Delay': '48 minutes',
-            'Maximum Delay': '1 hour and 46 minutes'}},
-        }
-
-
-        self.collective = {
-                        **self.jms_STDDS_clearance,
+    def collective(self,):
+        """ initialize flight_data first to use this function since variables in here are from flight_data"""
+        self.primary_flight_data_collective = {
+            **self.jms_STDDS_clearance,
             **self.jms_FDPS_base,
             **self.flightStats,
             **self.flightView,
             **self.flightAware,
-            **self.departure_weather,
-            **self.destination_weather,
-            **self.departureAlternateWeather,
-            **self.arrivalAlternateWeather,
-            **self.nas_departure,
-            **self.nas_destination,
+        }
+
+        self.weather_collective = {
+            'departureWeatherLive': self.weather,
+            'arrivalWeatherLive': self.weather,
+            'departureAlternateWeatherLive': self.weather,
+            'arrivalAlternateWeatherLive': self.weather,
+        }
+
+        self.NAS_collective = {
+            'arrivalAlternateNAS': self.nas_singular_mock,
+            'arrivalNAS': self.nas_singular_mock,
+            'departureAlternateNAS': self.nas_singular_mock,
+            'departureNAS': self.nas_singular_mock,
+        }
+
+        self.collective = {
+            'flightData':self.primary_flight_data_collective,
+            'weather': self.weather_collective,
+            'NAS': self.NAS_collective,
         }
         return self.collective
 

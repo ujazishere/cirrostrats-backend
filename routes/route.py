@@ -463,11 +463,12 @@ async def test_flight_deet_data(airportLookup: str = None):
     md = Mock_data()
     if not airportLookup:
         # Sends compolete test flight data
-        return md.flight_data(html_injected_weather=True)
+        md.flight_data(html_injected_weather=True)
+        return md.collective()
     else:
         # Sends for test data for airport lookups only -- returns test weather and nas data.
-        xx = md.flight_data(html_injected_weather=True)
-        return {**md.departure_weather['dep_weather'], **md.nas_departure}
+        md.flight_data(html_injected_weather=True)
+        return {'weather': md.weather, 'NAS': md.nas_singular_mock}
 
 # _____________________________________________________________________
 
