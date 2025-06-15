@@ -26,7 +26,7 @@ from .root.tests.mock_test_data import Mock_data
 from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import async_resp_returns_processing, response_filter, raw_resp_weather_processing
-from .root.search.suggestions_format import FrontendFormatter
+from .root.search.search_interface import SearchInterface
 
 app = FastAPI()
 
@@ -75,7 +75,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
         Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this bucket and return those to the frontend exhausting the 3500 items."""
 
-    ff = FrontendFormatter()
+    ff = SearchInterface()
     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
     formatted_suggestions = ff.search_suggestion_format(c_docs=c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc, limit=limit)
@@ -202,50 +202,14 @@ async def get_user_searches(email):
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable but search already takes care of that.
 async def raw_search_handler(search: str = None):
-
-    # Check FrontendFormatter.format to see the same usage. avoid this code and reuse from the frontendFormatter.
-    """ handles the submit that is NOT the drop down suggestion. so just willy nilly organic search submit"""
-    # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
-        # If found return that, if not found request on flightAware - e.g N917PG
-
-    parsed_query = qc.parse_query(query=search)
-    # TODO VHP: This is bad!! Take care of this formatting in the /suggestions_format area.
-            # It is adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
-    # TODO VHP: For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID` for `flightId`
-    if parsed_query.get('category') == 'Airports':
-        # TODO VHP: Return airport data from the collection_airports on this submit
-        # TODO HP: request from collection_airports if found, return it whilst fetching new data, if new data found update database. 
-        val,val_field,val_type = parsed_query.get('value'), 'airport','airport'
-        weather_returns = collection_weather.find_one({'code':val},{'_id':0,'weather':1})  # This is to ensure that the airport code exists in the collection.
-        # return weather_returns        #TODO: This needs to be returned in case weather is found.
-        pass
-    elif parsed_query.get('category') == 'Flights':
-        # TODO: account for flightID from within the collection_flights. if found return that, if not reqeuest on flightAware - e.g N917PG
-        parsed_query_value = parsed_query.get('value')
-        fid_st = parsed_query_value.get('airline_code') + parsed_query_value.get('flight_number')
-        val,val_field,val_type = fid_st, 'flightID', 'flight'
-        pass
-    elif parsed_query.get('category') == 'Others':
-        # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
-        # account for N numbers here! this is dangerous but can act as a bandaid for now. 
-        query = parsed_query.get('value')
-        val,val_field,val_type = query, 'others','others'
-        if qc.temporary_n_number_parse_query(query=query):
-            val,val_field,val_type = query, 'nnumber','others'
-            pass
-
-    
-    formatted_data = { 
-        f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
-        'display': val,             # This is manipulated later hence the duplicate.
-        'type': val_type,
-        # 'fuzz_find_search_text': val.lower()
-        }
-    print('SUBMIT: Raw search submit:', 'search: ', search,'pq: ', parsed_query,'formatted-data', formatted_data)
-    return formatted_data
-
+    """ handles the submit that is NOT the drop down suggestion. So just willy nilly taking
+    the organic search submit handlling it here by converting to a form that is acceptable in details.jsx"""
+    si = SearchInterface()
+    return si.submit_handler(collection_weather=collection_weather,search=search)
 
 # ___________________________________________________________________________
+
+# flight data returns
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):

@@ -111,7 +111,7 @@ class Mock_data:
                     'Reason': 'other',
                     'Average Delay': '1 hour and 40 minutes',
                     'Maximum Delay': '3 hours and 39 minutes',
-                    }}
+                    }},
 
 
     def collective(self,):

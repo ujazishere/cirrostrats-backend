@@ -2,9 +2,27 @@
 from routes.root.search.query_classifier import QueryClassifier
 
 
-class FrontendFormatter:
+class SearchInterface(QueryClassifier):
     def __init__(self):
+        super().__init__()
         pass
+
+    
+    def submit_handler(self,collection_weather, search):
+        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
+            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
+            contain similar format with display field for display and search within fuzzfind"""
+        parsed_query = self.parse_query(query=search)
+        val_field, val, val_type = self.format_conversion(doc=parsed_query)
+
+        formatted_data = { 
+            f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
+            'display': val,             # This is manipulated later hence the duplicate.
+            'type': val_type,
+            # 'fuzz_find_search_text': val.lower()
+            }
+        print('SUBMIT: Raw search submit:', 'search: ', search,'pq: ', parsed_query,'formatted-data', formatted_data)
+        return formatted_data
 
 
     def format_conversion(self,doc):
@@ -12,9 +30,12 @@ class FrontendFormatter:
         format inconsistencies from backend/mongoDB collection data to frontend are handled here.
         for example: csti `airport_st` is convertd to airport, `fid_st` to flight, etc.
         """
-        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
-            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
-            contain similar format with display field for display and search within fuzzfind"""
+        # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
+            # If found return that, if not found request on flightAware - e.g N917PG
+
+        #  TODO VHP: It is adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
+        # For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID` for `flightId`
+
         terminanl_gate_st = doc.get('Terminal/Gate')
         airport_st = doc.get('airport_st')
         fid_st = doc.get('fid_st')
@@ -41,8 +62,7 @@ class FrontendFormatter:
                 # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
                     # If found return that, if not found request on flightAware - e.g N917PG
                 query:str = parsed_query_cat_field
-                qc = QueryClassifier()
-                if qc.temporary_n_number_parse_query(query=query):
+                if self.temporary_n_number_parse_query(query=query):
                     val_field, val, val_type = query, 'nnumber','others'
                 elif query.isalpha():
                     val_field, val, val_type = query, 'airport','airport'
@@ -50,6 +70,7 @@ class FrontendFormatter:
                     val_field, val, val_type = query, 'others','others'
 
         return val_field, val, val_type
+
 
     def search_suggestion_format(self, c_docs, limit=1000,):         # cta- collection test airports; ctf- collection test flights
         """ Suggestions formatter for delivery to the frontend. It first goes to the fuzzfind then to frontend which is processed again
@@ -70,7 +91,7 @@ class FrontendFormatter:
                 'id': str(doc['r_id']),     # ***********only available in sti.
                 f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
 
-                'display': val,             # This is manipulated later hence the duplicate.
+                'display': val,             # This is manipulated later hence the duplicate. TODO: investigate.
                 'type': val_type,
 
                 'ph': doc.get('ph', 0),     # ***********Only available in  csti
