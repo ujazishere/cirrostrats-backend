@@ -120,6 +120,9 @@ class QueryClassifier:
             else:
                 # self.classified_suggestions.setdefault('Digits', []).append(query)
                 return {'category': 'Digits', 'value': query}
+        elif self.temporary_n_number_parse_query(query=query):
+            return {'category': 'Flights', 'value': query}
+
             # TODO VHP Feature: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction for now.
                 # once the complexity increases more digits can be accounted for.
         # elif for gate
@@ -149,7 +152,7 @@ class QueryClassifier:
                 airline_code = "UA"
             return airline_code, flightID_digits
         print("Error within qc_webscrape. parse_query failed to return categorized data")
-        return None
+        return None,None
 
 
     def classify_batch(self, queries: List[Tuple]) -> Dict:

@@ -7,7 +7,24 @@ class SearchInterface(QueryClassifier):
         super().__init__()
         pass
 
-    
+
+    def standardize_types(self, val_type):
+        """Ensure consistent type naming across platform"""
+        TYPE_STANDARDS = {
+            'Flight': 'flight',
+            'FLIGHT': 'flight', 
+            'flightNumbers': 'flight',
+            'flightId': 'flight',
+            'Airport': 'airport',
+            'AIRPORT': 'airport',
+            'Terminal/Gate': 'terminal',
+            'gate': 'terminal',
+            'Gate': 'terminal'
+        }
+
+        return TYPE_STANDARDS.get(val_type, val_type.lower())
+
+
     def submit_handler(self,collection_weather, search):
         """ the raw submit is supposed to return frontend formatted reference_id, display and type for
             /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
@@ -40,6 +57,7 @@ class SearchInterface(QueryClassifier):
         airport_st = doc.get('airport_st')
         fid_st = doc.get('fid_st')
         parsed_query_cat_field = doc.get('category')
+        pq_val = doc.get('value')
 
         # logic to separaate out flightID from airport and terminal/gates.
         if terminanl_gate_st:
@@ -51,23 +69,29 @@ class SearchInterface(QueryClassifier):
         # QueryClassifier's parse_query format handeling.
         elif parsed_query_cat_field:
             if parsed_query_cat_field == 'Airports':
-                val_field, val, val_type = parsed_query_cat_field, 'airport','airport'
+                val_field, val, val_type = 'airport', pq_val, 'airport'
             elif parsed_query_cat_field == 'Flights':
-                parsed_query_value = parsed_query_cat_field
-                fid_st = parsed_query_value.get('airline_code') + parsed_query_value.get('flight_number')
-                val_field, val, val_type = fid_st, 'flightID', 'flight'
+                if isinstance(pq_val,dict):
+                    fid_st = pq_val.get('airline_code') + pq_val.get('flight_number')
+                    val_field, val, val_type = 'flightID', fid_st, 'flight'
+                else:
+                    self.temporary_n_number_parse_query(query=pq_val)
+                    val_field, val, val_type = 'nnumber', pq_val, 'flight'
+            
+            elif parsed_query_cat_field == 'Digits':
+                # Digits are usually flight numbers,
+                val_field, val, val_type = 'flightID', pq_val, 'flight'
+
             elif parsed_query_cat_field == 'Others':
                 # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
                 # account for N numbers here! this is dangerous but can act as a bandaid for now. 
                 # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
                     # If found return that, if not found request on flightAware - e.g N917PG
-                query:str = parsed_query_cat_field
-                if self.temporary_n_number_parse_query(query=query):
-                    val_field, val, val_type = query, 'nnumber','others'
-                elif query.isalpha():
-                    val_field, val, val_type = query, 'airport','airport'
+                if pq_val.isalpha():
+                    val_field, val, val_type = 'airport', pq_val, 'airport'
                 else:
-                    val_field, val, val_type = query, 'others','others'
+                    print('pq_val', pq_val, 'is not alpha, assuming flightID')
+                    val_field, val, val_type = 'others', pq_val, 'others'
 
         return val_field, val, val_type
 

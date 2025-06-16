@@ -80,12 +80,46 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
     formatted_suggestions = ff.search_suggestion_format(c_docs=c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc, limit=limit)
 
-
+    print('sti_items_match_w_query', len(sti_items_match_w_query))
     if not sti_items_match_w_query and len(query)>=3:
-            parsed_query = qc.parse_query(query=query)
-            print('Exhausted parsed query',parsed_query)
-            # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
-            val_field,val,val_type = ff.format_conversion(doc=parsed_query)
+        # *****CAUTION**** Bad code exists here. this was a quick fix to exhaustion of csti.
+        parsed_query = qc.parse_query(query=query)
+        print('Exhausted parsed query',parsed_query)
+        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
+        val_field,val,val_type = ff.format_conversion(doc=parsed_query)
+        if val_type == 'flight':
+            # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
+            # N-numbers returns errors on submits.
+            return_crit = {'flightID': 1}
+            c = collection_flights.find({'flightID': {'$regex':val}}, return_crit).limit(10)
+            search_index = []
+            for i in c:
+                x = {
+                    'id': str(i['_id']),
+                    val_field: i['flightID'],  # Use the field name dynamically
+                    'display': i['flightID'],        # Merge code and name for display
+                    'type': 'flight',
+                }
+                search_index.append(x)
+            return search_index
+                
+        elif val_type == 'airport':
+            # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
+            # Plus its ugly -- abstract this away since flight ID is using the same logic.
+            # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
+            return_crit = {'name': 1, 'code':1}
+            case_insensitive_regex_find = {'$regex':val, '$options': 'i'}
+            c = collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10)
+            search_index = []
+            for i in c:
+                x = {
+                    'id': str(i['_id']),
+                    val_field: i['code'],  # Use the field name dynamically
+                    'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
+                    'type': 'airport',
+                }
+                search_index.append(x)
+            return search_index
 
     else:
         return sti_items_match_w_query
