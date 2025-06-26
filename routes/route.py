@@ -33,13 +33,21 @@ app = FastAPI()
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 c_sti_docs = qc.initialize_c_sti_collections()      # Caching sti collecion docs;
 
-# Define the origins that are allowed to access the backend
+""" Define the origins that are allowed to access the backend --Seems like none of the orgins defined are working. 
+TODO CORS: Setup a lightwight ngrok service to host the backend and frontend and show proof of concept
+tried and failed - Cors changes on cloudflare(still shows cors issue), adding prints to show origins(doesnt print)
+the ip address may have worked but that was throwing http vs https error but even then it wont send the response headers.
+Tried nginx changes as well but it did not work.
+"""
 origins = [
-    "http://localhost",
-    "http://localhost:5173",
-    "http://18.224.64.51",
-    "http://127.0.0.1:8000/",
-    ""
+#    "http://localhost",
+#    "http://localhost:5173",
+#    "http://18.224.64.51",
+#    "http://127.0.0.1:8000/",
+    "https://e693-69-120-60-223.ngrok-free.app/",
+    "http://e693-69-120-60-223.ngrok-free.app/",
+    "https://e693-69-120-60-223.ngrok-free.app",
+    "http://e693-69-120-60-223.ngrok-free.app"
     # Add any other origins that should be allowed
 ]
 app.add_middleware(
@@ -51,17 +59,16 @@ app.add_middleware(
 )
 
 router = APIRouter()
-
 """
-if you look up http://127.0.0.1:8000/airports this following function will be called.
-It is calling the /airports route which automatically calls the async function get_airports()
-it looks up the database through `collection` from the config/database.py file
-collection has these crud operation methods like find(), insert_one(), insert_many() and delete_one()
-The return from the collection is a type - <class 'pymongo.cursor.Cursor'>
-it gets sent to list serial to convert the database into python readble format.
-This serialize_document_list return is a list type with each item a dict.
-Each list item is a mdb document
-Check individual_serial to see the dict format.
+# Code to test the CORS response headers - Does not work and need troubleshooting.
+from starlette.requests import Request
+@app.middleware("http")
+async def log_cors(request: Request, call_next):
+    origin = request.headers.get("origin")
+    print(f"Incoming Origin: {origin} | Path: {request.url.path}")
+    response = await call_next(request)
+    print(f"Outgoing CORS Header: {response.headers.get('access-control-allow-origin')}")
+    return response
 """
 
 #_____________________________________________________________________________
@@ -80,9 +87,10 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
     formatted_suggestions = ff.search_suggestion_format(c_docs=c_sti_docs)
     sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc, limit=limit)
 
-    print('sti_items_match_w_query', len(sti_items_match_w_query))
+    # print('sti_items_match_w_query', len(sti_items_match_w_query))
     if not sti_items_match_w_query and len(query)>=3:
-        # *****CAUTION**** Bad code exists here. this was a quick fix to exhaustion of csti.
+        # *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of csti.
+        # At exhaustion it will search the collections based on the 'type of query.
         parsed_query = qc.parse_query(query=query)
         print('Exhausted parsed query',parsed_query)
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
@@ -371,9 +379,14 @@ async def aviation_stack(flight_number):
 
 
 @router.get("/flightAware/{flight_number}")
-async def flight_aware_w_auth(flight_number):
-
-    # sl.flight_stats_url(flight_number_query),])
+async def flight_aware_w_auth(flight_number, mock=False):
+    if mock:
+        md = Mock_data()
+        md.flight_data_init(html_injected_weather=False)
+        print('mock flight aware data', md.flightAware)
+        return md.flightAware
+    
+    # sl.flight_stats_url(flight_number_query)
     fm = Fetching_Mechanism(flt_num=flight_number)
     sl = Source_links_and_api()
     flt_info = Pull_flight_info()
@@ -461,11 +474,11 @@ async def test_flight_deet_data(airportLookup: str = None):
     md = Mock_data()
     if not airportLookup:
         # Sends compolete test flight data
-        md.flight_data(html_injected_weather=True)
+        md.flight_data_init(html_injected_weather=True)
         return md.collective()
     else:
         # Sends for test data for airport lookups only -- returns test weather and nas data.
-        md.flight_data(html_injected_weather=True)
+        md.flight_data_init(html_injected_weather=True)
         return {'weather': md.weather, 'NAS': md.nas_singular_mock}
 
 # _____________________________________________________________________

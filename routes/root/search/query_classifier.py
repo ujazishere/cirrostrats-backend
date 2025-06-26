@@ -110,6 +110,7 @@ class QueryClassifier:
             flight_info = {'airline_code': airline_code, 'flight_number': flight_number}
             # self.classified_suggestions.setdefault('Flights', []).append(flight_info)
             return {'category': 'Flights', 'value': flight_info}
+
         elif query.isdigit():
             if query[0] == '4' and len(query) == 4:
                 airline_code = 'GJS'
@@ -120,6 +121,7 @@ class QueryClassifier:
             else:
                 # self.classified_suggestions.setdefault('Digits', []).append(query)
                 return {'category': 'Digits', 'value': query}
+
         elif self.temporary_n_number_parse_query(query=query):
             return {'category': 'Flights', 'value': query}
 

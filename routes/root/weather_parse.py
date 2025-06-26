@@ -151,7 +151,7 @@ class Weather_parse:
             taf_raw = raw_return.get('taf')
 
         def zulu_extracts(weather_input, datis=None, taf=None):
-            """ TODO: This is a hazard such that if the weather is over a month old or even day, the zt may not be way off. """
+            """ TODO: Hazard-- If the weather is over a month old or even day, the zt may be way off. """
 
             # This could be work intensive. Make your own conversion if you can avoid using datetime
             raw_utc = Root_class().date_time(raw_utc='HM')[-4:]

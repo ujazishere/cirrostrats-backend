@@ -27,7 +27,7 @@ class Mock_data:
         pass
 
 
-    def flight_data(self,html_injected_weather):
+    def flight_data_init(self,html_injected_weather):
 
         self.jms_STDDS_clearance = {
             "towerAircraftID": "UAL4458",
@@ -111,7 +111,7 @@ class Mock_data:
                     'Reason': 'other',
                     'Average Delay': '1 hour and 40 minutes',
                     'Maximum Delay': '3 hours and 39 minutes',
-                    }},
+                    }}
 
 
     def collective(self,):
