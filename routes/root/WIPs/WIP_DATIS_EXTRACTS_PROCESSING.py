@@ -1,4 +1,5 @@
-from dj.dj_app.root.root_class import Root_class
+from routes.root.WIPs.WIP_weather_examination import WIPWeatherExamination_archive
+from root.root_class import Root_class
 import re
 import pickle
 from collections import Counter
@@ -14,21 +15,8 @@ import os
     # elements and how ofen they occor. keep looping
 
 # load all datis
-def load_em_all():
-    base_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles"
-    all_pickle_files = os.listdir(base_path)            # get all file names in pickles folder
-    # get just the ones with datis_info_stack in name
-    datis_info_stack_file_names = [i for i in all_pickle_files if 'datis_info_stack' in i]
-
-    datis_bulk = []
-    for i in datis_info_stack_file_names:
-        path = base_path+"\\"+ i
-        with open(path, 'rb') as f:
-            datis_bulk += pickle.load(f)
-    print(f'total datis files: {len(datis_info_stack_file_names)}', f'total datis: {len(datis_bulk)}')
-    return datis_bulk
-
-datis_bulk = load_em_all()
+we = WIPWeatherExamination_archive()
+datis_bulk = we.load_em_all(file_name_contains='datis')
 
 
 datis_pattern = {'airport_id': r'[A-Z]{1,3} ',

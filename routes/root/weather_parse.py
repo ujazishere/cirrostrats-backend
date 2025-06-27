@@ -57,9 +57,6 @@ class Weather_parse:
         ifr_digits = re.sub(self.ifr_single_or_douple,self.red_text_color,lifr_digits)
         processed_incoming_data = ifr_digits
 
-
-
-
         if processed_incoming_data:
             return processed_incoming_data
         else:
@@ -129,6 +126,73 @@ class Weather_parse:
                         })
     
 
+    def zulu_extraction(self, weather_input, weather_type:str):
+        """ Extracts the zulu time from the weather input. 
+            If datis is True, it will extract the zulu time from the datis input.
+            If taf is True, it will extract the zulu time from the taf input.
+            Otherwise, it will extract the zulu time from the metar input.
+        """
+        if weather_type == 'datis':
+            zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
+        elif weather_type == 'taf' or weather_type == 'metar':
+            # Not necessary if only using 4 digits. Use this if DDHHMM is required.
+            zulu_item_re = re.findall('[0-9]{6}Z', weather_input)       # regex zulu
+            
+        if zulu_item_re:    # There may be multiple zulu times in the datis, taf or metar. This will return the first one.
+            return zulu_item_re[0]
+        else:
+            return 'N/A'
+
+    def zulu_recency(self, weather_input, datis=None, taf=None):
+        """ TODO:
+            1. Hazard-- If the weather is over a month old or even day, the zt may be way off.
+            2. Datis,metar sometimes have multiple zulu times. check weather_examination for this anomaly - zulu_anomaly 
+               """
+
+        # This could be work intensive. Make your own conversion if you can avoid using datetime
+        raw_utc = Root_class().date_time(raw_utc='HM')[-4:]
+        raw_utc_dt = datetime.strptime(raw_utc,"%H%M")
+
+        if datis:
+            zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
+        else:
+            # Not necessary if only using 4 digits. Use this if DDHHMM is required.
+            zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
+            
+        if zulu_item_re:        # regex process
+            zulu_weather = zulu_item_re[0][:-1]
+            zulu_weather_dt = datetime.strptime(zulu_weather,"%H%M")
+            diff = raw_utc_dt - zulu_weather_dt
+            diff = int(diff.seconds/60) 
+            
+            dummy_published_time = '2152Z'
+            # diff = 56
+            if taf:
+                if diff > 350:
+                    # diff = dummy_published_time
+                    return f'<span class="published-color1">{diff} mins ago </span>'
+                if diff < 10:
+                    # diff = dummy_published_time
+                    return f'<span class="published-color2">{diff} mins ago</span>'
+                else:
+                    # diff = dummy_published_time
+                    return f'{diff} mins ago'
+
+            else:
+                if diff > 55:
+                    # diff = dummy_published_time
+                    return f'<span class="published-color1">{diff} mins ago </span>'
+                if diff <= 5:
+                    # diff = dummy_published_time
+                    return f'<span class="published-color2">{diff} mins ago</span>'
+                else:
+                    # diff = dummy_published_time
+                    return f'{diff} mins ago'
+        else:
+            zulu_weather = 'N/A'
+            return zulu_weather
+        
+
     def processed_weather(self, query=None, mock_test_data=None, datis_arr=None,
                           weather_raw=None,
                           ):
@@ -150,52 +214,6 @@ class Weather_parse:
             metar_raw = raw_return.get('metar')
             taf_raw = raw_return.get('taf')
 
-        def zulu_extracts(weather_input, datis=None, taf=None):
-            """ TODO: Hazard-- If the weather is over a month old or even day, the zt may be way off. """
-
-            # This could be work intensive. Make your own conversion if you can avoid using datetime
-            raw_utc = Root_class().date_time(raw_utc='HM')[-4:]
-            raw_utc_dt = datetime.strptime(raw_utc,"%H%M")
-
-            if datis:
-                zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
-            else:
-                # Not necessary if only using 4 digits. Use this if DDHHMM is required.
-                zulu_item_re = re.findall('[0-9]{4}Z', weather_input)       # regex zulu
-                
-            if zulu_item_re:        # regex process
-                zulu_weather = zulu_item_re[0][:-1]
-                zulu_weather_dt = datetime.strptime(zulu_weather,"%H%M")
-                diff = raw_utc_dt - zulu_weather_dt
-                diff = int(diff.seconds/60) 
-                
-                dummy_published_time = '2152Z'
-                # diff = 56
-                if taf:
-                    if diff > 350:
-                        # diff = dummy_published_time
-                        return f'<span class="published-color1">{diff} mins ago </span>'
-                    if diff < 10:
-                        # diff = dummy_published_time
-                        return f'<span class="published-color2">{diff} mins ago</span>'
-                    else:
-                        # diff = dummy_published_time
-                        return f'{diff} mins ago'
-
-                else:
-                    if diff > 55:
-                        # diff = dummy_published_time
-                        return f'<span class="published-color1">{diff} mins ago </span>'
-                    if diff <= 5:
-                        # diff = dummy_published_time
-                        return f'<span class="published-color2">{diff} mins ago</span>'
-                    else:
-                        # diff = dummy_published_time
-                        return f'{diff} mins ago'
-            else:
-                zulu_weather = 'N/A'
-                return zulu_weather
-            
         # Exporting raw weather data for color code processing
         # raw_weather_dummy_data = { 'D-ATIS': datis_raw, 'METAR': metar_raw, 'TAF': taf_raw} 
         # with open(f'raw_weather_dummy_data{airport_id}.pkl', 'wb') as f:
@@ -244,23 +262,26 @@ class Weather_parse:
 
         # This was the original way of returning the uppercase keys. React did not like it so returning lowercase.
         # return dict({ 'D-ATIS': highlighted_datis,
-        #               'D-ATIS_zt': zulu_extracts(datis_raw,datis=True),
+        #               'D-ATIS_zt': zulu_recency(datis_raw,datis=True),
                       
         #               'METAR': highlighted_metar, 
-        #               'METAR_zt': zulu_extracts(metar_raw),
+        #               'METAR_zt': zulu_recency(metar_raw),
 
         #               'TAF': highlighted_taf,
-        #               'TAF_zt': zulu_extracts(taf_raw,taf=True),
+        #               'TAF_zt': zulu_recency(taf_raw,taf=True),
         #               })
 
         return dict({ 'datis': highlighted_datis,
-                      'datis_zt': zulu_extracts(datis_raw,datis=True),
+                      'datis_zt': self.zulu_recency(datis_raw,datis=True),
+                      'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis'),
                       
                       'metar': highlighted_metar, 
-                      'metar_zt': zulu_extracts(metar_raw),
+                      'metar_zt': self.zulu_recency(metar_raw),
+                      'metar_ts': self.zulu_extraction(metar_raw,weather_type='metar'),
 
                       'taf': highlighted_taf,
-                      'taf_zt': zulu_extracts(taf_raw,taf=True),
+                      'taf_zt': self.zulu_recency(taf_raw,taf=True),
+                      'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf'),
                       })
 
 
