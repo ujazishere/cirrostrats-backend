@@ -50,6 +50,7 @@ class Mock_data:
             'arrivalAlternate': 'KDEN',
             'estimatedDepartureTime': '2025-06-05T18:00:00Z',
             "route": "KDEN.SUMMR2.STOKD..SERFR.SERFR4.KDEN/1646",
+            "faa_skyvector": "https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR",
             "assignedAltitude": "28000.0",
             "requestedAltitude": "37000.0",
             "currentBeacon": "7737",
@@ -91,7 +92,7 @@ class Mock_data:
                 'fa_route': 'QUAK8 SBV CREWE QUART PHLBO4',
                 'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
             }
-        
+
         self.weather_raw = {
             'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'datis_ts': "0756Z",

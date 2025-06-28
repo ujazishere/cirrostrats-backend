@@ -334,7 +334,22 @@ async def aws_jms(flightID, mock=False):
                     
     except Exception as e:
         print(e)
-    
+
+    route = returns.get('route')
+    print('returns', returns)
+    if returns.get('route'):
+        print('route found', route)
+        origin = returns.get('departure')
+        destination = returns.get('arrival')
+        split_route = route.split('.')
+        split_route = split_route[1:-1]
+        rh=[]
+        if len(split_route)>1:
+            for i in split_route:
+                rh.append(f"%20{split_route[split_route.index(i)]}")
+            rh = ''.join(rh[1:])
+            sv = f"https://skyvector.com/?fpl=%20{origin}{rh}%20{destination}"
+            returns['faa_skyvector'] = sv
     return returns
 
 
