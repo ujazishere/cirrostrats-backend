@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from typing import Dict, Optional, Union
+from routes.root.EDCT_Lookup import EDCT_LookUp
 from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
@@ -32,6 +33,9 @@ app = FastAPI()
 
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 c_sti_docs = qc.initialize_c_sti_collections()      # Caching sti collecion docs;
+if not config("env") == "dev":          # If dev skip the selenium
+    el = EDCT_LookUp()
+ 
 
 """ Define the origins that are allowed to access the backend --Seems like none of the orgins defined are working. 
 TODO CORS: Setup a lightwight ngrok service to host the backend and frontend and show proof of concept
@@ -415,6 +419,12 @@ async def flight_aware_w_auth(flight_number, mock=False):
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
+
+
+@router.get("/EDCTLookup/{flightID}")
+async def get_edct_info(flightID: str, origin: str, destination: str):  # Default page and page size
+    # WIP.
+    return el.extract_edct(flightID=flightID, origin=origin, destination=destination)
 
 
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.

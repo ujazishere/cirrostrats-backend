@@ -26,7 +26,10 @@ class Gate_Scrape(Root_class):
         # This function returns a dict with value of list that contains 3 items. Refer to the `return` item
         airline_code = flt_num[:2]      # first 2 characters of airline code eg. UA, DL
         flight_number_without_airline_code = flt_num[2:]
-        
+
+        # TODO: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
+            # Scheduled ones are usually very much planned. Repo and non-scheduled have been accounted for.
+            # Highlight late ones in red
         eastern = pytz.timezone('US/eastern')
         now = datetime.now(eastern)
         raw_date = now.strftime('%Y%m%d')       # formatted as YYYYMMDD
@@ -53,7 +56,7 @@ class Gate_Scrape(Root_class):
 
                 # TODO VHP: return as list of dictionaries to make the format consistent with gate_checker.py's ewr_UA_gate func's initial parses
                 return {
-                    'flt_num': flt_num,
+                    'flight_number': flt_num,
                     'gate': gate,
                     'scheduled': scheduled,
                     'actual': actual,
@@ -130,6 +133,3 @@ class Gate_Scrape(Root_class):
         gmo = Gates_mdb_ops()
         gmo.mdb_updates(fetch_returns)
         # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
-
-
-# for use in Jupyter

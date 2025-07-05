@@ -22,6 +22,7 @@ async def test_aws_jms():
     print(results)
             # pass
 
+
 class Mock_data:
     def __init__(self):
         pass
@@ -93,6 +94,21 @@ class Mock_data:
                 'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
             }
 
+        self.EDCT_data = [
+            {
+                'filedDepartureTime': '07/02/2025 21:41',
+                'edct': '07/03/2025 00:40',
+                'controlElement': 'EWR',
+                'flightCancelled': 'No'
+                },
+            {
+                'filedDepartureTime': '07/03/2025 21:41',
+                'edct': '07/04/2025 03:15',
+                'controlElement': 'EWR',
+                'flightCancelled': 'No'
+                }
+        ]
+
         self.weather_raw = {
             'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'datis_ts': "0756Z",
@@ -146,6 +162,7 @@ class Mock_data:
             'flightData':self.primary_flight_data_collective,
             'weather': self.weather_collective,
             'NAS': self.NAS_collective,
+            'EDCT': self.EDCT_data,
         }
         return self.collective
 

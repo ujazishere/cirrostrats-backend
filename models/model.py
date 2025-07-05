@@ -3,7 +3,7 @@ from typing import Union
 from pydantic import BaseModel
 
 class FlightData(BaseModel):
-    flight_number: str
+    flightID: str
     origin: str
     destination: str
     registration: str

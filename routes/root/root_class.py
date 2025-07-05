@@ -17,7 +17,7 @@ class Root_class():
 
 
     def send_email(self, body_to_send):
-        if config('env') == 'development':
+        if config('env') == 'dev':
             return
         else:
             env_type = config('env')
