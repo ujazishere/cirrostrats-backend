@@ -1,5 +1,18 @@
-Logger
-Kafka
+UJ
+    fuzzfind on airports
+    Load balancer
+    optimize faster more relevant lookups - alive and morphingdb -- popularity hits
+    searchtrack - key stroke Tracking
+    separate indexes for suggestions cache bucket - N number collection vs majors collection vs regionals? -- Already some progress on JMS
+    save recent search data-complete flightdata w timestamp for caching.
+    cache gjs flight data to the least maybe? save it onto another collection? - task schedule to webscrape?
+
+
+Extended POA:
+    test driven developement - mock tests and integration tests - TAF update errors - weather data validation tests - data should make sense
+    ian recommends:
+        Logger -- test driven developement 
+        Kafka
 
 
 

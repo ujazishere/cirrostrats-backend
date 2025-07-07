@@ -94,16 +94,22 @@ class Mock_data:
                 'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
             }
 
+        import datetime as dt
+        utc_now = dt.datetime.now(dt.UTC)
+        current_time = utc_now.strftime("%m/%d/%Y %H:%M")
+        edct = utc_now + timedelta(minutes=150)
+        edct = edct.strftime("%m/%d/%Y %H:%M")
+        
         self.EDCT_data = [
             {
-                'filedDepartureTime': '07/02/2025 21:41',
-                'edct': '07/03/2025 00:40',
+                'filedDepartureTime': current_time,
+                'edct': edct,
                 'controlElement': 'EWR',
                 'flightCancelled': 'No'
                 },
             {
-                'filedDepartureTime': '07/03/2025 21:41',
-                'edct': '07/04/2025 03:15',
+                'filedDepartureTime': current_time,
+                'edct': edct,
                 'controlElement': 'EWR',
                 'flightCancelled': 'No'
                 }
