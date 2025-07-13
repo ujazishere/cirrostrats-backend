@@ -31,9 +31,14 @@ from .root.search.search_interface import SearchInterface
 
 app = FastAPI()
 
+""" 
+Initializers: These run right as the server starts - scti loads 500 popular suggestions and edct initializes browser.
+"""
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 c_sti_docs = qc.initialize_c_sti_collections()      # Caching sti collecion docs;
-if not config("env") == "dev":          # If dev skip the selenium
+# Scrape EDCT data through selenium
+edct_scrape = True if config('edct_scrape')=='1' else False
+if edct_scrape:
     el = EDCT_LookUp()
  
 
@@ -96,7 +101,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
         # *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of csti.
         # At exhaustion it will search the collections based on the 'type of query.
         parsed_query = qc.parse_query(query=query)
-        print('Exhausted parsed query',parsed_query)
+        # print('Exhausted parsed query',parsed_query)
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
         val_field,val,val_type = ff.format_conversion(doc=parsed_query)
         if val_type == 'flight':
@@ -340,7 +345,6 @@ async def aws_jms(flightID, mock=False):
         print(e)
 
     route = returns.get('route')
-    print('returns', returns)
     if returns.get('route'):
         print('route found', route)
         origin = returns.get('departure')
@@ -424,7 +428,12 @@ async def flight_aware_w_auth(flight_number, mock=False):
 @router.get("/EDCTLookup/{flightID}")
 async def get_edct_info(flightID: str, origin: str, destination: str):  # Default page and page size
     # WIP.
-    return el.extract_edct(flightID=flightID, origin=origin, destination=destination)
+    if edct_scrape:
+        edct_info = el.extract_edct(flightID=flightID, origin=origin, destination=destination)
+        print(edct_info)
+        return edct_info
+    else:
+        return None
 
 
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.

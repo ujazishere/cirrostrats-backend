@@ -132,12 +132,32 @@ class Mock_data:
             self.weather = self.weather_raw
 
         self.nas_singular_mock = {
+                'Ground Stop': {
+                    'Airport': 'DEN',
+                    'Reason': 'other',
+                    'End Time': '8:15 pm EDT'
+                    },
+                'Airport Closure': {
+                    'Airport': 'DEN',
+                    'Reason': '!DEN 05/042 BOS AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC PPR 617-561-2500 2505030256-2510300359',
+                    'Start': 'May 03 at 02:56 UTC.',
+                    'Reopen': 'Oct 30 at 03:59 UTC.'
+                    },
                 'Ground Delay': {
                     'Airport': 'DEN',
                     'Reason': 'other',
                     'Average Delay': '1 hour and 40 minutes',
                     'Maximum Delay': '3 hours and 39 minutes',
-                    }}
+                    },
+                'Arrival/Departure Delay': {
+                    'Airport': 'DEN',
+                    'Reason': 'TM Initiatives:SWAP:WX',
+                    'Type': 'Departure',
+                    'Minimum': '1 hour and 46 minutes',
+                    'Maximum': '2 hours',
+                    'Trend': 'Increasing'
+                    }
+            }
 
 
     def collective(self,):
