@@ -92,8 +92,8 @@ class Root_class():
 
     # executor blueprint: In this case input1 argument of this exec funtion are a bunch of flight numbers in list form while,
         # `input1` is the list of all flight numbers that need to be fetched.
-        # `multithreaders` is the pool of task. it contails all the flight number and the function that fetches the gate all together ready to go.
-            # In this case multithreaders is a function that takes in a flight number and returns its gates.
+        # `multithreader` is the pool of task. it contails all the flight number and the function that fetches the gate all together ready to go.
+            # In this case multithreader is a function that takes in a flight number and returns its gates.
             # if there are 10 flight numbers the multithreader function will be duplicated 10 times.
         # executor.submit will submit this pool of taks at once to the multithreader function that is the second argument in exec
             # seems like this creates a task list of all functions and all those functions get sent to work at once altogether.
@@ -122,7 +122,7 @@ class Root_class():
                     result = future.result()        # result is the output of the task at that memory location 
                     completed.append(result)
                 except Exception as e:
-                    # print(f"Error scraping {flt_num}: {e}")
+                    print(f"Error scraping {flt_num}: {e}")
                     troubled.add(flt_num)
         
         # TODO: Check completed data type. If list then its a list of dicts. Its outght to be.

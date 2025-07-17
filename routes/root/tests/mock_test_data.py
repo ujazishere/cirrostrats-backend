@@ -60,11 +60,13 @@ class Mock_data:
         }
 
         self.flightStats = {
+                'flightStatsFlightID': 'UA4508',
+                'flightStatsOrigin': 'EWR',
                 "flightStatsDestination": "KIAH",
-                "flightStatsFlightID": "UA492",
-                "flightStatsOrigin": "KEWR",
-                "flightStatsScheduledArrivalTime": "08:31 CDT",
-                "flightStatsScheduledDepartureTime": "05:30 EDT",
+                'flightStatsOriginGate': 'C-101',
+                'flightStatsDestinationGate': 'D-1',
+                'flightStatsScheduledDepartureTime': '15:55 EDT',
+                'flightStatsScheduledArrivalTime': '18:09 EDT'
             }
 
         self.flightView = {

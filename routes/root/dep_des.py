@@ -5,6 +5,7 @@ from .flight_aware_data_pull import flight_aware_data_pull
 import xml.etree.ElementTree as ET
 import re
 import pickle
+from routes.root.api.flightStats import FlightStatsScraper
 
 '''
 This Script pulls the departure and destination when provided with the flight number.
@@ -22,59 +23,33 @@ class Pull_flight_info(Root_class):
             'flightViewArrivalGate': "None",
         }
 
-    def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, pre_process=None, return_bs4=False):
-        if type(flt_num_query) == list:
-            flt_num_query = flt_num_query[1]
-
-        # flt_num = query.split()[1]
-        flt_num = flt_num_query
-        if pre_process:
-            soup_fs = pre_process
-        else:       
-            # This is obsolete. will be removed. this is the old synchronous way to fetch data.
-            # This only exists as a backup in case we have to return to synchronous if async doesn't work when deploying
-
-            date = self.date_time(raw=True)     # Root_class inheritance format yyyymmdd
-            
-            # attempt to only pull departure and destination from the united from the info web.
-            flight_stats_url = f"https://www.flightstats.com/v2/flight-tracker/{airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
-            soup_fs = self.request(flight_stats_url)
-            if return_bs4:
-                return soup_fs 
-
-        # fs_juice = soup_fs.select('[class*="TicketContainer"]')     # This is the whole packet not needed now
+    def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, departure_date:str=None, return_bs4=False):
         
-        # If there is a valid active flight its time zone will show up in TimeGroupContainer
-        departure_time_zone,arrival_time_zone = [None]*2
+        fss = FlightStatsScraper()
+        fs_data = fss.scrape(airline_code=airline_code, flt_num_query=flt_num_query, return_bs4=return_bs4)
+        
+        # use this for custom datetime instead 
+        # fs_data = fss.scrape(airline_code="UA", flt_num_query="45", departure_date="20250717", return_bs4=False)
+
+        if not fs_data:     # early retur if data isnt found
+            return
+        
+        departure = fs_data.get('fsDeparture')
+        arrival = fs_data.get('fsArrival')
+
         # TODO VHP: Departure and arrival are 3 char returns theyre not ICAO and hence the weathre lookup doesn't work.
         # TODO Test: validation at source - make sure there 3 chars .isalpha mostly but 
                 #  can be isnumeric.
                 # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
-        origin_fs,destination_fs = [None]*2
-        Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
-        fs_time_zone = soup_fs.select('[class*="TimeGroupContainer"]')
-        if fs_time_zone and Ticket_Card:
-            origin_fs = Ticket_Card[0]
-            origin_fs = origin_fs.select('[class*="Airport"]')[0].text
-            destination_fs = Ticket_Card[1]
-            destination_fs = destination_fs.select('[class*="Airport"]')[0].text
-            
-            departure_time_zone = fs_time_zone[0].get_text()        #  format is HH:MM XXX timezone(eg.EST)
-            departure_time_zone = departure_time_zone[9:18]
-            # departure_estimated_or_actual = departure_time_zone[18:]
-            arrival_time_zone = fs_time_zone[1].get_text()
-            arrival_time_zone = arrival_time_zone[9:18]
-            # arrival_estimated_or_actual = arrival_time_zone[18:]
-            # print('dep_des.py fs_dep_arr_timezone_pull - SUCCESS at flightstats.com for scheduled_dep and arr local time stating what time zone it is.')
-        else:
-            print("no departure_arrival time zone found using flight_stats")
-
         # TODO Test: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
-        bulk_flight_deet = {'flightStatsFlightID': airline_code+flt_num,            # This flt_num is probably misleading since the UA attached manually. Try pulling it from the flightstats web
-                            'flightStatsOrigin':origin_fs,
-                            'flightStatsDestination':destination_fs,
-                            'flightStatsScheduledDepartureTime': departure_time_zone,
-                            'flightStatsScheduledArrivalTime': arrival_time_zone,
+        # TODO VHP: Return Estimated/ Actual to show delay times for the flights.
+        bulk_flight_deet = {'flightStatsFlightID': airline_code+flt_num_query,
+                            'flightStatsOrigin':departure.get('Code'),
+                            'flightStatsDestination':arrival.get('Code'),
+                            'flightStatsOriginGate': departure.get('TerminalGate'),
+                            'flightStatsDestinationGate': arrival.get('TerminalGate'),
+                            'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),
+                            'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),
                                             }
         return bulk_flight_deet
 

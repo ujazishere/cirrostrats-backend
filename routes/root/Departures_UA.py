@@ -7,7 +7,7 @@ class Req:
     def __init__(self) -> None:
         pass
 
-    def request(self, url):
+    def bs4_returns(self, url):
         response = requests.get(url)
         return bs4(response.content, 'html.parser')
 
@@ -20,7 +20,7 @@ def departures_EWR_UA():
     # evening = ''
     EWR_deps_url = f'https://www.airport-ewr.com/newark-departures{evening}'
     
-    soup = Req.request(EWR_deps_url)
+    soup = Req.bs4_returns(EWR_deps_url)
     raw_bs4_all_EWR_deps = soup.find_all('div', class_="flight-col flight-col__flight")[1:]
     # TODO LP: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
         # Scheduled ones are usually very much planned. Repo and non-scheduled have been accounted for.
