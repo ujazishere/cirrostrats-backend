@@ -98,7 +98,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
 
     # print('sti_items_match_w_query', len(sti_items_match_w_query))
     if not sti_items_match_w_query and len(query)>=3:
-        # *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of csti.
+        # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of csti.
         # At exhaustion it will search the collections based on the 'type of query.
         parsed_query = qc.parse_query(query=query)
         # print('Exhausted parsed query',parsed_query)

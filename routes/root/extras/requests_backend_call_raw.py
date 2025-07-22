@@ -1,4 +1,4 @@
-from gate_scrape import Gate_Scrape
+from gate_processor import Gate_processor
 from dj.dj_app.root.weather_parse import Weather_parse
 from dj.dj_app.root.dep_des import Pull_flight_info
 
@@ -14,5 +14,5 @@ d = flt_info.nas_final_packet('KLAS','KEWR')
 
 
 # scrapes gates and saves the pickle files as of now.
-gate_scrape = Gate_Scrape()
+gate_scrape = Gate_processor()
 gate_scrape.activator()

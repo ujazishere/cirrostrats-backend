@@ -2,7 +2,7 @@ import asyncio
 from celery import Celery
 from celery.schedules import crontab
 from routes.root.weather_fetch import Weather_fetch  # Used for periodic scheduling
-from gate_processor import Gate_processor
+from routes.root.gate_processor import Gate_processor
 import datetime as dt
 
 '''     ***CAUTION***
@@ -51,13 +51,13 @@ async def run_TAF_fetch():
 
 @celery_app.task
 def GateFetch():
-    gs = Gate_processor()
-    gs.fetch_and_store()
+    gp = Gate_processor()
+    gp.fetch_and_store()
 
 @celery_app.task
 def GateClear():
-    gs = Gate_processor()
-    gs.mdb_clear_historical(hours=3)
+    gp = Gate_processor()
+    gp.mdb_clear_historical(hours=48)
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 

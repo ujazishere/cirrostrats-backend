@@ -8,6 +8,7 @@ logger = logging.getLogger()
 
 ScrapeStatus = Literal['On time', 'Scheduled', 'Cancelled']
 
+# TODO Cleanup: Take this extractor out of the api. Api is only for scrapes and api fetches.
 class FlightStatsExtractor:
     def __init__(self):
         """ Given Soup through `ticket_card` this class extracts airport Code, city, airport name,

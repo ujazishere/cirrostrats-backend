@@ -59,6 +59,25 @@ class Mock_data:
             "version_created_at": "2025-05-10T15:52:10.527000"
         }
 
+        # This will be the new version of returns for flightstats.
+        self.flightStatsv2 = {
+            'fsDeparture': {'Code': 'HAM',
+                'City': 'Hamburg, DE',
+                'AirportName': 'Hamburg Airport',
+                'ScheduledDate': '20-Jul-2025',
+                'ScheduledTime': '13:35 CEST',
+                'ActualTime': '13:38 CEST',
+                'TerminalGate': '2'},
+            'fsArrival': {'Code': 'DUB',
+                'City': 'Dublin, IE',
+                'AirportName': 'Dublin Airport',
+                'ScheduledDate': '20-Jul-2025',
+                'ScheduledTime': '14:35 IST',
+                'ActualTime': '14:39 IST',
+                'TerminalGate': 'T2'},
+            'fsDelayStatus': 'On time'
+                }
+        
         self.flightStats = {
                 'flightStatsFlightID': 'UA4508',
                 'flightStatsOrigin': 'EWR',
@@ -69,6 +88,7 @@ class Mock_data:
                 'flightStatsScheduledArrivalTime': '18:09 EDT'
             }
 
+        # Depricated
         self.flightView = {
                 "flightViewArrivalGate": "\nD - D1A\n",
                 "flightViewDeparture": "EWR",
@@ -234,6 +254,20 @@ class Mock_data:
 
         ]
         
+        self.gate_collection = [
+            {
+                'Scheduled': 'July 21, 2025 18:00',
+                'Departed': '18:09',        # mind Departed vs Estimated
+                'Gate': 'C83',
+                'FlightID': 'UA1707'},
+            {
+                'Scheduled': 'July 21, 2025 18:10',
+                'Estimated': '18:03',
+                'Gate': 'C115',
+                'FlightID': 'UA1733'},
+        ]
+
+
 class MockTestSubmits:
     def __init__(self):
         self.cts = db_UJ['test_st']
