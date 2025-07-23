@@ -4,6 +4,7 @@ from routes.root.search.query_classifier import QueryClassifier
 
 class SearchInterface(QueryClassifier):
     def __init__(self):
+        """ An interface for collection search suggestions and query submission and processing between frontend and backend."""
         super().__init__()
         pass
 
@@ -30,7 +31,7 @@ class SearchInterface(QueryClassifier):
             /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
             contain similar format with display field for display and search within fuzzfind"""
         parsed_query = self.parse_query(query=search)
-        val_field, val, val_type = self.format_conversion(doc=parsed_query)
+        val_field, val, val_type = self.format_conversion_for_frontend(doc=parsed_query)
 
         formatted_data = { 
             f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
@@ -42,7 +43,7 @@ class SearchInterface(QueryClassifier):
         return formatted_data
 
 
-    def format_conversion(self,doc):
+    def format_conversion_for_frontend(self,doc):
         """
         format inconsistencies from backend/mongoDB collection data to frontend are handled here.
         for example: csti `airport_st` is convertd to airport, `fid_st` to flight, etc.
@@ -61,7 +62,7 @@ class SearchInterface(QueryClassifier):
 
         # logic to separaate out flightID from airport and terminal/gates.
         if terminanl_gate_st:
-            val_field,val,val_type = 'Terminal/Gate', terminanl_gate_st, 'Terminal/Gate'
+            val_field,val,val_type = 'Terminal/Gate', "EWR - " + terminanl_gate_st + " Departures", 'Terminal/Gate'
         elif airport_st:
             val_field,val,val_type = 'airport', airport_st, 'airport'
         elif fid_st:
@@ -96,9 +97,11 @@ class SearchInterface(QueryClassifier):
         return val_field, val, val_type
 
 
-    def search_suggestion_format(self, c_docs, limit=1000,):         # cta- collection test airports; ctf- collection test flights
-        """ Suggestions formatter for delivery to the frontend. It first goes to the fuzzfind then to frontend which is processed again
-            There's quite a bit of unnecessary formatting and processing during this three way process --> TODO: reduce this clutter to improve efficiency.
+    def search_suggestion_frontned_format(self, c_docs, limit=1000,):         # cta- collection test airports; ctf- collection test flights
+        """ Suggestions formatter for delivery to the frontend. Takes in csti docs as is,
+            It first goes to the fuzzfind then to frontend which is processed again.
+            There's quite a bit of unnecessary formatting and processing during this three way process
+            TODO: reduce this clutter to improve efficiency.
         """
 
         # create unified search index
@@ -106,13 +109,12 @@ class SearchInterface(QueryClassifier):
 
         for doc in c_docs:
 
-            # Cconverting the sti type to to the type thats processed in the frontend.
-            val_field,val,val_type = self.format_conversion(doc=doc)
+            # Converting the search index collection format to a suitable format that can be processed in the frontend.
+            val_field,val,val_type = self.format_conversion_for_frontend(doc=doc)
 
             # passed_data is the format that is sent to the frontend after being passed to the fuzzfind for search_text matching.
             passed_data = { 
                 'stId': str(doc['_id']),
-                'id': str(doc['r_id']),     # ***********only available in sti.
                 f"{val_field}":val,         # attempt to make a key field/property for an object in frontend.
 
                 'display': val,             # This is manipulated later hence the duplicate. TODO: investigate.
@@ -123,6 +125,15 @@ class SearchInterface(QueryClassifier):
                 }
 
             search_index.append(passed_data)
+
+            # *** r_id meaning reference id - only available in search index collection.
+            if doc.get('r_id'):
+                passed_data.update({'id': str(doc['r_id'])})
+
+            # terminal/gate doesn't use r_id, it uses regex for finding associated data.
+            gate = doc.get('Terminal/Gate')
+            if doc.get('Terminal/Gate'):
+                passed_data.update({'gate': gate})
 
         # sort by popularity (count), it obv comes in sorted. this is just an extra precautionary step.
         search_index.sort(key=lambda x: x['ph'], reverse=True)

@@ -12,7 +12,7 @@ from config.database import collection_weather
 from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""
-cts = db_UJ['test_st']   # create/get a collection
+search_index_collection = db_UJ['search_index']
 # cta = db['test_airports']   # create/get a collection
 # cta = collection_airports
 # ctf = collection_flights
@@ -44,19 +44,20 @@ class QueryClassifier:
         self.flight_pattern = re.compile(rf"^({self.icao_codes_separated})\s?(\d{{1,5}}[A-Z]?$)")
 
 
-    def initialize_c_sti_collections(self):
+    def initialize_search_index_collection(self):
         """ Cache the collections for searchbar dropdown"""
+        # TODO Get rid of test suggestions. No longer needed - not using it.
         test_suggestions = True if config('test_suggestions')=='1' else False
         if test_suggestions:
             with open('sti_test.pkl', 'rb') as f: 
-                self.c_sti_docs = pickle.load(f)
+                self.sic_docs = pickle.load(f)
         else:
-            # search index finds - sorted ph returns from the sti.
+            # search index finds - sorted ph returns from the search index collection.
             count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
             # return_crit = {'ph':0}       # return only...
-            self.c_sti_docs = list(cts.find(count_crit).sort('ph',-1))     # Reverse sort
-            return self.c_sti_docs
-        # print('initialized.', self.c_sti_docs[:5])
+            self.sic_docs = list(search_index_collection.find(count_crit).sort('ph',-1))     # Reverse sort
+            return self.sic_docs
+        # print('initialized.', self.sic_docs[:5])
 
 
     def load_icao_codes(self, file_path: str) -> None:
@@ -276,11 +277,11 @@ class QC_base_popularity_hits(QueryClassifier):
             ph = self.compress_sigmoid(2)
             fids_to_upload.append({'r_id':doc['_id'],'fid_st':doc['flightID'],'ph':ph})
         
-        # len(fids_to_upload)+cts.count_documents({})
-        # cts.count_documents({})
+        # len(fids_to_upload)+search_index_collection.count_documents({})
+        # search_index_collection.count_documents({})
         # fids_to_upload
         
-        # updates the new united docs - 3000+ of them to the cts collection. !!! Caution.. It will also update the united flights that are already in there - ones like UAL414
+        # updates the new united docs - 3000+ of them to the search_index_collection collection. !!! Caution.. It will also update the united flights that are already in there - ones like UAL414
 
         # update_operations = []
         # for doc in fids_to_upload:
@@ -294,7 +295,7 @@ class QC_base_popularity_hits(QueryClassifier):
         # return update_operations
         return fids_to_upload
         # ***CAUTION!!!!
-        # result = cts.bulk_write(update_operations)
+        # result = search_index_collection.bulk_write(update_operations)
         
     def nn_popular_flights_and_airports_sorted(self,collection_flights):
         # returns popular flights and airport returns
@@ -345,8 +346,6 @@ class QC_base_popularity_hits(QueryClassifier):
         # difference btwn requests and returns. difference are the unsuccessfull ones.
         print('difference btwn requests and colelction returns',len(airports_p_hits),len(cacodes))
         
-
-
         """ merge flight docs and aiport docs to upload then insert to a new csti collection """
         all_docs_to_upload = fids_to_upload + airports_to_upload
         all_docs_to_upload = sorted(all_docs_to_upload, key=lambda doc:doc.get('ph',0),reverse=True)
@@ -356,11 +355,13 @@ class QC_base_popularity_hits(QueryClassifier):
     def gate_popularity(self,collection_gates):
         nn= self.nn
         
-        gates = [i[1:] for i in nn['Others'].keys() if i.startswith('C') and i[1:]!= '']        # include 'C' in match exclude it in returns and discardempty ones.
+        # include 'C' in match exclude it in returns and discardempty ones.
+        gates = [i[1:] for i in nn['Others'].keys() if i.startswith('C') and i[1:]!= '']
         # match from the list provided.
         list_of_items_to_be_matched = gates  # for exmple this  could a list of flight numbers you want to match within the collection.
         reg_pat = "|".join(list_of_items_to_be_matched)
-        cgid = list(collection_gates.find({'Gate': {'$regex': reg_pat}},{'Gate':1,'_id':1} ))
+        return_crit = {'Gate':1,'_id':1}
+        cgid = list(collection_gates.find({'Gate': {'$regex': reg_pat}}, return_crit ))
         # cgid
         # list(collection_gates.find({}, {'Gate':1}))
         gate_docs_to_upload = []
@@ -378,12 +379,12 @@ class QC_base_popularity_hits(QueryClassifier):
     
         # list(collection_gates.find({}, {'Gate':1}))
     def col_metrics(self):
-        # cts.insert_many(all_docs_to_upload)
+        # search_index_collection.insert_many(all_docs_to_upload)
         
-        # cts.find_one({})
-        # cts.delete_many({})
-        cts.count_documents({})
-        # list(cts.find({},{}))
+        # search_index_collection.find_one({})
+        # search_index_collection.delete_many({})
+        search_index_collection.count_documents({})
+        # list(search_index_collection.find({},{}))
         
         
         

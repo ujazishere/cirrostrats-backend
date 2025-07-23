@@ -35,7 +35,7 @@ app = FastAPI()
 Initializers: These run right as the server starts - scti loads 500 popular suggestions and edct initializes browser.
 """
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
-c_sti_docs = qc.initialize_c_sti_collections()      # Caching sti collecion docs;
+sic_docs = qc.initialize_search_index_collection()      # Caching search index collecion docs;
 # Scrape EDCT data through selenium
 edct_scrape = True if config('edct_scrape')=='1' else False
 if edct_scrape:
@@ -93,17 +93,15 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
 
     ff = SearchInterface()
     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
-    formatted_suggestions = ff.search_suggestion_format(c_docs=c_sti_docs)
-    sti_items_match_w_query = fuzz_find(query=query, data=formatted_suggestions, qc=qc, limit=limit)
-
-    # print('sti_items_match_w_query', len(sti_items_match_w_query))
-    if not sti_items_match_w_query and len(query)>=3:
-        # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of csti.
-        # At exhaustion it will search the collections based on the 'type of query.
+    search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
+    suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
+    if not suggestions_match and len(query)>=3:        # Exhaustion criteria
+        # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
+        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         parsed_query = qc.parse_query(query=query)
         # print('Exhausted parsed query',parsed_query)
-        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to csti.
-        val_field,val,val_type = ff.format_conversion(doc=parsed_query)
+        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
+        val_field,val,val_type = ff.format_conversion_for_frontend(doc=parsed_query)
         if val_type == 'flight':
             # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
             # N-numbers returns errors on submits.
@@ -119,7 +117,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
                 }
                 search_index.append(x)
             return search_index
-                
+
         elif val_type == 'airport':
             # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
             # Plus its ugly -- abstract this away since flight ID is using the same logic.
@@ -139,7 +137,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
             return search_index
 
     else:
-        return sti_items_match_w_query
+        return suggestions_match
 
 
 
@@ -492,15 +490,19 @@ async def nas(
     return nas_returns
 
 
-@router.get("/gates/{gate_id}")
-async def gate_returns(gate_id):
+@router.get("/gates/{gate}")
+async def gate_returns(gate):
 
+    gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
+    
     return_crit = {'_id':0}
-    find_crit = {"_id": ObjectId(gate_id)}
-    res = collection_gates.find_one(find_crit, return_crit)
-    # code = res.get('code') if res else None
-    if res:
-        return res
+    find_crit = {'Gate':{'$regex':gate}}
+    res = gate_rows_collection.find(find_crit, return_crit)
+
+    ewr_gates = list(res)
+
+    if ewr_gates:
+        return ewr_gates
 
 
 @router.get("/testDataReturns")
