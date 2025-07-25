@@ -24,6 +24,7 @@
    **`.env` contents:**
    **Create an `.env` file inside of the `cirrostrats-backend` folder :**
    **paste the following into this `.env` file, replacing the `connection_string` with your MongoDB connection string.**
+   **Check the Mongodb connection string section for guide to creating connection string**
       
       ```bash
       # Use to send email. dev wont send emails
@@ -73,4 +74,6 @@
 
    f. **Access the Backend Locally:** The project will be locally running at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-
+### Mongodb connection string:
+   1. Go on to atlas web account page --> database access - create one and note the username and password
+   2. Go to Clusters --> Connect --> Connecting with MongoDB for VS Code --> copy string insert username and password

@@ -89,17 +89,17 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(minute=21, hour='5,11,17,23'),  # Run at 05:21, 11:21, 17:21, and 23:21 UTC
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
-    # TODO: Schedule this everyday at 1am/2am Eastern - Mind the zulu time.
-    'gateFetch-func_run_frequently': {
+    'gateFetch-typical-every-2-hours-daytime': {
         'task': 'routes.celery_app.GateFetch',
         # 'schedule': crontab(minute=35, hour='3'),     # test
-        'schedule': crontab(minute=59, hour='5'),  # Run at 05:59 UTC. 
+        'schedule': crontab(minute=0, hour='0,8-23/2'),  # Run at 00z and, 08-23z every 2 hours.
     },
-    'gateClear-func_run_frequently': {
-        'task': 'routes.celery_app.GateClear',
-        # 'schedule': crontab(minute=45, hour='3'),     # test
-        'schedule': crontab(minute=30, hour='6'),  # Run at 06:30 UTC. 
-    },
+    # Not using the gate clear beacause the collection will be cleared prior to update and is implemented in Gate_processor.mdb_updates.
+    # 'gateClear-func_run_frequently': {
+    #     'task': 'routes.celery_app.GateClear',
+    #     # 'schedule': crontab(minute=45, hour='3'),     # test
+    #     'schedule': crontab(minute=0, hour='0,8-23/2'),  # Run at every 2 hours from 06:00 to 21:00 UTC
+    # },
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.
     # 'func_run_frequently': {
     #     'task': 'routes.celery_app.DatisFetch',

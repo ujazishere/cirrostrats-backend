@@ -15,9 +15,11 @@ class Gate_processor(Root_class):
 
 
     def mdb_updates(self, incoming_docs: list):
+        """ Clears all existing gates and updates with new ones. """
+        self.gates_collection.delete_many({})
         self.gates_collection.insert_many(incoming_docs)
 
-
+    
     def mdb_gate_fetch(self, gate_request):
         # TODO: Update actual more frequently and scheduled less frequently to get delayed flights info. maybe couple times a day for scheduled.
             # Scheduled ones are usually very much planned. Repo and non-scheduled have been accounted for.
