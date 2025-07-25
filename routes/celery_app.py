@@ -52,7 +52,7 @@ async def run_TAF_fetch():
 @celery_app.task
 def GateFetch():
     gp = Gate_processor()
-    gp.fetch_and_store()
+    gp.scrape_and_store()
 
 @celery_app.task
 def GateClear():

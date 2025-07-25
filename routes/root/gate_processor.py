@@ -7,6 +7,10 @@ from datetime import datetime
 import pytz
 import re
 
+""" The idea is to keep the processing separate from the scrapes so scrapes can be reused elsewhere if needed.
+    This will keep all api and scrapes separate from the processings.
+"""
+
 
 class Gate_processor(Root_class):
     def __init__(self) -> None:
@@ -47,7 +51,7 @@ class Gate_processor(Root_class):
         print(f"Deleted {result.deleted_count} documents")
 
 
-    def fetch_and_store(self,):
+    def scrape_and_store(self,):
         
         # Extracting all United flight numbers in list form to dump into the exec func
         nds = Newark_departures_scrape()
