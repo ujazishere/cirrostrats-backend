@@ -48,16 +48,19 @@ async def run_TAF_fetch():
     Wf = Weather_fetch()
     await Wf.fetch_and_store_by_type(weather_type='taf')
 
-
+# Gate fetchers
 @celery_app.task
 def GateFetch():
     gp = Gate_processor()
     gp.scrape_and_store()
-
+@celery_app.task
+def GateRecurrentUpdater():
+    gp = Gate_processor()
+    gp.recurrent_updater()
 @celery_app.task
 def GateClear():
     gp = Gate_processor()
-    gp.mdb_clear_historical(hours=48)
+    gp.mdb_clear_historical(hours=30)
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
@@ -74,14 +77,14 @@ celery_app.conf.beat_schedule = {
                 # -- This maybe too complicated and may require constant mx--> Maybe decrease variables and loose endpoints to reduce complexity.
                 # What is important? weather should exist and should be accurate. If its not send notification at a threshold and continue fetch.
                 #  Only attend to it when critical failure occurs.
-    'run-metarfetch-every-53-mins-past-hour': {
-        'task': 'routes.celery_app.MetarFetch',      # The task function that needs to be scheduled
-        'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
-        # 'args': (16, 16)          # Arguments to pass to the task function
-    },
     'run-datisfetch-every-53-mins-past-hour': {
         'task': 'routes.celery_app.DatisFetch',      # The task function that needs to be scheduled
         'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
+        # 'args': (16, 16)          # Arguments to pass to the task function
+    },
+    'run-metarfetch-every-53-mins-past-hour': {
+        'task': 'routes.celery_app.MetarFetch',      # The task function that needs to be scheduled
+        'schedule': crontab(minute=54),  # frequency of the task. In this case every 53 mins past the hour.
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
     'run-TAFfetch-every-4-hours': {
@@ -89,17 +92,24 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(minute=21, hour='5,11,17,23'),  # Run at 05:21, 11:21, 17:21, and 23:21 UTC
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
+
+    # Gate Fetches - 1. Typical, 2. Recurrent, 3. Clear Historical
     'gateFetch-typical-every-2-hours-daytime': {
         'task': 'routes.celery_app.GateFetch',
         # 'schedule': crontab(minute=35, hour='3'),     # test
         'schedule': crontab(minute=0, hour='0,8-23/2'),  # Run at 00z and, 08-23z every 2 hours.
     },
-    # Not using the gate clear beacause the collection will be cleared prior to update and is implemented in Gate_processor.mdb_updates.
-    # 'gateClear-func_run_frequently': {
-    #     'task': 'routes.celery_app.GateClear',
-    #     # 'schedule': crontab(minute=45, hour='3'),     # test
-    #     'schedule': crontab(minute=0, hour='0,8-23/2'),  # Run at every 2 hours from 06:00 to 21:00 UTC
-    # },
+    'gateRecurrentUpdater-every-4mins-daytime': {
+        'task': 'routes.celery_app.GateRecurrentUpdater',
+        # 'schedule': crontab(minute=35, hour='3'),     # test
+        'schedule': crontab(minute='2-58/4', hour='0,1,8-23'),  # Run every 4 minutes 2 past to 58 past and between 800-2300z
+    },
+    'gateClear-eveyr-5-hours-daytime': {
+        'task': 'routes.celery_app.GateClear',
+        # 'schedule': crontab(minute=45, hour='3'),     # test
+        'schedule': crontab(minute=5, hour='0,8-23/5'),  # Run 10 mins past the hour every 5 hours from 08:00 to 21:00 UTC
+    },
+
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.
     # 'func_run_frequently': {
     #     'task': 'routes.celery_app.DatisFetch',

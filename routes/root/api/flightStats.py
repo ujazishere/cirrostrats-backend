@@ -165,12 +165,11 @@ class FlightStatsScraper:
         self.extractor = FlightStatsExtractor()
 
 
-    def scrape(self,airline_code="UA", flt_num_query=None, departure_date:str=None, return_bs4=False):
+    def scrape(self,airline_code="UA", flt_num=None, departure_date:str=None, return_bs4=False):
         """ Returns clean scraped data or bs4 data if return_bs4 is True. Date format is YYYYMMDD.
         flt_num_query is numberic only."""
         rc=Root_class()
 
-        flt_num = flt_num_query
         date = departure_date if departure_date else rc.date_time(raw=True)     # Root_class inheritance format yyyymmdd
         base_url = "https://www.flightstats.com/v2/flight-tracker"
         flight_stats_url = f"{base_url}/{airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"

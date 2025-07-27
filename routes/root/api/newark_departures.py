@@ -10,18 +10,29 @@ logger = logging.getLogger()
 
 class Newark_departures_scrape(Root_class):
 
-    def soup_scrape(self,) -> list:
+    def soup_scrape(self,UA=True) -> list:
         """ Get All departures soups in list. 4 soups in list before the day is split in 4 parts. """
         day_times = {'very_early_morn': '?tp=0',
-                    'morning': '?tp6',
+                    'morning': '?tp=6',
                     'noon': '?tp=12',
                     'evening': '?tp=18',
                         }                                
 
         soups = []
 
+        # *** ALTERNATIVES ***
+        # If the airport-ewr url fails change to following flight.info url. find url in codebase for use case:
+        # the flight.info url was tried for extracts and it worked. Found on bing search last added at the bottom of this file.
+        # url = f"https://www.flight.info/ORD/departures/2025-07-26/{hour}.00?s=UA"
+
+        # Chicago ORD airport-ohare url example
+        # https://www.airport-ohare.com/departures.php?tp=6
+        if UA:
+            base_url = "https://www.airport-ewr.com/newark-departures-airline-united-airlines"
+        else:
+            base_url = "https://www.airport-ewr.com/newark-departures"
         for time_of_the_day, time_associated_code in day_times.items():
-            EWR_deps_url = f'https://www.airport-ewr.com/newark-departures{time_associated_code}'
+            EWR_deps_url = base_url + time_associated_code
 
             soup = self.request(EWR_deps_url)
             soups.append(soup)
@@ -29,8 +40,7 @@ class Newark_departures_scrape(Root_class):
         return soups
 
 
-    def extract_flight_id_and_link(self,) -> List[Tuple[str, str]]:
-        # TODO: Need to put this in celery.
+    def extract_flight_id_and_link(self,soups=None) -> List[Tuple[str, str]]:
         """Extract flight numbers and links from BeautifulSoup data with redundancy handling.
         
         Args:
@@ -40,8 +50,9 @@ class Newark_departures_scrape(Root_class):
             List of tuples containing (flight_number, link)
         """
         EWR_departures_and_links = []
-        
-        soups = self.soup_scrape()
+        flight_numbers = set()
+        if not soups:
+            soups = self.soup_scrape()
         for s in soups:
             flight_id_link = s.find_all('div', class_="flight-row")
             try:
@@ -51,6 +62,9 @@ class Newark_departures_scrape(Root_class):
                 break
 
             for element in raw_bs4_all_EWR_deps:
+                # declare.
+                flight_number = scheduled_departure_time = link = None
+
                 # Skip if element is just a newline
                 if element == '\n':
                     continue
@@ -62,20 +76,35 @@ class Newark_departures_scrape(Root_class):
                 # Find all flight columns - use find() instead of find_all()[0] for safety
                 dep = element.find('div', class_="flight-col flight-col__flight")
                 if not dep:
+                    logger.warning("Flight dep element not found in HTML structure", element)
                     continue
-                    
-                # Find the anchor tag with multiple safety checks
+
                 s_tag = dep.find('a')
+                flight_number = dep.get_text(strip=True)
+                if flight_number in flight_numbers:
+                    continue
+                flight_numbers.add(flight_number)
                 if not s_tag:
+                    # EWR_departures_and_links.append((flight_number, scheduled_departure_time, link))
+                    # This logger is trigged quite often so has been commented out
+                    # logger.warning("Flight anchor tag for link not found in HTML structure", element)
                     continue
                     
                 # Extract link and flight number with fallbacks
                 link = s_tag.get('href', '').strip()
-                flight_number = s_tag.get_text(strip=True)
-                
-                # Only add if we have both pieces of information
-                if flight_number and link:
-                    EWR_departures_and_links.append((flight_number, link))
+                    
+                # Scheduled time from the same row
+                scheduled_tag = element.find('div', class_="flight-col flight-col__hour")
+                if not scheduled_tag:
+                    # EWR_departures_and_links.append((flight_number, None))
+                    logger.warning("Scheduled time element not found in HTML structure", element)
+                    continue
+                scheduled_departure_time = scheduled_tag.get_text(strip=True)
+                scheduled_departure_time = self.time_converter(flight_number, scheduled_departure_time)
+
+                # Only add if we have all 3 information
+                if flight_number and scheduled_departure_time and link:
+                    EWR_departures_and_links.append((flight_number, scheduled_departure_time, link))
                     
         self.EWR_departures_and_links = EWR_departures_and_links
 
@@ -224,8 +253,8 @@ class Newark_departures_scrape(Root_class):
         if test==True:
             all_day_EWR_departures = all_day_EWR_departures[:30]
         
-        for flight_id,link in all_day_EWR_departures:
-            if flight_id[:2] == "UA":
+        for flight_id,scheduled_time,link in all_day_EWR_departures:
+            if flight_id[:2] == "UA" and link:      # fail-safe
                 # time.sleep(1)  # Respectful scraping delay
                 flight_rows.append(self.gate_scrape_per_flight(flight_id,link))
 
@@ -233,3 +262,30 @@ class Newark_departures_scrape(Root_class):
 
         return flight_rows
         
+
+
+
+
+
+"""
+# This is a backup to gate fetch - for ORD - have not tested for EWR.
+import requests
+from bs4 import BeautifulSoup as bs4
+deets = []
+for hour in range(0, 24):
+    url = f"https://www.flight.info/ORD/departures/2025-07-26/{hour}.00?s=UA"
+    response = requests.get(url)
+    soup = bs4(response.content, "html.parser")
+    rows = soup.find_all('div', class_='departures')
+    for i in rows:
+        each_row = []
+        for y in i.find_all('div', class_='deparr-row'):
+            extract = y.text
+            if extract:
+                each_row.append(extract)
+        deets.append(each_row)
+    
+    break
+for i in deets[1:]:
+    print(i[0],i[3])
+"""

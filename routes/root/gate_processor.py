@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta
-import pytz
-from config.database import db_UJ        # UJ mongoDB
 from .root_class import Root_class
-from.api.newark_departures import Newark_departures_scrape
-from datetime import datetime
+from .api.newark_departures import Newark_departures_scrape
+from config.database import db_UJ        # UJ mongoDB
+from datetime import datetime, timedelta
+import logging
+from pymongo import ReplaceOne
 import pytz
 import re
 
 """ The idea is to keep the processing separate from the scrapes so scrapes can be reused elsewhere if needed.
     This will keep all api and scrapes separate from the processings.
 """
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 
 class Gate_processor(Root_class):
@@ -18,10 +20,17 @@ class Gate_processor(Root_class):
         self.gates_collection = db_UJ['ewrGates']   # create/get a collection
 
 
-    def mdb_updates(self, incoming_docs: list):
-        """ Clears all existing gates and updates with new ones. """
-        self.gates_collection.delete_many({})
-        self.gates_collection.insert_many(incoming_docs)
+    def mdb_updates(self, incoming_docs: list, update_type=None):
+        """ Update collecion based on flight id - replace old with new. """
+
+        update_operations = []
+        for doc in incoming_docs:
+            update_operations.append(
+                ReplaceOne({"FlightID": doc["FlightID"]}, doc, upsert=True)
+            )
+
+        result = self.gates_collection.bulk_write(update_operations)
+        logger.info(f"Updated {result.modified_count} documents in the collection, on {update_type}") #
 
     
     def mdb_gate_fetch(self, gate_request):
@@ -37,7 +46,7 @@ class Gate_processor(Root_class):
         return flights
 
 
-    def mdb_clear_historical(self,hours=48):
+    def mdb_clear_historical(self,hours=30):
         """ Clears docs with Scheduled times prior to 48 hours before the scheduled time """
         et = pytz.timezone('US/Eastern')
         current_time = datetime.now(et)
@@ -51,6 +60,56 @@ class Gate_processor(Root_class):
         print(f"Deleted {result.deleted_count} documents")
 
 
+    def recurrent_updater(self):
+        """ flights around current eastern time are updated. """
+        
+        # Define the Eastern Time zone
+        eastern = pytz.timezone('US/Eastern')
+        
+        # Get the current time in Eastern Time zone
+        current_time = datetime.now(eastern)
+        
+        # Define the time range in this case between 1/2 hour past the current time and 2 post from the current time
+        start_time = current_time - timedelta(hours=0.5)
+        end_time = current_time + timedelta(hours=2)
+        
+        # Convert start_time and end_time to string format
+        start_time_str = start_time.strftime('%B %d, %Y %H:%M')
+        end_time_str = end_time.strftime('%B %d, %Y %H:%M')
+        
+        # Define the filter
+        filter = {
+            "Scheduled": {"$gte": start_time_str, "$lte": end_time_str},
+            # Exclude scrapes for flights that have already departed
+            "Departed": {"$exists": False}
+        }
+        
+        # Define the projection
+        projection = {
+            "_id": 0,
+            # "Scheduled": 1,
+            "FlightID": 1
+        }
+        
+        # Now execute the find and return the docs
+        docs = list(self.gates_collection.find(filter, projection))
+
+        nds = Newark_departures_scrape()
+        flight_rows = []
+        for doc in docs:
+            flight_id = doc.get('FlightID')
+            if not flight_id:
+                continue
+            link = "/newark-flight-status?departure="+flight_id
+
+            if flight_id[:2] == "UA" and link:          # Fail safe
+                # time.sleep(1)  # Respectful scraping delay
+                scrape_extract = nds.gate_scrape_per_flight(flight_id,link)
+                flight_rows.append(scrape_extract)
+
+        self.mdb_updates(incoming_docs=flight_rows, update_type='light recurrent scrape save')
+
+
     def scrape_and_store(self,):
         
         # Extracting all United flight numbers in list form to dump into the exec func
@@ -58,7 +117,7 @@ class Gate_processor(Root_class):
         # TODO: Currently fetch is in series and not concurrent.
         flight_rows = nds.gate_scrape_main()
 
-        self.mdb_updates(incoming_docs=flight_rows)
+        self.mdb_updates(incoming_docs=flight_rows,update_type='initial scrape save')
         # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED! WASTED ENOUGH TIME!
 
 

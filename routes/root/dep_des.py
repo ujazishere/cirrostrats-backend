@@ -26,7 +26,7 @@ class Pull_flight_info(Root_class):
     def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, departure_date:str=None, return_bs4=False):
         
         fss = FlightStatsScraper()
-        fs_data = fss.scrape(airline_code=airline_code, flt_num_query=flt_num_query, return_bs4=return_bs4)
+        fs_data = fss.scrape(airline_code=airline_code, flt_num=flt_num_query, return_bs4=return_bs4)
         
         # use this for custom datetime instead 
         # fs_data = fss.scrape(airline_code="UA", flt_num_query="45", departure_date="20250717", return_bs4=False)
