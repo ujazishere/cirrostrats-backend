@@ -218,40 +218,42 @@ class Mock_data:
     def mongo_collection_mock(self,):
         """ set of mock data from all collections across all mongoDB"""
 
-        """ csti: a collection that servers dropdown suggestions to the frontend, keeps track of popularity hits and submits.
+        """ Search Index Collection: a collection that servers dropdown suggestions to the frontend, keeps track of popularity hits and submits.
             Fields:
                 r_id: is the reference ID of the associated collection for associated data retrival.
                 type: type of search term(st) -- associated with a particular type of collection - airport, fid(flightID), terminal/gate
                 ph: Popularity hit prorcessed through QueryClassifier's normalization function.
                 submits: the submits on the frontend.
         """
-        self.csti = [
+        self.search_index_collection = [
             {
-                # airport csti
+                # airport search index collection doc
                 '_id': ObjectId('6821b9805795b7ff557e3153'),
                 'r_id': ObjectId('66176711170d1d57a24df7ce'),
                 'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
                 'ph': 2.4973989440488236,
-                'submits': [datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
-                datetime.datetime(2025, 6, 1, 7, 20, 45, 448000)]},
+                'submits': [
+                    datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
+                    datetime.datetime(2025, 6, 1, 7, 20, 45, 448000)]},
 
-                # flight csti
+                # flight search index collection doc
                 {'_id': ObjectId('6821b9805795b7ff557e3161'),
                 'r_id': ObjectId('67e4ca4228d60c5468f315c2'),
                 'fid_st': 'GJS4416',
                 'ph': 1.3010847436299786,
-                'submits': [datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
-                datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)]},
+                'submits': [
+                    datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
+                    datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)]},
 
-                # terminal csti
+                # terminal search index collection doc
                 {'_id': ObjectId('6821b9805795b7ff557e3154'),
                 'r_id': ObjectId('66eb8aa5122bd9fc2f88896a'),
                 'Terminal/Gate': 'Terminal C - C71X',
                 'ph': 2.3975190568219413,
-                'submits': [datetime.datetime(2025, 6, 10, 12, 16, 14, 469000)]
+                'submits': [
+                    datetime.datetime(2025, 6, 10, 12, 16, 14, 469000)]
 
             },
-
         ]
         
         self.gate_collection = [
@@ -270,7 +272,7 @@ class Mock_data:
 
 class MockTestSubmits:
     def __init__(self):
-        self.cts = db_UJ['test_st']
+        self.search_index_collection = db_UJ['test_st']
 
     def random_date_gen(self, simplify=False, total_dates=5):
         def df(dt):
@@ -298,8 +300,8 @@ class MockTestSubmits:
         # return formatted_items
 
     def update_operations(self,mdb_set=False):
-        cts = db_UJ['test_st']   # create/get a collection
-        doc_ids = list(cts.find({},{"_id":1}).limit(15))       # Get limited test document IDs
+        search_index_collection = db_UJ['test_st']   # create/get a collection
+        doc_ids = list(search_index_collection.find({},{"_id":1}).limit(15))       # Get limited test document IDs
         update_operation = []
         for i in doc_ids:
             juice = {'submits':self.random_date_gen(simplify=False, total_dates=15)}
@@ -314,10 +316,10 @@ class MockTestSubmits:
         return update_operation
 
     def update_submits(self, mdb_set):
-        self.cts.bulk_write(self.update_operations(mdb_set=mdb_set))
+        self.search_index_collection.bulk_write(self.update_operations(mdb_set=mdb_set))
 
     def check_transformed_submits(self):
-        original = list(self.cts.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+        original = list(self.search_index_collection.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
         transformed = [{v1: v2} for d in original for v1, v2 in zip(d.values(), list(d.values())[1:])]
         return transformed
 # mts = MockTestSubmits()

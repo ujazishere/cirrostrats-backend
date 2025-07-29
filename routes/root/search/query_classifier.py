@@ -13,10 +13,6 @@ from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO HP
 
 """ These Collections gets loaded up as soon as the server starts."""
 search_index_collection = db_UJ['search_index']
-# cta = db['test_airports']   # create/get a collection
-# cta = collection_airports
-# ctf = collection_flights
-
 
 class QueryClassifier:
     """
@@ -46,17 +42,11 @@ class QueryClassifier:
 
     def initialize_search_index_collection(self):
         """ Cache the collections for searchbar dropdown"""
-        # TODO Get rid of test suggestions. No longer needed - not using it.
-        test_suggestions = True if config('test_suggestions')=='1' else False
-        if test_suggestions:
-            with open('sti_test.pkl', 'rb') as f: 
-                self.sic_docs = pickle.load(f)
-        else:
-            # search index finds - sorted ph returns from the search index collection.
-            count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
-            # return_crit = {'ph':0}       # return only...
-            self.sic_docs = list(search_index_collection.find(count_crit).sort('ph',-1))     # Reverse sort
-            return self.sic_docs
+        # search index finds - sorted ph returns from the search index collection.
+        count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
+        return_crit = {'submits':0}       # We dont need submits since its not used in search interface
+        self.sic_docs = list(search_index_collection.find(count_crit, return_crit).sort('ph',-1))     # Reverse sort
+        return self.sic_docs
         # print('initialized.', self.sic_docs[:5])
 
 
@@ -346,7 +336,7 @@ class QC_base_popularity_hits(QueryClassifier):
         # difference btwn requests and returns. difference are the unsuccessfull ones.
         print('difference btwn requests and colelction returns',len(airports_p_hits),len(cacodes))
         
-        """ merge flight docs and aiport docs to upload then insert to a new csti collection """
+        """ merge flight docs and aiport docs to upload then insert to a new search_index collection """
         all_docs_to_upload = fids_to_upload + airports_to_upload
         all_docs_to_upload = sorted(all_docs_to_upload, key=lambda doc:doc.get('ph',0),reverse=True)
         

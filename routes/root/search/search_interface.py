@@ -46,7 +46,7 @@ class SearchInterface(QueryClassifier):
     def format_conversion_for_frontend(self,doc):
         """
         format inconsistencies from backend/mongoDB collection data to frontend are handled here.
-        for example: csti `airport_st` is convertd to airport, `fid_st` to flight, etc.
+        for example: search_index_collection `airport_st` is convertd to airport, `fid_st` to flight, etc.
         """
         # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
             # If found return that, if not found request on flightAware - e.g N917PG
@@ -98,7 +98,7 @@ class SearchInterface(QueryClassifier):
 
 
     def search_suggestion_frontned_format(self, c_docs, limit=1000,):         # cta- collection test airports; ctf- collection test flights
-        """ Suggestions formatter for delivery to the frontend. Takes in csti docs as is,
+        """ Suggestions formatter for delivery to the frontend. Takes in sic docs as is,
             It first goes to the fuzzfind then to frontend which is processed again.
             There's quite a bit of unnecessary formatting and processing during this three way process
             TODO: reduce this clutter to improve efficiency.
@@ -120,7 +120,7 @@ class SearchInterface(QueryClassifier):
                 'display': val,             # This is manipulated later hence the duplicate. TODO: investigate.
                 'type': val_type,
 
-                'ph': doc.get('ph', 0),     # ***********Only available in  csti
+                'ph': doc.get('ph', 0),     # ***********Only available in  search index collection
                 'fuzz_find_search_text': val.lower()        # matched within fuzz_find func
                 }
 

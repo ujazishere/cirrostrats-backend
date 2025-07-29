@@ -5,7 +5,7 @@ from config.database import collection_flights, client_UJ, db_UJ        # UJ mon
 Idea is to inspect the rate of departures and arrivals at a gate.
 intent: To separate saturated and unsaturated gates.
 """
-gates_test = db_UJ['ewrGates']   # create/get a collection
+gates_collection = db_UJ['ewrGates']   # create/get a collection
 
 
 def gate_analyses():
@@ -13,7 +13,7 @@ def gate_analyses():
     # find_crit = {"_id": ObjectId(gate_id)}
     # find_crit = {'Gate':{'$regex':"101"}}
     find_crit = {}
-    res = gates_test.find(find_crit, return_crit)
+    res = gates_collection.find(find_crit, return_crit)
     ewr_gates = list(res)
 
     ewr_gate_departure_analyses = {}

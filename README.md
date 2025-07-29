@@ -40,9 +40,6 @@
       # 1 activates edct scrapes
       edct_scrape=2
 
-      # Test suggestions are local suggestions that appear in frontend as searchbar dropdown suggestions.
-      # this is passed as string. dont use 0 as false bool. 2 in this case is string and is meant as false. 1 is true.
-      test_suggestions=2
       ```
 
    a. **Ensure Python Installation:** Make sure Python is installed on your machine.

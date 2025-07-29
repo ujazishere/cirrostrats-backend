@@ -156,8 +156,11 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
 
 @router.post('/searches/track')
 def track_search(data: SearchData):
-    # Save the search term and timestamp to the database
-    
+    """ Save searches to the DB for tracking and analytics. saves to search index collection"""
+    # NOTE: It this good at all to save to search index collection since were using it for suggestions?
+            # Maybe returning sic without submits is good for suggestions, and since its 
+            # a light weight collection(upto 3000 items) it shouldnt make a huge difference?
+            # TODO: But submits can blow up out of proportions ovevrtime?
     cts = db_UJ['test_st']   # create/get a collection
     ctrs = db_UJ['test_rst']   # create/get a collection
 

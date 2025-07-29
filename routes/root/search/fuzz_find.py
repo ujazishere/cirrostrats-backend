@@ -1,6 +1,6 @@
 from fuzzywuzzy import fuzz, process
 
-""" Uses the frontend formatted csti collection to search and deliver fuzz found results."""
+""" Uses the frontend formatted search_index_collection to search and deliver fuzz found results."""
 def fuzz_find(query, data, qc, limit=5):
     # For very short queries, prioritize prefix matching
     if len(query) <= 2:
