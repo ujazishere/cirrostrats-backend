@@ -161,7 +161,7 @@ def track_search(data: SearchData):
             # Maybe returning sic without submits is good for suggestions, and since its 
             # a light weight collection(upto 3000 items) it shouldnt make a huge difference?
             # TODO: But submits can blow up out of proportions ovevrtime?
-    cts = db_UJ['test_st']   # create/get a collection
+    cts = db_UJ['search_index']   # create/get a collection
     ctrs = db_UJ['test_rst']   # create/get a collection
 
     # quick view of the search term. dropdown selection or raw search term
@@ -205,7 +205,7 @@ def track_search(data: SearchData):
 async def get_search_timeline():
     # Returns a timeline of all searches made by users in exploded fashion.
 
-    cts = db_UJ['test_st']   # create/get a collection
+    cts = db_UJ['search_index']   # create/get a collection
     crts = db_UJ['test_rst']   # create/get a collection
 
     cts_returns =  list(cts.aggregate([
@@ -485,6 +485,7 @@ async def nas(
     departure: Optional[str] = None,
     destination: Optional[str] = None
 ):
+# TODO: Canadian airports need to be handled. As of July 2025 throws error in fronend.
     pfi = Pull_flight_info()
     if airport:
         nas_returns = pfi.nas_final_packet(airport=airport)
