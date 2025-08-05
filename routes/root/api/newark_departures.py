@@ -9,6 +9,33 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger()
 
 class Newark_departures_scrape(Root_class):
+    def __init__(self) -> None:
+        super().__init__()
+        self.base_url = "https://www.airport-ewr.com/"
+        self.ewr_ua_departures_url = "newark-departures-airline-united-airlines"
+        self.ewr_ua_arrivals_url = "newark-arrivals-airline-united-airlines"
+        # all airlines dep/arr currently unused. Probably won't be used since only ua is needed.
+        self.ewr_all_departures_url = "newark-departures"
+        self.ewr_all_arrivals_url = "newark-arrivals"
+
+
+    def soup_scrape_UA_arrivals(self):
+        day_times = {
+                    'very_early_morn': '?tp=0',
+                    'morning': '?tp=6',
+                    'noon': '?tp=12',
+                    'evening': '?tp=18',
+                        }                                
+
+        soups = []
+
+        for time_of_the_day, time_associated_code in day_times.items():
+            ewr_ua_arrivals = self.base_url + self.ewr_ua_arrivals_url + time_associated_code
+
+            soup = self.request(ewr_ua_arrivals)
+            soups.append(soup)
+        
+        return soups
 
     def soup_scrape(self,UA=True) -> list:
         """ Get All departures soups in list. 4 soups in list before the day is split in 4 parts. """
@@ -27,6 +54,7 @@ class Newark_departures_scrape(Root_class):
 
         # Chicago ORD airport-ohare url example
         # https://www.airport-ohare.com/departures.php?tp=6
+        #TODO VHP: So I want to have chicago departures as well. all UA chicago departures should have web scrape. They can be derived through JMS
         if UA:
             base_url = "https://www.airport-ewr.com/newark-departures-airline-united-airlines"
         else:
