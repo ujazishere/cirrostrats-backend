@@ -87,49 +87,50 @@ async def log_cors(request: Request, call_next):
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements fuzzfind
 async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
     """Cached fuzzy search to improve performance for repeated queries.
-        The Idea is to have some sort of a bucket that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
+        The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
-        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this bucket and return those to the frontend exhausting the 3500 items."""
+        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items."""
 
     ff = SearchInterface()
     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
     search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
     suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
+
     if not suggestions_match and len(query)>=3:        # Exhaustion criteria
         # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         parsed_query = qc.parse_query(query=query)
         # print('Exhausted parsed query',parsed_query)
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
-        val_field,val,val_type = ff.format_conversion_for_frontend(doc=parsed_query)
-        if val_type == 'flight':
+        query_field,query_val,query_type = ff.query_type_frontend_conversion(doc=parsed_query)
+        if query_type == 'flight':
             # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
             # N-numbers returns errors on submits.
             return_crit = {'flightID': 1}
-            c = collection_flights.find({'flightID': {'$regex':val}}, return_crit).limit(10)
+            c = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
             search_index = []
             for i in c:
                 x = {
                     'id': str(i['_id']),
-                    val_field: i['flightID'],  # Use the field name dynamically
+                    query_field: i['flightID'],  # Use the field name dynamically
                     'display': i['flightID'],        # Merge code and name for display
                     'type': 'flight',
                 }
                 search_index.append(x)
             return search_index
 
-        elif val_type == 'airport':
+        elif query_type == 'airport':
             # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
             # Plus its ugly -- abstract this away since flight ID is using the same logic.
             # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
             return_crit = {'name': 1, 'code':1}
-            case_insensitive_regex_find = {'$regex':val, '$options': 'i'}
+            case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
             c = collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10)
             search_index = []
             for i in c:
                 x = {
                     'id': str(i['_id']),
-                    val_field: i['code'],  # Use the field name dynamically
+                    query_field: i['code'],  # Use the field name dynamically
                     'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
                     'type': 'airport',
                 }
@@ -257,7 +258,7 @@ async def raw_search_handler(search: str = None):
     """ handles the submit that is NOT the drop down suggestion. So just willy nilly taking
     the organic search submit handlling it here by converting to a form that is acceptable in details.jsx"""
     si = SearchInterface()
-    return si.submit_handler(collection_weather=collection_weather,search=search)
+    return si.raw_submit_handler(collection_weather=collection_weather,search=search)
 
 # ___________________________________________________________________________
 

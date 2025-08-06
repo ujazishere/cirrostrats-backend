@@ -1,3 +1,22 @@
+Current issue with search innterface:
+    Raw query submits cause and effect:
+        CYOW submits will first go for the first dropdown - this may be a problem.
+        For example if there was UA7 as flight number byitself but drop downs contains UA722 and so forth with no
+        indication of UA7 then the first item submit will never retrieve its actual flight details.
+        same way dl and so forth for raw queries will never return associated deets
+    Accounting for others like dl aa and other cariers with raw submits and 
+
+    Solution:
+        if raw submit matches flight number to its entirity then select the dropdown to send 
+        if raw submit matches airport code to its entirity then select the dropdown
+        if raw submit partially matches flight number then do not send the first drop select
+
+The interface is designed such that it has pre existing values in search-index
+these dont currently update with new submits. also older submits may be intensive on processing during /st route on frontend lookup
+
+
+
+
 UJ
     fuzzfind on airports
     Load balancer

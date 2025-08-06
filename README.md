@@ -37,7 +37,7 @@
       # FlightAware api
       ujazzzmay0525api='***'
       
-      # 1 activates edct scrapes
+      # 1 activates edct scrapes. 2 deactivates it - use 2 for dev
       edct_scrape=2
 
       ```
