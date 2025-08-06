@@ -95,21 +95,24 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
     search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
     suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
-
     if not suggestions_match and len(query)>=3:        # Exhaustion criteria
         # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         parsed_query = qc.parse_query(query=query)
-        # print('Exhausted parsed query',parsed_query)
+        print('Exhausted sic docs, parsed query',parsed_query)
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
         query_field,query_val,query_type = ff.query_type_frontend_conversion(doc=parsed_query)
         if query_type == 'flight':
             # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
+            if query_val[:2] == 'DL':       # temporary fix for delta flights
+                query_val = 'DAL'+query_val[2:]
+            elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
+                query_val = 'AAL'+query_val[2:]
             # N-numbers returns errors on submits.
             return_crit = {'flightID': 1}
-            c = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
+            flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
             search_index = []
-            for i in c:
+            for i in flight_docs:
                 x = {
                     'id': str(i['_id']),
                     query_field: i['flightID'],  # Use the field name dynamically
@@ -117,6 +120,7 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
                     'type': 'flight',
                 }
                 search_index.append(x)
+            print(search_index)
             return search_index
 
         elif query_type == 'airport':
@@ -125,16 +129,28 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
             # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
             return_crit = {'name': 1, 'code':1}
             case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
-            c = collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10)
+            
+            airport_docs = list(collection_airports.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
             search_index = []
-            for i in c:
+            for i in airport_docs:
                 x = {
-                    'id': str(i['_id']),
-                    query_field: i['code'],  # Use the field name dynamically
+                    'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
+                    query_field: i['code'],     # Use the field name dynamically
                     'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
                     'type': 'airport',
                 }
                 search_index.append(x)
+            if len(search_index) < 2:
+                # TODO CAUTION: This is causing duplicates - e.g search `dec` on frontend it will flood dropdown with duplicates.
+                airport_docs = list(collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
+                for i in airport_docs:
+                    x = {
+                        'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
+                        query_field: i['code'],     # Use the field name dynamically
+                        'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
+                        'type': 'airport',
+                    }
+                    search_index.append(x)
             return search_index
 
     else:
