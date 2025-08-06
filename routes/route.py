@@ -120,7 +120,6 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
                     'type': 'flight',
                 }
                 search_index.append(x)
-            print(search_index)
             return search_index
 
         elif query_type == 'airport':

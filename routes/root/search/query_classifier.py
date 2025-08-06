@@ -143,6 +143,11 @@ class QueryClassifier:
             flightID_digits = parsed_query["value"]["flight_number"]
             if airline_code in ["UAL", "GJS", "UCA"]:
                 airline_code = "UA"
+            elif airline_code == "DAL":
+                airline_code = "DL"
+            elif airline_code == "AAL":
+                airline_code = "AA"
+            print('airline_code in qc',airline_code)
             return airline_code, flightID_digits
         print("Error within qc_webscrape. parse_query failed to return categorized data")
         return None,None
