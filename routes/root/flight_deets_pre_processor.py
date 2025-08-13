@@ -34,19 +34,6 @@ def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
         return raw_weather_returns
 
     
-def async_resp_returns_processing(resp_dict:dict, dep_airport_id, dest_airport_id):
-    """ Processess returns from async func - nas status"""
-    # TODO: the nas shouldnt be processing multiple, should be singular since only time departure and destination nas is used is for flightData card.
-    nas_data = None            # Declaring for use in nas() in views.py
-    for url, resp in resp_dict.items():
-        if f"faa.gov/api/airport-status-information" in str(url):
-            nas_data = resp
-            nas_data = flt_info.nas_final_packet(dep_ID=dep_airport_id,dest_ID=dest_airport_id)
-    
-    if nas_data:
-        return nas_data
-
-
 def response_filter(resp_dict:dict,*args,):
     """ converts response to appropriate format given either json bs4 or beautiful soup"""
 

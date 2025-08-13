@@ -2,16 +2,12 @@ from decouple import config
 import requests
 import pickle
 from time import sleep
-try:
-    from .root_class import Root_class
-except:     # Just so it's easier to import outside of django
-    from dj.dj_app.root.root_class import Root_class
+from .root_class import Root_class
 # from dj.dj_app.root.root_class import Root_class
 import re
 
-# TODO VHP: Fix wrong flights showing up. One way is to make the flight aware data prominent
+# TODO VHP: Fix wrong flights showing up - One way is to cross check with other sources - JMS, flightstats, etc.
         # But that will cause utc and local time clashes.  redundancies to cross check and verify and use reliable sources.
-        # Maybe crosscheck it with other source as primary rathar than other  way around.
 
 class Flight_aware_pull(Root_class):
     def __init__(self) -> None:

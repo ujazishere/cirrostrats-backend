@@ -26,7 +26,7 @@ from schema.schemas import serialize_document_list
 from .root.tests.mock_test_data import Mock_data
 from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
-from .root.flight_deets_pre_processor import async_resp_returns_processing, response_filter, raw_resp_weather_processing
+from .root.flight_deets_pre_processor import response_filter, raw_resp_weather_processing
 from .root.search.search_interface import SearchInterface
 
 app = FastAPI()
@@ -36,17 +36,13 @@ Initializers: These run right as the server starts - scti loads 500 popular sugg
 """
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 sic_docs = qc.initialize_search_index_collection()      # Caching search index collecion docs;
-# Scrape EDCT data through selenium
-edct_scrape = True if config('edct_scrape')=='1' else False
-if edct_scrape:
-    el = EDCT_LookUp()
  
 
 """ Define the origins that are allowed to access the backend --Seems like none of the orgins defined are working. 
-TODO CORS: Setup a lightwight ngrok service to host the backend and frontend and show proof of concept
+TODO CORS: Tried to setup a lightwight ngrok service to host the backend and frontend to host dev operations but
 tried and failed - Cors changes on cloudflare(still shows cors issue), adding prints to show origins(doesnt print)
 the ip address may have worked but that was throwing http vs https error but even then it wont send the response headers.
-Tried nginx changes as well but it did not work.
+Tried nginx changes as well but it did not work. Failed. spin up dev instance on azure just pay small fee for it instead.
 """
 origins = [
 #    "http://localhost",
@@ -82,7 +78,6 @@ async def log_cors(request: Request, call_next):
 
 #_____________________________________________________________________________
 
-# SearhTracking section
 @router.get('/searches/suggestions/{email}')
 # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements fuzzfind
 async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
@@ -140,7 +135,6 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
                 }
                 search_index.append(x)
             if len(search_index) < 2:
-                # TODO CAUTION: This is causing duplicates - e.g search `dec` on frontend it will flood dropdown with duplicates.
                 airport_docs = list(collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
                 for i in airport_docs:
                     x = {
@@ -173,15 +167,18 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
 @router.post('/searches/track')
 def track_search(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection"""
+    # TODO: Current bug: not tracking searches outside of the sic collection. need to account for all searches.
+        # Need to save raw items properly to the sic with proper format and also account for duplicated if it already exists.
     # NOTE: It this good at all to save to search index collection since were using it for suggestions?
             # Maybe returning sic without submits is good for suggestions, and since its 
             # a light weight collection(upto 3000 items) it shouldnt make a huge difference?
             # TODO: But submits can blow up out of proportions ovevrtime?
-    cts = db_UJ['search_index']   # create/get a collection
+    
+    sic = db_UJ['search_index']   # create/get a collection
     ctrs = db_UJ['test_rst']   # create/get a collection
 
     # quick view of the search term. dropdown selection or raw search term
-    # quick_view_st = data.submitTerm if data.submitTerm else cts.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
+    # quick_view_st = data.submitTerm if data.submitTerm else sic.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
     # 
     # TODO: query should be saved by user.
     update_query = {
@@ -191,21 +188,21 @@ def track_search(data: SearchData):
 
     oid = {"_id": ObjectId(data.stId)}
     if data.stId:       # if submission with dropdown selection
-        doc = cts.find_one(oid)
+        doc = sic.find_one(oid)
         if doc:
             if "submits" in doc:
                 # If submits exists, just push the new timestamp -- append to the submits array
-                cts.update_one(
+                sic.update_one(
                     {"_id": ObjectId(data.stId)},
                     {"$push": {"submits": data.timestamp}}
                 )
             else:
                 # If submits doesn't exist, set it as new array with the timestamp
-                cts.update_one(
+                sic.update_one(
                     {"_id": ObjectId(data.stId)},
                     {"$set": {"submits": [data.timestamp]}}
                 )
-        doc = cts.find_one(oid)
+        doc = sic.find_one(oid)
     # TODO: This wont account for uniques. Every store is a new store.
     elif data.submitTerm:       # if submission with raw search term
         ctrs.update_one(
@@ -221,10 +218,10 @@ def track_search(data: SearchData):
 async def get_search_timeline():
     # Returns a timeline of all searches made by users in exploded fashion.
 
-    cts = db_UJ['search_index']   # create/get a collection
+    sic = db_UJ['search_index']   # create/get a collection
     crts = db_UJ['test_rst']   # create/get a collection
 
-    cts_returns =  list(cts.aggregate([
+    sic_docs =  list(sic.aggregate([
             { "$match": { "submits": { "$exists": True} } },
             { "$unwind": "$submits" },
             { "$addFields": { "timestamp": "$submits" } },
@@ -238,19 +235,19 @@ async def get_search_timeline():
                 "timestamp": "$submits"
             }}
         ]))
-    returns = cts_returns + crts_returns
+    returns = sic_docs + crts_returns
     return returns
 
 
 @router.get('/searches/all')
 async def get_all_searches():
     
-    cts = db_UJ['test_st']   # create/get a collection
+    sic = db_UJ['test_st']   # create/get a collection
     crts = db_UJ['test_rst']   # create/get a collection
 
-    cts_all_results = list(cts.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+    sic_docs = list(sic.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
     crts_call_results = list(crts.find({'submits': {'$exists': True}},{"_id":0}))
-    all_results = cts_all_results + crts_call_results
+    all_results = sic_docs + crts_call_results
 
     # transformed converts `all_results` which is a list of dicts. Conversions are such:
     # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
@@ -377,7 +374,7 @@ async def aws_jms(flightID, mock=False):
             returns['faa_skyvector'] = sv
     return returns
 
-
+# Deprecated
 @router.get("/flightViewGateInfo/{flightID}")
 async def ua_dep_dest_flight_status(flightID):
     # dep and destination id pull
@@ -443,14 +440,11 @@ async def flight_aware_w_auth(flight_number, mock=False):
 
 
 @router.get("/EDCTLookup/{flightID}")
-async def get_edct_info(flightID: str, origin: str, destination: str):  # Default page and page size
-    # WIP.
-    if edct_scrape:
-        edct_info = el.extract_edct(flightID=flightID, origin=origin, destination=destination)
-        print(edct_info)
-        return edct_info
-    else:
-        return None
+async def get_edct_info(flightID: str, origin: str, destination: str):
+    el = EDCT_LookUp()
+    edct_info = el.extract_edct(call_sign=flightID, origin=origin, destination=destination)
+    print(edct_info)
+    return edct_info
 
 
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.

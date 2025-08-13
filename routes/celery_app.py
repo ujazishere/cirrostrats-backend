@@ -93,6 +93,7 @@ celery_app.conf.beat_schedule = {
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
 
+    # TODO VHP: Need a mechanism to check if the task is running or not and if not then spin up an instance to run it or check validity of data.
     # Gate Fetches - 1. Typical, 2. Recurrent, 3. Clear Historical
     'gateFetch-typical-every-2-hours-daytime': {
         'task': 'routes.celery_app.GateFetch',

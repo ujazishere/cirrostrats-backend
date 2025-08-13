@@ -1,10 +1,22 @@
+*******VVI*********
+So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
+    save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+Chicago gate scrapes
+*******************
+
+Idea to cache - the most popular flights searched or any that is searched should always show up right away through cache.
+    save recent search data-complete flightdata w timestamp for caching in a separate cache collection?
+        -- This is the best to secure flightstats data in cache and decrease load times.
+    Maybe just cache gjs flight data? - is it plausible to implement task schedule for webscrape flightstats? - run into risk of ip block?
+
 Current issue with search innterface:
     Raw query submits cause and effect:
         CYOW submits will first go for the first dropdown - this may be a problem.
+            sidenote: The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
         For example if there was UA7 as flight number byitself but drop downs contains UA722 and so forth with no
         indication of UA7 then the first item submit will never retrieve its actual flight details.
         same way dl and so forth for raw queries will never return associated deets
-    Accounting for others like dl aa and other cariers with raw submits and 
+    Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
 
     Solution:
         if raw submit matches flight number to its entirity then select the dropdown to send 
@@ -14,17 +26,14 @@ Current issue with search innterface:
 The interface is designed such that it has pre existing values in search-index
 these dont currently update with new submits. also older submits may be intensive on processing during /st route on frontend lookup
 
-
-
-
 UJ
-    fuzzfind on airports
+    fuzzfind on airports - Some airports dont show up - need to account for large airport file with icao and iata codes names and location.
     Load balancer
-    optimize faster more relevant lookups - alive and morphingdb -- popularity hits
+    optimize faster more relevant lookups - alive and morphingdb using popularity hits.
     searchtrack - key stroke Tracking
-    separate indexes for suggestions cache bucket - N number collection vs majors collection vs regionals? -- Already some progress on JMS
-    save recent search data-complete flightdata w timestamp for caching.
-    cache gjs flight data to the least maybe? save it onto another collection? - task schedule to webscrape?
+    separate indexes for suggestions cache bucket - N number collection vs majors collection vs regionals?
+        -- Already some progress on JMS - commit/chanes made locally but not integrated to the instance.
+        JMS-- move to home based server. No need for it to run on aws.
 
 
 Extended POA:
@@ -33,35 +42,10 @@ Extended POA:
         Logger -- test driven developement 
         Kafka
 
-
-
-TODO: UJ
-June 12
-query Tracking:
-the raw search query submit should be processed within query classifier and have a function named `frontend formatter`.
-    This can be reused by the useSuggestion's search_suggestion function in the backend to display ran out searches.
-
-
-June 13
-Frontend receives first 500 of the 3500 searchtem index collection(originally called csti).
-As the query progresses in the searchbar its suppose to match the remaining.
-but then when its low it should use parse query using the frontend formatter that directs the query to its dedicated collection,
-    again to send it to frontend with limit of upto 500 items at a time.
-The formatter is what I need help with primarily since its suppose to send formatted data frontend for drop down suggestions as well as
-    its supposed to parse_query the raw submits from the frontend, format and deliver the data to the frontend.
-
-
 So the submit should deliver the actually collection data to the frontend?
 and suggestions should deliver the display name only?
 
 Both contains display name for the frontend. The difference is raw submit will contain full flightnumber or airportID  for frontend fetching.
 
-*******VVI*********
-So essentially raw submit should ***query the collection*** based on parseQuery and submit that to the frontend.?
-    But wait, that doesn't make sense since raw flightnumber or code is needed for the frontend to perform live api fetch.
-    So keep it?
-    Dropdown selection of the suggestion has similar functionality where it sends just the mongoID or flightnumber/nnumber from search_index_collection.
-*******************
-
 Finally,
-Know and document search_index_collection format. Not just that, document the formatting of all the collections in mock test data-- This will give your visibility.
+Know and document search_index_collection format. Not just that, document the formatting of all the collections in mock test data-- This will give you some structure visibility.

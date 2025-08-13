@@ -56,6 +56,7 @@ class Pull_flight_info(Root_class):
 
     def flight_view_gate_info(self, airline_code='UA', flt_num=None, departure_airport=None, pre_process=None):             # not used yet. Plan on using it such that only reliable and useful information is pulled.
         """
+        Deprecated!
         Retrieves flight gate information from FlightView website.
         
         Args:
@@ -67,8 +68,6 @@ class Pull_flight_info(Root_class):
         Returns:
             Dictionary with departure and arrival and associated gate information, or 'None' values if unsuccessful
         """
-        # TODO Test: flightview can give reliable origin and destination info However it a 3 char airport code return. It's what google uses. Repo flights still dont show up tho - Use flightstats instead for repo flights.
-            # flightview format  https://www.flightview.com/flight-tracker/UA/4437
         # date format in the url is YYYYMMDD. For testing, you can find flt_nums on https://www.airport-ewr.com/newark-departures
         if pre_process:     # it doesn't feed in the pre-process if it cannt find the
             soup = pre_process
@@ -123,8 +122,6 @@ class Pull_flight_info(Root_class):
             for script in scripts:
                 # looks up text 'var sdepapt' which is associated with departure airport.
                     # then splits all lines into list form then just splits the departure and destination in string form (")
-                # TODO Weather: It is important to get airport names along with identifiers to seperate international flights for metar view.
-                        # Since the whole of html is being supplied might as well get the city and state in.
                 if 'var sdepapt' in script.get_text():
                     departure = script.get_text().split('\n')[1].split('\"')[1]
                     destination = script.get_text().split('\n')[2].split('\"')[1]
@@ -372,7 +369,7 @@ class Pull_flight_info(Root_class):
     
 
     def united_departure_destination_scrape(self,airline_code=None, flt_num=None,pre_process=None):         # Depricate. Link doesn't work
-        # !!! Depricate! Link doesn't work
+        # !!! Deprecated! Link doesn't work
         # print('dep_des.py united_departure_destination_scrape', flt_num, airline_code)
         departure_scheduled_time,destination_scheduled_time = [None]*2
         if not airline_code:
@@ -387,14 +384,11 @@ class Pull_flight_info(Root_class):
 
         # table = soup.find('div', {'class': 'a2'})
         try: 
-            # TODO Test: This is prone to throwing list index out of range errors. add if statement on airport_id befor processing departure_ID and destination_ID since airport_ID can be None.
             airport_id = soup.find_all('div', {'class': 'a2_ak'})
             airport_id = [i.text for i in airport_id if 'ICAO' in i.text]
             if airport_id:
                 departure_ID = airport_id[0].split()[2]
                 destination_ID = airport_id[1].split()[2]
-                # TODO: WIP for getting scheduled times since the flight stats one can be unreliable at times 
-                # TODO Test: ^^ setup scheduled tasks to fetch in bulk setup tests to trigger notif for times when fetch tests fails.
                 scheduled_times = soup.find_all('div', {'class': 'tb2'})
                 scheduled_times = [i.text for i in scheduled_times]
                 scheduled_times = [i for i in scheduled_times if 'Scheduled' in i]
