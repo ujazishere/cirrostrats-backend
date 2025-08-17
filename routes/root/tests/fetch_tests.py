@@ -21,7 +21,6 @@ def tests():
         airport = aa['flightStatsOrigin'][1:]
         # print('treagfdsv',i)
         print(aa)
-        print(flt_info.flight_view_gate_info(airline_code,i,airport,))
     # x(flt_num,airport,date,airline_code)
 
 def icao_regional_to_major_match():

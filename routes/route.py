@@ -374,20 +374,6 @@ async def aws_jms(flightID, mock=False):
             returns['faa_skyvector'] = sv
     return returns
 
-# Deprecated
-@router.get("/flightViewGateInfo/{flightID}")
-async def ua_dep_dest_flight_status(flightID):
-    # dep and destination id pull
-    flightID = flightID.upper()
-
-    flt_info = Pull_flight_info()
-    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID=flightID)
-
-    united_dep_dest = flt_info.flight_view_gate_info(airline_code=airline_code,flt_num=flightID_digits, departure_airport=None)
-    # united_dep_dest = flt_info.united_departure_destination_scrape(airline_code=airline_code,flt_num=flightID, pre_process=None)
-    # print('depdes united_dep_dest',united_dep_dest)
-    return united_dep_dest
-
 
 @router.get("/flightStatsTZ/{flightID}")
 async def flight_stats_url(flightID):      # time zone pull
