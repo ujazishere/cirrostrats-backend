@@ -6,22 +6,40 @@ import xml.etree.ElementTree as ET
 import re
 import pickle
 from routes.root.api.flightStats import FlightStatsScraper
+from config.database import db_UJ        # UJ mongoDB
 
 '''
 This Script pulls the departure and destination when provided with the flight number.
 '''
+class AirportValidation:
+    # TODO: This function probably belongs somewhere in weather? or maybe in rootclass since its validation?
+    def __init__(self,):
+        self.airport_collection = db_UJ['icao_iata']
+
+
+    def validate_airport_id(self, airport_id, param_name):
+        if isinstance(airport_id, str):
+            iata = icao = None
+            if len(airport_id) == 3:            # Accounting for flightStats deriveed 3-letter codes
+                iata = airport_id
+                find_crit = {"iata": iata}  # Example query to find an airport by ICAO code
+            elif len(airport_id) == 4:           # This does not work airports outside of us.
+                icao = airport_id
+                find_crit = {"icao": icao}
+            else:
+                raise ValueError(f"Invalid {param_name} airport ID: must be 4 or 3 characters. If 4 it should begin with 'K'")
+            
+            return_crit = {"_id": 0, "iata": 1, "airport": 1}  # Fields to return
+            
+            result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
+            return result
+
 
 class Pull_flight_info(Root_class):
 
     def __init__(self) -> None:
         # Super method inherits the init method of the superclass. In this case`Root_class`.
         super().__init__()
-        self.fv_attrs = {
-            'flightViewDeparture': "None",
-            'flightViewDestination': "None",
-            'flightViewDepartureGate': "None",
-            'flightViewArrivalGate': "None",
-        }
 
     def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, departure_date:str=None, return_bs4=False):
         
@@ -101,23 +119,21 @@ class Pull_flight_info(Root_class):
         else:
             raise ValueError("Must provide either 'airport' or 'departure' argument")
         
-        def validate_airport_id(airport_id, param_name):
-            if not isinstance(airport_id, str) or len(airport_id) != 4 or airport_id[0] != 'K':
-                raise ValueError(f"Invalid {param_name} airport ID: must be 4 characters starting with 'K'")
     
         # Validate airport IDs
+        av= AirportValidation()
         if is_single_airport:
-            validate_airport_id(airport_id, 'airport')
-            departure_code = airport_id[1:]  # Strip 'K' for NAS 3-letter code
-            destination_code = None
+            airport_data = av.validate_airport_id(airport_id, 'airport')
+            departure_iata_code = airport_data.get('iata')      # Naming singular airport as departure since it feeds through without complications
+            destination_iata_code = None
         else:
-            validate_airport_id(departure_id, 'departure')
-            departure_code = departure_id[1:]
-            destination_code = None
+            airport_data = av.validate_airport_id(departure_id, 'departure')
+            departure_iata_code = airport_data.get('iata')
+            destination_iata_code = None
             if destination_id:
-                validate_airport_id(destination_id, 'destination')
-                destination_code = destination_id[1:]
-
+                airport_data = av.validate_airport_id(destination_id, 'destination')
+                destination_iata_code = airport_data.get('iata')
+        
         # Get NAS data
         nas_delays = self.nas_pre_processing()
         airport_closures = nas_delays['Airport Closure']
@@ -195,7 +211,7 @@ class Pull_flight_info(Root_class):
         # Process based on usage pattern
         if is_single_airport:
             # Single airport query
-            airport_data = get_airport_delays(departure_code)
+            airport_data = get_airport_delays(departure_iata_code)
             return airport_data if airport_data else {}
         
         else:
@@ -203,13 +219,13 @@ class Pull_flight_info(Root_class):
             result = {}
             
             # Process departure airport
-            departure_data = get_airport_delays(departure_code)
+            departure_data = get_airport_delays(departure_iata_code)
             if departure_data:
                 result['nas_affected_departure'] = departure_data
                 
             # Process destination airport if provided
-            if destination_code:
-                destination_data = get_airport_delays(destination_code)
+            if destination_iata_code:
+                destination_data = get_airport_delays(destination_iata_code)
                 if destination_data:
                     result['nas_affectred_destination'] = destination_data
             

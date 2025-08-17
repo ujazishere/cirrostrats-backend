@@ -4,7 +4,6 @@ import requests
 from bs4 import BeautifulSoup as bs4
 import datetime as dt
 import pytz
-import pickle
 import smtplib
 import asyncio
 import aiohttp
@@ -70,15 +69,6 @@ class Root_class():
         else:
             response = requests.get(url)
         return bs4(response.content, 'html.parser')
-
-
-    def load_master(self):
-        try:
-            with open('gate_query_database.pkl', 'rb') as f:
-                return pickle.load(f)
-        except:
-            with open('dj/gate_query_database.pkl', 'rb') as f:
-                return pickle.load(f)
 
 
     def dt_conversion(self, data):
@@ -220,9 +210,6 @@ class Source_links_and_api:
         return f"https://datis.clowd.io/api/{airport_id}"
 
 
-
-
-
 class Fetching_Mechanism(Root_class):
     # TODO VHP:first rest should account for airline code and flight number, next init of this class needs dep_id
     def __init__(self,airline_code=None,flt_num=None,
@@ -252,25 +239,9 @@ class Fetching_Mechanism(Root_class):
         # Old requests code: api_result = requests.get(aviation_stack_url, self.aviation_stack_params)
 
 
-    def weather_links(self, dep_airport_id, dest_airport_id, ):
-        
-        return {
-        "dep_awc_metar_api": f"https://aviationweather.gov/api/data/metar?ids={dep_airport_id}",
-        "dep_awc_taf_api": f"https://aviationweather.gov/api/data/taf?ids={dep_airport_id}",
-        "dep_datis_api":  f"https://datis.clowd.io/api/{dep_airport_id}",
-        "dest_awc_metar_api": f"https://aviationweather.gov/api/data/metar?ids={dest_airport_id}",
-        "dest_awc_taf_api": f"https://aviationweather.gov/api/data/taf?ids={dest_airport_id}",
-        "dest_datis_api":  f"https://datis.clowd.io/api/{dest_airport_id}",
-        }
-
-
     def jupyter_interactive_code(self,):
 
         """
-        from dj.dj_app.root.root_class import Root_class, Fetching_Mechanism,Source_links_and_api
-        from dj.dj_app.root.flight_deets_pre_processor import resp_initial_returns,resp_sec_returns,response_filter
-        from dj.dj_app.root.dep_des import Pull_flight_info
-
         flight_number_query = 4595
         airline_code = 'UA'
 

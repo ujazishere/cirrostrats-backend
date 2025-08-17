@@ -278,6 +278,7 @@ async def raw_search_handler(search: str = None):
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):
+    return
     # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
