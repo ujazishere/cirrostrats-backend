@@ -1,5 +1,6 @@
 # from dj.dj_app.root.root_class import Root_class, Fetching_Mechanism
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from config.database import db_UJ        # UJ mongoDB
 import requests
 from bs4 import BeautifulSoup as bs4
 import datetime as dt
@@ -119,7 +120,43 @@ class Root_class():
         rets = dict({'completed':  completed, 'troubled': troubled})
         # print(rets)
         return rets
+
+
+class AirportValidation:
+    # TODO: This function probably belongs somewhere in weather? or maybe in rootclass since its validation?
+    def __init__(self,):
+        """
+        icao to iata and vice versa airport code validation will return both iata and icao code.
+        others will return singular
+        """
+        self.airport_collection = db_UJ['icao_iata']
+
+
+    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, param_name=None):
+        """ This function validates the airport ID and returns the corresponding IATA or ICAO code.
+            Accounting for formats within flightStats derived 3-letter codes, NAS returns, weather input compliance, etc.
+        """
         
+        if isinstance(airport_id, str):
+            iata_code = icao_code = None
+            if len(airport_id) == 3 and iata_return:            # This is for IATA codes returned as is for NAS - prevents unnecessary mdb processing
+                return {'iata': airport_id}         # Return the 3-letter IATA code as is
+            elif len(airport_id) == 3 and icao_return:
+                iata_code = airport_id
+                find_crit = {"iata": iata_code}  # Example query to find an airport by ICAO code
+            elif len(airport_id) == 4 and iata_return:
+                icao_code = airport_id
+                find_crit = {"icao": icao_code}
+            elif len(airport_id) == 4 and icao_return:
+                return {'icao': airport_id}         # Return the 4-letter ICAO code as is
+            else:
+                raise ValueError(f"Invalid {param_name} airport ID: must be 4 or 3 characters")
+            
+            return_crit = {"_id": 0, "iata": 1, "icao": 1, "airport": 1}  # Fields to return
+            
+            result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
+            return result
+
 
 class Root_source_links:
 

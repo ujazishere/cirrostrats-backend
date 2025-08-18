@@ -6,34 +6,11 @@ import xml.etree.ElementTree as ET
 import re
 import pickle
 from routes.root.api.flightStats import FlightStatsScraper
-from config.database import db_UJ        # UJ mongoDB
+from routes.root.root_class import AirportValidation
 
 '''
 This Script pulls the departure and destination when provided with the flight number.
 '''
-class AirportValidation:
-    # TODO: This function probably belongs somewhere in weather? or maybe in rootclass since its validation?
-    def __init__(self,):
-        self.airport_collection = db_UJ['icao_iata']
-
-
-    def validate_airport_id(self, airport_id, param_name):
-        if isinstance(airport_id, str):
-            iata = icao = None
-            if len(airport_id) == 3:            # Accounting for flightStats deriveed 3-letter codes
-                iata = airport_id
-                find_crit = {"iata": iata}  # Example query to find an airport by ICAO code
-            elif len(airport_id) == 4:           # This does not work airports outside of us.
-                icao = airport_id
-                find_crit = {"icao": icao}
-            else:
-                raise ValueError(f"Invalid {param_name} airport ID: must be 4 or 3 characters. If 4 it should begin with 'K'")
-            
-            return_crit = {"_id": 0, "iata": 1, "airport": 1}  # Fields to return
-            
-            result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
-            return result
-
 
 class Pull_flight_info(Root_class):
 
@@ -123,15 +100,15 @@ class Pull_flight_info(Root_class):
         # Validate airport IDs
         av= AirportValidation()
         if is_single_airport:
-            airport_data = av.validate_airport_id(airport_id, 'airport')
+            airport_data = av.validate_airport_id(airport_id=airport_id, iata_return=True, param_name='NAS IATA airport')
             departure_iata_code = airport_data.get('iata')      # Naming singular airport as departure since it feeds through without complications
             destination_iata_code = None
         else:
-            airport_data = av.validate_airport_id(departure_id, 'departure')
+            airport_data = av.validate_airport_id(departure_id, iata_return=True, param_name='NAS IATA departure')
             departure_iata_code = airport_data.get('iata')
             destination_iata_code = None
             if destination_id:
-                airport_data = av.validate_airport_id(destination_id, 'destination')
+                airport_data = av.validate_airport_id(destination_id, iata_return=True, param_name= 'NAS IATA destination')
                 destination_iata_code = airport_data.get('iata')
         
         # Get NAS data

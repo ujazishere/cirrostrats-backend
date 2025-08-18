@@ -1,19 +1,18 @@
+from bson import ObjectId
+import bson
+from decouple import config
 from datetime import datetime
-import json
-from typing import Dict, Optional, Union
-from routes.root.EDCT_Lookup import EDCT_LookUp
 from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fuzzywuzzy import fuzz, process
 # from levenshtein import levenshtein  # type: ignore
-from pydantic import BaseModel
-import requests
-from decouple import config
-from bson import ObjectId
-
 from models.model import SearchData
-from routes.root.search.fuzz_find import fuzz_find
-from routes.root.weather_parse import Weather_parse
+from pydantic import BaseModel
+import json
+from routes.root.EDCT_Lookup import EDCT_LookUp
+import requests
+from typing import Dict, Optional, Union
+
 
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
@@ -21,13 +20,16 @@ try:        # This is in order to keep going when collections are not available
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
-from .root.search.query_classifier import QueryClassifier
-from schema.schemas import serialize_document_list
 from .root.tests.mock_test_data import Mock_data
-from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
 from .root.dep_des import Pull_flight_info
 from .root.flight_deets_pre_processor import response_filter, raw_resp_weather_processing
+from .root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
+from .root.root_class import AirportValidation
+from .root.search.fuzz_find import fuzz_find
+from .root.search.query_classifier import QueryClassifier
 from .root.search.search_interface import SearchInterface
+from .root.weather_parse import Weather_parse
+from schema.schemas import serialize_document_list
 
 app = FastAPI()
 
@@ -278,7 +280,6 @@ async def raw_search_handler(search: str = None):
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):
-    return
     # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
@@ -436,25 +437,42 @@ async def get_edct_info(flightID: str, origin: str, destination: str):
 
 @router.get('/mdbAirportWeather/{airport_id}')       # you can store the airport_id thats coming from the react as a variable to be used here.
 async def get_airport_data(airport_id,):
+    """Airport ID can be bson id itself for mongo or a icao/iata airportID code.
+        4 letter ICAO codes are converted to 3 letter IATA codes for mdb weather collection.
+    """
 
-    # TODO VHP Weather: Temp fix. Find better wayto do this. Handle prepend at source find it in celery rabit hole in metar section
-    if len(airport_id)<=4:   # airport ID can be bson id itself from mongo or a icao airportID code.
-        airport_id = airport_id[1:] if len(airport_id)==4 else airport_id
-        find_crit = {"code": airport_id}
+    # Airport code/bson id validation for find criteria
+    if len(airport_id)<=4:   
+        # TODO Weather: Refactor weather collection docs `code` field to reflect if its icao or iata
+            # Seems a lot more appropriate to do that and might just reduce unnecessary processing for
+            # validating the airport from root_class.validate_airport_id
+        av = AirportValidation()
+        # Since mdb takes iata code as airport_id, we need to validate the airport_id and return the iata code.
+        airport_data = av.validate_airport_id(airport_id, iata_return=True, param_name='mdbAirportWeather Route')
+        find_crit = {"code": airport_data.get('iata')}
     else:
-        find_crit = {"airport_id": ObjectId(airport_id)}
+        # TODO test: error handling here if its not an ObjectId either. It is sommething else - an impossible return.
+        try:
+            # find_criteria = {"airport_id": ObjectId(airport_id)}
+            find_crit = {"airport_id": ObjectId(airport_id)}
+        except bson.errors.InvalidId:
+            # Handle the case where airport_id is not a valid ObjectId
+            raise ValueError("Invalid airport ID")
 
     return_crit = {'weather':1,'code':1,'_id':0}
 
+    # mdb weather returns
     res = collection_weather.find_one(find_crit, return_crit)
     code = res.get('code') if res else None
     if res:
         res = res.get('weather')
         # TODO VHP Weather: Need to be able to add the ability to see the departure as well as the arrival datis
-        # weather = weather.scrape(weather_query, datis_arr=True)
-        weather = Weather_parse()
-        weather = weather.processed_weather(weather_raw=res)
-        weather.update({'code':code})
+            # try this: weather = weather.scrape(weather_query, datis_arr=True)
+        # HTML injection to color code the weather data
+        wp = Weather_parse()
+        weather = wp.processed_weather(weather_raw=res)
+        weather.update({'code':code})       # add airport code to the weather dict
+        # print('res weather',weather )
 
         return weather
     else:
@@ -462,10 +480,18 @@ async def get_airport_data(airport_id,):
 
 @router.get("/liveAirportWeather/{airportCode}")
 async def liveAirportWeather(airportCode):
+    """ Airport code can be either icao or iata. If its iata it will be converted to icao.
+        Fetches live weather from source using icao airport code and returns it."""
+
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
 
     fm = Fetching_Mechanism()
     rsl = Root_source_links
+    av = AirportValidation()
+
+    # Validate airport code and convert to ICAO if IATA is provided.
+    airport_data = av.validate_airport_id(airportCode, icao_return=True, param_name='liveAirportWeather route')
+    airportCode =  airport_data.get('icao')
 
     def link_returns(weather_type, airport_id):
         wl = rsl.weather(weather_type,airport_id)
@@ -482,7 +508,7 @@ async def nas(
     departure: Optional[str] = None,
     destination: Optional[str] = None
 ):
-# TODO: Canadian airports need to be handled. As of July 2025 throws error in fronend.
+    # TODO: Canadian airports need to be handled. As of July 2025 throws error in fronend.
     pfi = Pull_flight_info()
     if airport:
         nas_returns = pfi.nas_final_packet(airport=airport)
