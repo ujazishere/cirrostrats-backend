@@ -36,6 +36,9 @@
       
       # FlightAware api
       ujazzzmay0525api='***'
+      # Telegram bot token
+      
+      TELE_BOT_TOKEN='***'
       ```
 
    a. **Ensure Python Installation:** Make sure Python is installed on your machine.
