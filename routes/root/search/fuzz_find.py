@@ -1,3 +1,5 @@
+# TODO: investigate this levenshtein since that message shows up dugring backend container spinups.
+# from levenshtein import levenshtein  # type: ignore
 from fuzzywuzzy import fuzz, process
 
 """ Uses the frontend formatted search_index_collection to search and deliver fuzz found results."""

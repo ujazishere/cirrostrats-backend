@@ -1,13 +1,9 @@
 from bson import ObjectId
 import bson
-from decouple import config
-from datetime import datetime
 from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fuzzywuzzy import fuzz, process
-# from levenshtein import levenshtein  # type: ignore
+from api.nas import NAS
 from models.model import SearchData
-from pydantic import BaseModel
 import json
 from routes.root.EDCT_Lookup import EDCT_LookUp
 import requests
@@ -15,7 +11,7 @@ from typing import Dict, Optional, Union
 
 
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_gates, collection_searchTrack
+    from config.database import collection_airports, collection_weather, collection_searchTrack
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
@@ -394,7 +390,6 @@ async def flight_stats_url(flightID):      # time zone pull
 async def aviation_stack(flight_number):
     fm = Fetching_Mechanism(flt_num=flight_number)
     sl = Source_links_and_api()
-    flt_info = Pull_flight_info()
 
     link = sl.aviation_stack(flight_number)
     link = sl.flight_aware_w_auth(flight_number)
@@ -510,10 +505,11 @@ async def nas(
 ):
     # TODO: Canadian airports need to be handled. As of July 2025 throws error in fronend.
     pfi = Pull_flight_info()
+    nas = NAS()
     if airport:
-        nas_returns = pfi.nas_final_packet(airport=airport)
+        nas_returns = nas.nas_airport_matcher(airport=airport)
     else:
-        nas_returns = pfi.nas_final_packet(departure=departure,destination=destination)
+        nas_returns = nas.nas_airport_matcher(departure=departure,destination=destination)
     return nas_returns
 
 

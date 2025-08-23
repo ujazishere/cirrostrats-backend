@@ -1,9 +1,11 @@
+from api.nas import NAS, NASExtracts
 import asyncio
 from celery import Celery
 from celery.schedules import crontab
+import datetime as dt
 from routes.root.weather_fetch import Weather_fetch  # Used for periodic scheduling
 from routes.root.gate_processor import Gate_processor
-import datetime as dt
+from routes.tele import Tele_bot
 
 '''     ***CAUTION***
     Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
@@ -69,6 +71,21 @@ def GateClear():
     gp.mdb_clear_historical(hours=30)
     return f'Celery task completed for clearing historical gate data older than 30 hours. timestamp - {zulutime}'
 
+# # WIP: NAS fetch
+@celery_app.task
+def nasFetch():
+    nas = NASExtracts()
+    nas_data = nas.nas_xml_processor()
+    if nas_data.get('ground_stop_packet'):
+        # TODO: add telegram notification for groundstops for inspection.
+        # tb = Tele_bot()
+        # tb.send_message(tb.ISMAIL_CHAT_ID, "test message from bot")
+        pass
+
+#     gp = Gate_processor()
+#     gp.mdb_clear_historical(hours=30)
+
+
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
 # TODO VHP: There have been times when the task is not running - celery-beat inadvertently shutsoff...
@@ -76,9 +93,14 @@ celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
             # Design tests to consistently check output of the task...
             # Something that resembles a supervisor or a watchdog that checks for data validation.
 
+# TODO AI: Task logger filtering - how do we filter logger tasks to show maybe just gate fetches or maybe just weather and such?
+    # These will be necessary one recurrent tasks start blowing up in proportions and will be hard to filter individual job logs.   
+
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
-    # TODO Test: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every min or so increasing every iteration and stop when it becomes available.
+    # TODO Test: This beat schedule at times has not been working. Need a mechanism that makes sure that these schedules are run successfully and loggs it in a rolling file
+                    # Categorize into statuses, cautions and warnings.
+                # Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every min or so increasing every iteration and stop when it becomes available.
                 # once stopped return to original schedule of 53 past. 
                 # If data unavailable for extended period then stop fetching completely and return to original schedule, notify about issue after 3 hours of inactive fetch.
                 # -- This maybe too complicated and may require constant mx--> Maybe decrease variables and loose endpoints to reduce complexity.
@@ -117,6 +139,11 @@ celery_app.conf.beat_schedule = {
         # 'schedule': crontab(minute=45, hour='3'),     # test
         'schedule': crontab(minute=5, hour='0,8-23/5'),  # Run 10 mins past the hour every 5 hours from 08:00 to 21:00 UTC
     },
+    'NAS-everyminute': {
+        'task': 'routes.celery_app.nasFetch',
+        # 'schedule': crontab(minute=45, hour='3'),     # test
+        'schedule': crontab(minute='*'),  # Run 10 mins past the hour every 5 hours from 08:00 to 21:00 UTC
+    },
 
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.
     # 'func_run_frequently': {
@@ -125,6 +152,7 @@ celery_app.conf.beat_schedule = {
     #     # 'args': (16, 16)          # Arguments to pass to the task function
     # },
 }
+
 
 
 # Import the tasks so they're registered with the app
