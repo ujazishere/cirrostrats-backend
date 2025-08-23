@@ -19,6 +19,9 @@ celery_app = Celery(
 # TODO LP: Do I need this since I already have it in the Celery args.
 # celery_app.conf.broker_url = 'redis://redis:6379/0'
 
+utc_now = dt.datetime.now(dt.UTC)
+zulutime = utc_now.strftime("%d %H:%M")
+
 @celery_app.task
 def DatisFetch():
     # Read caution note for explanation on asyncio use here.
@@ -26,7 +29,8 @@ def DatisFetch():
 
 async def run_datis_fetch():    
     Wf = Weather_fetch()
-    await Wf.fetch_and_store_by_type(weather_type='datis')
+    await Wf.bulk_fetch_and_store_by_type(weather_type='datis')
+    return f'Celery task completed for fetching datis. timestamp - {zulutime}'
 
 
 @celery_app.task
@@ -35,9 +39,8 @@ def MetarFetch():
 
 async def run_metar_fetch_async_function():
     Wf = Weather_fetch()
-    await Wf.fetch_and_store_by_type(weather_type='metar')
-
-    return 'Celery task completed for fetching metar'
+    await Wf.bulk_fetch_and_store_by_type(weather_type='metar')
+    return f'Celery task completed for fetching metar. timestamp - {zulutime}'
 
 
 @celery_app.task
@@ -46,21 +49,25 @@ def TAFFetch():
 
 async def run_TAF_fetch():    
     Wf = Weather_fetch()
-    await Wf.fetch_and_store_by_type(weather_type='taf')
+    await Wf.bulk_fetch_and_store_by_type(weather_type='taf')
+    return f'Celery task completed for fetching TAF. timestamp - {zulutime}'
 
 # Gate fetchers
 @celery_app.task
 def GateFetch():
     gp = Gate_processor()
     gp.scrape_and_store()
+    return f'Celery task completed for fetching gates. timestamp - {zulutime}'
 @celery_app.task
 def GateRecurrentUpdater():
     gp = Gate_processor()
     gp.recurrent_updater()
+    return f'Celery task completed for recurrent gate update. timestamp - {zulutime}'
 @celery_app.task
 def GateClear():
     gp = Gate_processor()
     gp.mdb_clear_historical(hours=30)
+    return f'Celery task completed for clearing historical gate data older than 30 hours. timestamp - {zulutime}'
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 

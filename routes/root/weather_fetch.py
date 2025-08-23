@@ -12,7 +12,7 @@ from routes.root.weather_parse import Weather_parse
 
 class Weather_fetch:
     """
-    TODO Feature: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
+    TODO LP Feature: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
     """
 
     def __init__(self) -> None:
@@ -125,7 +125,7 @@ class Weather_fetch:
         return resp_dict
 
 
-    async def fetch_and_store_by_type(self,weather_type):
+    async def bulk_fetch_and_store_by_type(self,weather_type):
         # print(f'{weather_type} async fetch in progress..')
         # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
@@ -156,7 +156,7 @@ class Weather_fetch:
 #         while True:
 #             print('Weather fetch in progress...')
 
-#             self.Wf.fetch_and_store_datis()
+#             self.Wf.bulk_fetch_and_store_datis()
 #             yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
 #             utc_now = yyyymmddhhmm
 #             print('Weather fetched at:', utc_now)
@@ -172,10 +172,10 @@ class Weather_fetch:
 from routes.root.weather_fetch import Weather_fetch
 Wf = Weather_fetch()
 
-Wf.fetch_and_store_by_type(weather_type='datis')
+Wf.bulk_fetch_and_store_by_type(weather_type='datis')
 datis = Wf.datis_returns
 
-# Wf.fetch_and_store_by_type(weather_type='metar')
-# Wf.fetch_and_store_by_type(weather_type='taf')
+# Wf.bulk_fetch_and_store_by_type(weather_type='metar')
+# Wf.bulk_fetch_and_store_by_type(weather_type='taf')
 
 """
