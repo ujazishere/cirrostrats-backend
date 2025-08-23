@@ -42,7 +42,7 @@ class Gate_processor(Root_class):
 
 
     def mdb_clear_historical(self,hours=30):
-        """ Clears docs with Scheduled times prior to 48 hours before the scheduled time """
+        """ Clears docs with Scheduled times prior to x hours before the scheduled time """
         et = pytz.timezone('US/Eastern')
         current_time = datetime.now(et)
         
