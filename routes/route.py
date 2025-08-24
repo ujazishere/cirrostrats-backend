@@ -1,4 +1,5 @@
 from bson import ObjectId
+from urllib.parse import unquote
 import bson
 from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,8 @@ import json
 from routes.root.EDCT_Lookup import EDCT_LookUp
 import requests
 from typing import Dict, Optional, Union
+
+from routes.tele import Tele_bot
 
 
 try:        # This is in order to keep going when collections are not available
@@ -592,3 +595,11 @@ async def store_live_weather(
 
     # result = collection_weather.bulk_write(update_operations)
     return {"status": "success"}
+
+@router.post("/sendTelegramNotification")
+def send_telegram_notification(message):
+    tb = Tele_bot()
+
+    send_to = [tb.ISMAIL_CHAT_ID, tb.UJ_CHAT_ID]
+    tb.send_message(chat_id=send_to,
+                    MESSAGE=message,token=tb.TELE_MAIN_BOT_TOKEN)
