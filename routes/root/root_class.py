@@ -1,14 +1,15 @@
-# from dj.dj_app.root.root_class import Root_class, Fetching_Mechanism
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from config.database import db_UJ        # UJ mongoDB
-import requests
-from bs4 import BeautifulSoup as bs4
-import datetime as dt
-import pytz
-import smtplib
 import asyncio
 import aiohttp
+from bs4 import BeautifulSoup as bs4
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from config.database import db_UJ        # UJ mongoDB
+import datetime as dt
 from decouple import config
+import pytz
+import requests
+import smtplib
+
+from routes.tele import Tele_bot
 
 class Root_class():
     
@@ -44,7 +45,7 @@ class Root_class():
             server.sendmail(smtp_user, to_email, full_email.encode('utf-8'))
         print('SENT EMAIL!!!!!!!!!!!!!:', body_to_send)
 
-        
+
     def date_time(self, raw=None, viewable=None, raw_utc=None):
         eastern = pytz.timezone('US/eastern')
         now = dt.datetime.now(eastern)
