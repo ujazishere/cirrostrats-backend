@@ -2,7 +2,7 @@ from bson import ObjectId
 import bson
 from fastapi import APIRouter, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from api.nas import NAS
+from routes.root.api.nas import NAS
 from models.model import SearchData
 import json
 from routes.root.EDCT_Lookup import EDCT_LookUp
