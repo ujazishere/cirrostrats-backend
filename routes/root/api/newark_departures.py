@@ -1,8 +1,9 @@
-from datetime import datetime
-import re
 import bs4
+from datetime import datetime
 import logging
+import re
 from routes.root.root_class import Root_class
+from routes.route import send_telegram_notification
 from typing import Dict, List, Optional, Tuple
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -104,7 +105,9 @@ class Newark_departures_scrape(Root_class):
                 # Find all flight columns - use find() instead of find_all()[0] for safety
                 dep = element.find('div', class_="flight-col flight-col__flight")
                 if not dep:
-                    logger.warning("Flight dep element not found in HTML structure", element)
+                    error_message = f"Flight dep element not found in HTML structure for {flight_number}" + element
+                    send_telegram_notification(message=error_message)
+                    logger.warning(error_message )
                     continue
 
                 s_tag = dep.find('a')
@@ -125,7 +128,9 @@ class Newark_departures_scrape(Root_class):
                 scheduled_tag = element.find('div', class_="flight-col flight-col__hour")
                 if not scheduled_tag:
                     # EWR_departures_and_links.append((flight_number, None))
-                    logger.warning("Scheduled time element not found in HTML structure", element)
+                    error_message = f"Scheduled time element not found in HTML structure for {flight_number}" + element
+                    send_telegram_notification(message=error_message)
+                    logger.warning(error_message)
                     continue
                 scheduled_departure_time = scheduled_tag.get_text(strip=True)
                 scheduled_departure_time = self.time_converter(flight_number, scheduled_departure_time)
@@ -157,7 +162,7 @@ class Newark_departures_scrape(Root_class):
             # time_obj = datetime.strptime(time_str, "%H%M").time()         # Attempt to convert to datetime obj but gives error when saving to mongo
             return time_str
         else:
-            logger.warn("Time issues in time_converter:", flight_id, time_data)
+            logger.info("Time issues in time_converter:", flight_id, time_data)
 
 
     def validate_date(self,flight_id, date_str):
@@ -193,7 +198,9 @@ class Newark_departures_scrape(Root_class):
                 scheduled_date_extracts = flight_info_date[0].get_text(strip=True)
                 scheduled_date = self.validate_date(flight_id, scheduled_date_extracts)
             else:
-                logger.warning("Flight date element not found in HTML structure", flight_id, scheduled_date_extracts)
+                error_message = f"Flight date element not found in HTML structure {flight_id, scheduled_date_extracts}", 
+                send_telegram_notification(message=error_message)
+                logger.warning(error_message)
                 
             # 2. Extract scheduled time
             if flight_info_sc_dep and scheduled_date:
@@ -204,7 +211,9 @@ class Newark_departures_scrape(Root_class):
                     datetime_obj = scheduled_date+" "+scheduled_time
                     extracts.update({"Scheduled": datetime_obj})
             else:
-                logger.warning("Scheduled departure time element not found in HTML structure", flight_id)
+                error_message = "Scheduled departure time element not found in HTML structure for" + flight_id
+                send_telegram_notification(message=error_message)
+                logger.warning(error_message)
 
             # 3. Extract departure title
             try:
@@ -218,10 +227,14 @@ class Newark_departures_scrape(Root_class):
                     hhmm = self.time_converter(flight_id, departure_time_raw)
                     extracts.update({"Departed":hhmm})
                 else:
-                    logger.warning(f"Outlaw in estimated/actual time -- departure extract")
+                    error_message = f"Outlaw in estimated/actual time -- departure extract - flight id:" + flight_id
+                    send_telegram_notification(message=error_message)
+                    logger.warning(error_message)
                     
             except IndexError:
-                logger.warning(f"Flight info index 7 or 8 not found (only {len(flight_info)} elements present)")
+                error_message = f"Flight info index 7 or 8 not found - only {len(flight_info)} elements present for {flight_id}"
+                send_telegram_notification(message=f'Error: {error_message}')
+                logger.warning(error_message)
                 
 
             # 4. Extract gate
@@ -236,7 +249,9 @@ class Newark_departures_scrape(Root_class):
                     gate_extract = None
                 extracts.update({"Gate": gate_extract})
             except IndexError:
-                logger.warning(f"Gate info index 14 not found (only {len(flight_info)} elements present)")
+                error_message = f"Gate info index 14 not found - only {len(flight_info)} elements present for {flight_id}"
+                send_telegram_notification(message=f'Error: {error_message}')
+                logger.warning(error_message)
 
             # Log successful extraction
             if not all([extracts.get('Scheduled'), extracts.get('Gate')]):

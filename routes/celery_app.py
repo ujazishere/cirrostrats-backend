@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from celery import Celery
 from celery.schedules import crontab
 import datetime as dt
@@ -13,6 +14,9 @@ from routes.root.gate_processor import Gate_processor
     Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
     instead use asyncio.run(async_function()) and this async_function() can be any async function you want to schedule. check example below for asyncio.run()
 '''
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 celery_app = Celery(
     'tasks',
@@ -86,10 +90,10 @@ def nasFetch():
         tb = Tele_bot()
 
         if error:
-            print('Error, sending to Ismail and UJ')
             send_to = [tb.ISMAIL_CHAT_ID, tb.UJ_CHAT_ID]
+            logger.error('Error, sending notification to Ismail and UJ')
         elif not error:
-            print('Sending to UJ only')
+            logger.info('Sending to UJ only')
             send_to = [tb.UJ_CHAT_ID]
 
         tb.send_message(chat_id=send_to,

@@ -1,4 +1,5 @@
 from config.database import collection_weather,collection_airports
+from routes.route import send_telegram_notification
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
@@ -32,7 +33,6 @@ class Weather_fetch:
         cwd = os.getcwd()
         # TODO VHP: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
         all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
-        print('PATHHHH:', all_datis_airports_path)
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
         with open(all_datis_airports_path, 'rb') as f:
             all_datis_airport_codes = pickle.load(f)
@@ -105,7 +105,7 @@ class Weather_fetch:
         # print(result)
 
 
-    def datis_processing(self, resp_dict:dict):
+    def bulk_datis_processing(self, resp_dict:dict):
         # TODO Test: a similar function exists in -- weather_parse().datis_processing().
                     # Better to change label to 'bulk_datis_processing'
 
@@ -120,7 +120,9 @@ class Weather_fetch:
             else:
                 # ending up in this block means the code is broken somewhere.
                 # TODO Test: checkpoint here for notification- track how many times the code ends up here.
+                send_telegram_notification(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
                 print('Error: Datis processing')
+
                 pass
         return resp_dict
 
@@ -131,7 +133,7 @@ class Weather_fetch:
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
 
         if weather_type == 'datis':
-            processed_datis = self.datis_processing(resp_dict=resp_dict)
+            processed_datis = self.bulk_datis_processing(resp_dict=resp_dict)
             self.weather_returns[weather_type] = processed_datis
             # print('processed datis')
             self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)

@@ -24,7 +24,7 @@ class Tele_bot:
         
         self.url = f"https://api.telegram.org/bot{token}/sendMessage"
         for each_user in chat_id:
-            print(f"Sending to {chat_id}")
             payload = self.payload_prep(each_user, MESSAGE)
             r = requests.post(self.url, data=payload)
-            print(r.json())
+            # this is a result of the post request could use a log for this. or atleast condition for ok:false to log warning.
+            # print(r.json())
