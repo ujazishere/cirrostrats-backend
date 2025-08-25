@@ -85,9 +85,29 @@ async def get_search_suggestions(email: str, query: str, limit=500):  # Default 
     """Cached fuzzy search to improve performance for repeated queries.
         The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
-        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items."""
+        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
+
+        The interface is designed such that it has pre existing values in search-index
+        these dont currently update with new raw submits. also older submits may be intensive on processing during /st route on frontend lookup
+        """
 
     ff = SearchInterface()
+    # TODO VHP:
+    """ 
+        So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
+            save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+
+            Current issue with search interface:
+            Raw query submits cause and effect:
+                The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
+                Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
+
+            Solution: - This possibly is already account for in the frontend - but need same for backend in case top5 suggestions are exhausted/unavailable.
+                if raw submit matches flight number to its entirity then select the dropdown to send 
+                if raw submit matches airport code to its entirity then select the dropdown
+                    Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
+                if raw submit partially matches flight number then do not send the first drop select
+    """
     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
     search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
     suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)

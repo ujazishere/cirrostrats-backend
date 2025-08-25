@@ -125,21 +125,20 @@ def nasFetch():
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
-# TODO VHP; 
-# TODO Test: This beat schedule at times has not been working. Need a mechanism that makes sure that these schedules are run successfully and
-            # loggs it in a rolling file -possiby redis cache like one in NASFetch
-            # Retries should be made for unsuccessful tasks - consistent outlaws should be flagged and trashed to save processing power.
-            
 
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
 
-    # TODO celery: Check if this works and fetches the weather data, when it doesn't fetch the weather data it should log or retry every min or so increasing every iteration and stop when it becomes available.
-            # once stopped return to original schedule of 53 past. 
-            # If data unavailable for extended period then stop fetching completely and return to original schedule, notify about issue after 3 hours of inactive fetch.
-            # -- This maybe too complicated and may require constant mx--> Maybe decrease variables and loose endpoints to reduce complexity.
-            # What is important? weather should exist and should be accurate. If its not send notification at a threshold and continue fetch.
-            #  Only attend to it when critical failure occurs.
+    # TODO Test: This beat schedule at times has not been working. Need a mechanism that makes sure that these schedules are run successfully and
+                # loggs it in a rolling file -possiby redis cache like one in NASFetch
+            # -- Following maybe too complicated and may require constant mx--> Maybe decrease variables and loose endpoints to reduce complexity.
+                # when it doesn't fetch the weather data it should log or retry every min or so increasing every iteration and stop when it becomes available.
+                # once stopped return to original schedule of 53 past?
+                # If data unavailable for extended period then stop fetching completely and return to original schedule, notify about issue after 3 hours of inactive fetch.
+            # Reducce complexity- What is important? weather should exist and should be accurate. If its not send notification at a threshold and continue fetch.
+            #  spin up an instance to run these tasks if the celery task fails? but that may not be necessary.
+                #  Only attend to it when critical failure occurs?
+
     'run-datisfetch-every-53-mins-past-hour': {
         'task': 'routes.celery_app.DatisFetch',      # The task function that needs to be scheduled
         'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
@@ -156,7 +155,6 @@ celery_app.conf.beat_schedule = {
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
 
-    # TODO VHP: Need a mechanism to check if the task is running or not and if not then spin up an instance to run it or check validity of data.
     # Gate Fetches - 1. Typical, 2. Recurrent, 3. Clear Historical
     'gateFetch-typical-every-2-hours-daytime': {
         'task': 'routes.celery_app.GateFetch',
@@ -174,6 +172,7 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(minute=5, hour='0,8-23/5'),  # Run 10 mins past the hour every 5 hours from 08:00 to 21:00 UTC
     },
 
+    # TODO cache: Cache this NAS for display on frontend instead of active NAS api fetch to reduce load and latency.
     'NAS-everyminute': {
         'task': 'routes.celery_app.nasFetch',
         # 'schedule': crontab(minute='*'),  # Test run every minute

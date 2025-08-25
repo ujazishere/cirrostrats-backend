@@ -1,35 +1,20 @@
 *******VVI*********
-So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
-    save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
-Chicago gate scrapes
+Check search suggestion fucntion todos in routee file
 *******************
 
-Idea to cache - the most popular flights searched or any that is searched should always show up right away through cache.
+TODO Cache:
+    Idea to cache - the most popular flights searched or any that is searched should always show up right away through cache.
     save recent search data-complete flightdata w timestamp for caching in a separate cache collection?
         -- This is the best to secure flightstats data in cache and decrease load times.
-    Maybe just cache gjs flight data? - is it plausible to implement task schedule for webscrape flightstats? - run into risk of ip block?
+    Maybe just cache gjs flight data? - is it plausible to implement task schedule for webscrape flightstats?
+        - May run into risk of ip block for extensice web scrape?
 
-Current issue with search innterface:
-    Raw query submits cause and effect:
-        CYOW submits will first go for the first dropdown - this may be a problem.
-            sidenote: The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
-        For example if there was UA7 as flight number byitself but drop downs contains UA722 and so forth with no
-        indication of UA7 then the first item submit will never retrieve its actual flight details.
-        same way dl and so forth for raw queries will never return associated deets
-    Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
-
-    Solution:
-        if raw submit matches flight number to its entirity then select the dropdown to send 
-        if raw submit matches airport code to its entirity then select the dropdown
-        if raw submit partially matches flight number then do not send the first drop select
-
-The interface is designed such that it has pre existing values in search-index
-these dont currently update with new submits. also older submits may be intensive on processing during /st route on frontend lookup
 
 UJ
-    fuzzfind on airports - Some airports dont show up - need to account for large airport file with icao and iata codes names and location.
     Load balancer
-    optimize faster more relevant lookups - alive and morphingdb using popularity hits.
+    test driven developement - mock tests and integration tests for backend just like frontend? scheduled health checks?
+    account for fuzzfund - label vs display -- show display on frontend but use label for search matching? since it may have fuzz find labels in array?
+        fuzzfind on airports - Some airports dont show up - need to account for large airport file with icao and iata codes names and location.
     searchtrack - key stroke Tracking
     separate indexes for suggestions cache bucket - N number collection vs majors collection vs regionals?
         -- Already some progress on JMS - commit/chanes made locally but not integrated to the instance.
@@ -37,13 +22,11 @@ UJ
 
 
 Extended POA:
-    test driven developement - mock tests and integration tests - TAF update errors - weather data validation tests - data should make sense
+    test driven dev: TAF update errors - weather data validation tests - data should make sense
+    optimize faster more relevant lookups - alive and morphingdb using popularity hits.
     ian recommends:
         Logger -- test driven developement 
         Kafka
-
-So the submit should deliver the actually collection data to the frontend?
-and suggestions should deliver the display name only?
 
 Both contains display name for the frontend. The difference is raw submit will contain full flightnumber or airportID  for frontend fetching.
 
