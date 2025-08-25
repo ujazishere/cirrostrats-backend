@@ -441,6 +441,8 @@ async def get_airport_data(airport_id,):
 
     # Airport code/bson id validation for find criteria
     if len(airport_id)<=4:   
+        # TODO Efficiency: if a code is provided and found, add it to the mdb airport collection for caching and fetching next time.
+                # Maybe even insert a TTL index to auto delete after a certain time period?
         # TODO Weather: Refactor weather collection docs `code` field to reflect if its icao or iata
             # Seems a lot more appropriate to do that and might just reduce unnecessary processing for
             # validating the airport from root_class.validate_airport_id

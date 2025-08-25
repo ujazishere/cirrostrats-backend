@@ -1,13 +1,14 @@
 from config.database import collection_weather,collection_airports
+import json
+import pickle
+from pymongo import UpdateOne
+import requests
 from routes.route import send_telegram_notification
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
     print('jupyter import for root_class')
     from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-import json
-import pickle
-from pymongo import UpdateOne
 from routes.root.weather_parse import Weather_parse
 
 
@@ -26,17 +27,20 @@ class Weather_fetch:
 
     def weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
-        all_mdb_airport_codes = [i['code'] for i in collection_airports.find({})]
 
-        # TODO VHP: bandaid - quick fix for path. find better and clean this.
+        all_mdb_airport_codes = [i['code'] for i in collection_airports.find({},{'code':1})]
+
+        url = 'https://datis.clowd.io/api/stations'
+        response = requests.get(url)
+        all_datis_airport_codes = response.json()
+        if not all_datis_airport_codes or  not isinstance(all_datis_airport_codes,list):        # Check if response is valid list of airport codes
+            send_telegram_notification(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_airport_codes}')
+            print('Error: Datis airport codes fetch failed. Returns:', all_datis_airport_codes)
+            all_datis_airport_codes = []
+        # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
+
         import os
         cwd = os.getcwd()
-        # TODO VHP: These paths are irrelevant in docker- use print(os.getcwd) to find path, paste these files in the project and access it through reletive path
-        all_datis_airports_path = fr'{cwd}/routes/root/pkl/all_datis_airports.pkl'
-        # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
-        with open(all_datis_airports_path, 'rb') as f:
-            all_datis_airport_codes = pickle.load(f)
-
         taf_positive_path = fr'{cwd}/routes/root/pkl/taf_positive_airports.pkl'
         # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'
         with open(taf_positive_path, 'rb') as f:
@@ -123,7 +127,6 @@ class Weather_fetch:
                 send_telegram_notification(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
                 print('Error: Datis processing')
 
-                pass
         return resp_dict
 
 
@@ -135,7 +138,6 @@ class Weather_fetch:
         if weather_type == 'datis':
             processed_datis = self.bulk_datis_processing(resp_dict=resp_dict)
             self.weather_returns[weather_type] = processed_datis
-            # print('processed datis')
             self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
         else:
             self.weather_returns[weather_type] = resp_dict
