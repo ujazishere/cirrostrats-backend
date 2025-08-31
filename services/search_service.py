@@ -190,7 +190,7 @@ async def get_all_searches_service():
     transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
     return serialize_document_list(transformed)
 
-async def get_user_searches(email):
+async def get_user_searches_service(email):
     # Supposed to show all the searches that have been made by the user.
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
