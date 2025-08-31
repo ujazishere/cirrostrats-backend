@@ -79,207 +79,207 @@ async def log_cors(request: Request, call_next):
 
 #_____________________________________________________________________________
 
-@router.get('/searches/suggestions/{email}')
-# @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements fuzzfind
-async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
-    """Cached fuzzy search to improve performance for repeated queries.
-        The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
-        If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
-        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
+# @router.get('/searches/suggestions/{email}')
+# # @functools.lru_cache(maxsize=100)         # TODO investigate and check Levenshtein how it supplements fuzzfind
+# async def get_search_suggestions(email: str, query: str, limit=500):  # Default page and page size
+#     """Cached fuzzy search to improve performance for repeated queries.
+#         The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
+#         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
+#         Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
 
-        The interface is designed such that it has pre existing values in search-index
-        these dont currently update with new raw submits. also older submits may be intensive on processing during /st route on frontend lookup
-        """
+#         The interface is designed such that it has pre existing values in search-index
+#         these dont currently update with new raw submits. also older submits may be intensive on processing during /st route on frontend lookup
+#         """
 
-    ff = SearchInterface()
-    # TODO VHP:
-    """ 
-        So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
-            save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+#     ff = SearchInterface()
+#     # TODO VHP:
+#     """ 
+#         So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
+#             save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
 
-            Current issue with search interface:
-            Raw query submits cause and effect:
-                The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
-                Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
+#             Current issue with search interface:
+#             Raw query submits cause and effect:
+#                 The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
+#                 Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
 
-            Solution: - This possibly is already account for in the frontend - but need same for backend in case top5 suggestions are exhausted/unavailable.
-                if raw submit matches flight number to its entirity then select the dropdown to send 
-                if raw submit matches airport code to its entirity then select the dropdown
-                    Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
-                if raw submit partially matches flight number then do not send the first drop select
-    """
-    # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
-    search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
-    suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
-    if not suggestions_match and len(query)>=3:        # Exhaustion criteria
-        # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
-        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
-        parsed_query = qc.parse_query(query=query)
-        print('Exhausted sic docs, parsed query',parsed_query)
-        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
-        query_field,query_val,query_type = ff.query_type_frontend_conversion(doc=parsed_query)
-        if query_type == 'flight':
-            # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
-            if query_val[:2] == 'DL':       # temporary fix for delta flights
-                query_val = 'DAL'+query_val[2:]
-            elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
-                query_val = 'AAL'+query_val[2:]
-            # N-numbers returns errors on submits.
-            return_crit = {'flightID': 1}
-            flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
-            search_index = []
-            for i in flight_docs:
-                x = {
-                    'id': str(i['_id']),
-                    query_field: i['flightID'],  # Use the field name dynamically
-                    'display': i['flightID'],        # Merge code and name for display
-                    'type': 'flight',
-                }
-                search_index.append(x)
-            return search_index
+#             Solution: - This possibly is already account for in the frontend - but need same for backend in case top5 suggestions are exhausted/unavailable.
+#                 if raw submit matches flight number to its entirity then select the dropdown to send 
+#                 if raw submit matches airport code to its entirity then select the dropdown
+#                     Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
+#                 if raw submit partially matches flight number then do not send the first drop select
+#     """
+#     # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
+#     search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
+#     suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
+#     if not suggestions_match and len(query)>=3:        # Exhaustion criteria
+#         # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
+#         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
+#         parsed_query = qc.parse_query(query=query)
+#         print('Exhausted sic docs, parsed query',parsed_query)
+#         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
+#         query_field,query_val,query_type = ff.query_type_frontend_conversion(doc=parsed_query)
+#         if query_type == 'flight':
+#             # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
+#             if query_val[:2] == 'DL':       # temporary fix for delta flights
+#                 query_val = 'DAL'+query_val[2:]
+#             elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
+#                 query_val = 'AAL'+query_val[2:]
+#             # N-numbers returns errors on submits.
+#             return_crit = {'flightID': 1}
+#             flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
+#             search_index = []
+#             for i in flight_docs:
+#                 x = {
+#                     'id': str(i['_id']),
+#                     query_field: i['flightID'],  # Use the field name dynamically
+#                     'display': i['flightID'],        # Merge code and name for display
+#                     'type': 'flight',
+#                 }
+#                 search_index.append(x)
+#             return search_index
 
-        elif query_type == 'airport':
-            # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
-            # Plus its ugly -- abstract this away since flight ID is using the same logic.
-            # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
-            return_crit = {'name': 1, 'code':1}
-            case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
+#         elif query_type == 'airport':
+#             # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
+#             # Plus its ugly -- abstract this away since flight ID is using the same logic.
+#             # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
+#             return_crit = {'name': 1, 'code':1}
+#             case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
             
-            airport_docs = list(collection_airports.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
-            search_index = []
-            for i in airport_docs:
-                x = {
-                    'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
-                    query_field: i['code'],     # Use the field name dynamically
-                    'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
-                    'type': 'airport',
-                }
-                search_index.append(x)
-            if len(search_index) < 2:
-                airport_docs = list(collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
-                for i in airport_docs:
-                    x = {
-                        'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
-                        query_field: i['code'],     # Use the field name dynamically
-                        'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
-                        'type': 'airport',
-                    }
-                    search_index.append(x)
-            return search_index
+#             airport_docs = list(collection_airports.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
+#             search_index = []
+#             for i in airport_docs:
+#                 x = {
+#                     'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
+#                     query_field: i['code'],     # Use the field name dynamically
+#                     'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
+#                     'type': 'airport',
+#                 }
+#                 search_index.append(x)
+#             if len(search_index) < 2:
+#                 airport_docs = list(collection_airports.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
+#                 for i in airport_docs:
+#                     x = {
+#                         'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
+#                         query_field: i['code'],     # Use the field name dynamically
+#                         'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
+#                         'type': 'airport',
+#                     }
+#                     search_index.append(x)
+#             return search_index
 
-    else:
-        return suggestions_match
-
-
-
-    # # If sti is exhausted, direct query to appropriate index.
-    # if sti_items_match_w_query:
-    #     print('len if sti',len(sti_items_match_w_query))
-
-    #     return sti_items_match_w_query
-    # elif not sti_items_match_w_query:
-    #     if len(query)>=3:
-    #         parsed_query = qc.parse_query(query=query)
-    #         print('Exhausted parsed query',parsed_query)
+#     else:
+#         return suggestions_match
 
 
-""" Tracking, saving and retrieving searches"""
 
-@router.post('/searches/track')
-def track_search(data: SearchData):
-    """ Save searches to the DB for tracking and analytics. saves to search index collection"""
-    # TODO: Current bug: not tracking searches outside of the sic collection. need to account for all searches.
-        # Need to save raw items properly to the sic with proper format and also account for duplicated if it already exists.
-    # NOTE: It this good at all to save to search index collection since were using it for suggestions?
-            # Maybe returning sic without submits is good for suggestions, and since its 
-            # a light weight collection(upto 3000 items) it shouldnt make a huge difference?
-            # TODO: But submits can blow up out of proportions ovevrtime?
+#     # # If sti is exhausted, direct query to appropriate index.
+#     # if sti_items_match_w_query:
+#     #     print('len if sti',len(sti_items_match_w_query))
+
+#     #     return sti_items_match_w_query
+#     # elif not sti_items_match_w_query:
+#     #     if len(query)>=3:
+#     #         parsed_query = qc.parse_query(query=query)
+#     #         print('Exhausted parsed query',parsed_query)
+
+
+# """ Tracking, saving and retrieving searches"""
+
+# @router.post('/searches/track')
+# def track_search(data: SearchData):
+#     """ Save searches to the DB for tracking and analytics. saves to search index collection"""
+#     # TODO: Current bug: not tracking searches outside of the sic collection. need to account for all searches.
+#         # Need to save raw items properly to the sic with proper format and also account for duplicated if it already exists.
+#     # NOTE: It this good at all to save to search index collection since were using it for suggestions?
+#             # Maybe returning sic without submits is good for suggestions, and since its 
+#             # a light weight collection(upto 3000 items) it shouldnt make a huge difference?
+#             # TODO: But submits can blow up out of proportions ovevrtime?
     
-    sic = db_UJ['search_index']   # create/get a collection
-    ctrs = db_UJ['test_rst']   # create/get a collection
+#     sic = db_UJ['search_index']   # create/get a collection
+#     ctrs = db_UJ['test_rst']   # create/get a collection
 
-    # quick view of the search term. dropdown selection or raw search term
-    # quick_view_st = data.submitTerm if data.submitTerm else sic.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
-    # 
-    # TODO: query should be saved by user.
-    update_query = {
-        "$setOnInsert": {"email": data.email},  # Only set email on document creation
-        "$set": {"lastUpdated": data.timestamp},  # Update timestamp
-    }
+#     # quick view of the search term. dropdown selection or raw search term
+#     # quick_view_st = data.submitTerm if data.submitTerm else sic.find_one({"_id": ObjectId(data.stId)}, {"_id": 0, "ph": 0, "r_id": 0})
+#     # 
+#     # TODO: query should be saved by user.
+#     update_query = {
+#         "$setOnInsert": {"email": data.email},  # Only set email on document creation
+#         "$set": {"lastUpdated": data.timestamp},  # Update timestamp
+#     }
 
-    oid = {"_id": ObjectId(data.stId)}
-    if data.stId:       # if submission with dropdown selection
-        doc = sic.find_one(oid)
-        if doc:
-            if "submits" in doc:
-                # If submits exists, just push the new timestamp -- append to the submits array
-                sic.update_one(
-                    {"_id": ObjectId(data.stId)},
-                    {"$push": {"submits": data.timestamp}}
-                )
-            else:
-                # If submits doesn't exist, set it as new array with the timestamp
-                sic.update_one(
-                    {"_id": ObjectId(data.stId)},
-                    {"$set": {"submits": [data.timestamp]}}
-                )
-        doc = sic.find_one(oid)
-    # TODO: This wont account for uniques. Every store is a new store.
-    elif data.submitTerm:       # if submission with raw search term
-        ctrs.update_one(
-            {"rst": data.submitTerm},
-            {"$push": {"submits": data.timestamp}},
-            upsert=True
-        )
-    else:
-        print("Impossible return!")
-
-
-@router.get('/searches/timeline')
-async def get_search_timeline():
-    # Returns a timeline of all searches made by users in exploded fashion.
-
-    sic = db_UJ['search_index']   # create/get a collection
-    crts = db_UJ['test_rst']   # create/get a collection
-
-    sic_docs =  list(sic.aggregate([
-            { "$match": { "submits": { "$exists": True} } },
-            { "$unwind": "$submits" },
-            { "$addFields": { "timestamp": "$submits" } },
-            { "$unset": ["_id", "r_id", "ph", "submits"] }
-        ]))
-    crts_returns =  list(crts.aggregate([
-            { "$unwind": "$submits" },
-            { "$project": {
-                "_id": 0,
-                "rst": 1,
-                "timestamp": "$submits"
-            }}
-        ]))
-    returns = sic_docs + crts_returns
-    return returns
+#     oid = {"_id": ObjectId(data.stId)}
+#     if data.stId:       # if submission with dropdown selection
+#         doc = sic.find_one(oid)
+#         if doc:
+#             if "submits" in doc:
+#                 # If submits exists, just push the new timestamp -- append to the submits array
+#                 sic.update_one(
+#                     {"_id": ObjectId(data.stId)},
+#                     {"$push": {"submits": data.timestamp}}
+#                 )
+#             else:
+#                 # If submits doesn't exist, set it as new array with the timestamp
+#                 sic.update_one(
+#                     {"_id": ObjectId(data.stId)},
+#                     {"$set": {"submits": [data.timestamp]}}
+#                 )
+#         doc = sic.find_one(oid)
+#     # TODO: This wont account for uniques. Every store is a new store.
+#     elif data.submitTerm:       # if submission with raw search term
+#         ctrs.update_one(
+#             {"rst": data.submitTerm},
+#             {"$push": {"submits": data.timestamp}},
+#             upsert=True
+#         )
+#     else:
+#         print("Impossible return!")
 
 
-@router.get('/searches/all')
-async def get_all_searches():
+# @router.get('/searches/timeline')
+# async def get_search_timeline():
+#     # Returns a timeline of all searches made by users in exploded fashion.
+
+#     sic = db_UJ['search_index']   # create/get a collection
+#     crts = db_UJ['test_rst']   # create/get a collection
+
+#     sic_docs =  list(sic.aggregate([
+#             { "$match": { "submits": { "$exists": True} } },
+#             { "$unwind": "$submits" },
+#             { "$addFields": { "timestamp": "$submits" } },
+#             { "$unset": ["_id", "r_id", "ph", "submits"] }
+#         ]))
+#     crts_returns =  list(crts.aggregate([
+#             { "$unwind": "$submits" },
+#             { "$project": {
+#                 "_id": 0,
+#                 "rst": 1,
+#                 "timestamp": "$submits"
+#             }}
+#         ]))
+#     returns = sic_docs + crts_returns
+#     return returns
+
+
+# @router.get('/searches/all')
+# async def get_all_searches():
     
-    sic = db_UJ['test_st']   # create/get a collection
-    crts = db_UJ['test_rst']   # create/get a collection
+#     sic = db_UJ['test_st']   # create/get a collection
+#     crts = db_UJ['test_rst']   # create/get a collection
 
-    sic_docs = list(sic.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
-    crts_call_results = list(crts.find({'submits': {'$exists': True}},{"_id":0}))
-    all_results = sic_docs + crts_call_results
+#     sic_docs = list(sic.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))
+#     crts_call_results = list(crts.find({'submits': {'$exists': True}},{"_id":0}))
+#     all_results = sic_docs + crts_call_results
 
-    # transformed converts `all_results` which is a list of dicts. Conversions are such:
-    # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
-    transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
-    return serialize_document_list(transformed)
+#     # transformed converts `all_results` which is a list of dicts. Conversions are such:
+#     # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
+#     transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
+#     return serialize_document_list(transformed)
 
-@router.get('/searches/{email}')
-async def get_user_searches(email):
-    # Supposed to show all the searches that have been made by the user.
-    all_results = collection_searchTrack.find({"email": email})
-    return serialize_document_list(all_results)
+# @router.get('/searches/{email}')
+# async def get_user_searches(email):
+#     # Supposed to show all the searches that have been made by the user.
+#     all_results = collection_searchTrack.find({"email": email})
+#     return serialize_document_list(all_results)
 
 
 # ____________________________________________________________________________
@@ -540,7 +540,7 @@ async def nas(
 
 @router.get("/gates/{gate}")
 async def gate_returns(gate):
-
+    """ Nidhi: Returns gate from ewrGates """
     gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
     
     return_crit = {'_id':0}
@@ -620,6 +620,7 @@ async def store_live_weather(
 
 @router.post("/sendTelegramNotification")
 def send_telegram_notification(message):
+    
     tb = Tele_bot()
 
     send_to = [tb.ISMAIL_CHAT_ID, tb.UJ_CHAT_ID]

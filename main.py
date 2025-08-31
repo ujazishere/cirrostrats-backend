@@ -3,6 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
 import routes.route as route
+from services.search import (
+    get_search_timeline_service,
+    get_all_searches_service,
+    get_user_searches_service
+)
+from routes import search_routes
+
 
 app = FastAPI()
 
@@ -26,3 +33,5 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
+app.include_router(search_routes.router)
