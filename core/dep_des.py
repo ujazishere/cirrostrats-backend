@@ -5,8 +5,8 @@ from .flight_aware_data_pull import flight_aware_data_pull
 import xml.etree.ElementTree as ET
 import re
 import pickle
-from routes.root.api.flightStats import FlightStatsScraper
-from routes.root.root_class import AirportValidation
+from core.api.flightStats import FlightStatsScraper
+from core.root_class import AirportValidation
 
 '''
 This Script pulls the departure and destination when provided with the flight number.

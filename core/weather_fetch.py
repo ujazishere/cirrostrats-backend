@@ -8,8 +8,8 @@ try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
     print('jupyter import for root_class')
-    from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-from routes.root.weather_parse import Weather_parse
+    from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from core.weather_parse import Weather_parse
 
 
 class Weather_fetch:
@@ -173,7 +173,7 @@ class Weather_fetch:
 # For use in jupyter
 
 # test datis returns:
-from routes.root.weather_fetch import Weather_fetch
+from core.weather_fetch import Weather_fetch
 Wf = Weather_fetch()
 
 Wf.bulk_fetch_and_store_by_type(weather_type='datis')

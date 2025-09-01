@@ -9,7 +9,7 @@ from typing import Dict, List, Union, Optional, Tuple
 from pymongo import UpdateOne
 from config.database import collection_airports, collection_flights, db_UJ
 from config.database import collection_weather
-from routes.root.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
+from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""
 search_index_collection = db_UJ['search_index']
@@ -239,7 +239,7 @@ class QC_base_popularity_hits(QueryClassifier):
     
 
     def qc_ranker(self):
-        from routes.root.search.query_classifier import QueryClassifier
+        from core.search.query_classifier import QueryClassifier
 
         suggestions, flightID_batch,airports_batch,icaos = self.pickle_loads()
         

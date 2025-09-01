@@ -55,7 +55,7 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 
 from config.database import collection_airports, collection_weather
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
-from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 from bson import ObjectId
 import requests
 import datetime as dt
@@ -63,7 +63,7 @@ import json
 from pymongo import UpdateOne
 import pickle
 import asyncio
-from routes.root.weather_parse import Weather_parse
+from core.weather_parse import Weather_parse
 
 # CAUTION!!! the .delete_many with delete all the documents
 # collection_weather.count_documents({})      # returls total documents

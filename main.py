@@ -2,9 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
-
-import routes.route as route
-from routes import search_routes
+from routes.route import register_routes
 
 app = FastAPI()
 
@@ -21,8 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(route.router)
-app.include_router(search_routes.router)
+register_routes(app)
 
 @app.get("/")
 def root():

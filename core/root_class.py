@@ -9,7 +9,7 @@ import pytz
 import requests
 import smtplib
 
-from routes.tele import Tele_bot
+from utils.tele import Tele_bot
 
 class Root_class():
     

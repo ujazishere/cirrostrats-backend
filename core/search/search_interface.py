@@ -1,5 +1,5 @@
 
-from routes.root.search.query_classifier import QueryClassifier
+from core.search.query_classifier import QueryClassifier
 
 
 class SearchInterface(QueryClassifier):

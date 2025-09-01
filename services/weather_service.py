@@ -1,16 +1,16 @@
 from typing import Dict, Optional, Union
 from bson import ObjectId
 from schema.schemas import serialize_document_list
-from ..routes.root.root_class import AirportValidation
-from ..routes.root.weather_parse import Weather_parse
+from core.root_class import AirportValidation
+from core.weather_parse import Weather_parse
 import bson
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather, collection_searchTrack
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
-from ..routes.root.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
-from ..routes.root.flight_deets_pre_processor import response_filter, raw_resp_weather_processing
+from core.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
+from core.flight_deets_pre_processor import response_filter, raw_resp_weather_processing
 
 
 

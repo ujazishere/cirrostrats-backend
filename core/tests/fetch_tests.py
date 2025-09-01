@@ -1,3 +1,8 @@
+try:        # This is in order to keep going when collections are not available
+    from config.database import collection_airports, collection_weather, collection_searchTrack
+    from config.database import collection_flights, db_UJ
+except Exception as e:
+    print('Mongo collection(Luis) connection unsuccessful\n', e)
 
 def tests():
     """
@@ -12,7 +17,7 @@ def tests():
     airport = 'KORD'
 
     flt_nums = ['4418','4433','414','4546','362','213','1411','5555']
-    from routes.root.dep_des import Pull_flight_info
+    from core.dep_des import Pull_flight_info
     flt_info = Pull_flight_info()
     # flt_info.flight_view_gate_info(airline_code='UA',flt_num='4461')
 
@@ -23,7 +28,7 @@ def tests():
         print(aa)
     # x(flt_num,airport,date,airline_code)
 
-def icao_regional_to_major_match():
+async def icao_regional_to_major_match():
 
     import datetime as dt
     from datetime import timedelta

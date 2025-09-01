@@ -1,5 +1,5 @@
-from routes.root.WIPs.WIP_weather_examination import WIPWeatherExamination_archive
-from root.root_class import Root_class
+from core.WIPs.WIP_weather_examination import WIPWeatherExamination_archive
+from root_class import Root_class
 import re
 import pickle
 from collections import Counter

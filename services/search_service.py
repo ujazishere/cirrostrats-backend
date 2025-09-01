@@ -1,7 +1,7 @@
 from config.database import collection_flights, collection_airports, db_UJ
-from routes.root.search.fuzz_find import fuzz_find
-from routes.root.search.search_interface import SearchInterface
-from routes.root.search.query_classifier import QueryClassifier
+from core.search.fuzz_find import fuzz_find
+from core.search.search_interface import SearchInterface
+from core.search.query_classifier import QueryClassifier
 from models.model import SearchData
 from bson import ObjectId
 from schema.schemas import serialize_document_list
@@ -194,3 +194,9 @@ async def get_user_searches_service(email):
     # Supposed to show all the searches that have been made by the user.
     all_results = collection_searchTrack.find({"email": email})
     return serialize_document_list(all_results)
+
+async def raw_search_handler_service(search: str = None):
+    """ handles the submit that is NOT the drop down suggestion. So just willy nilly taking
+    the organic search submit handlling it here by converting to a form that is acceptable in details.jsx"""
+    si = SearchInterface()
+    return si.raw_submit_handler(collection_weather=collection_weather,search=search)

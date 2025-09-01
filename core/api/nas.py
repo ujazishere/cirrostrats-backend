@@ -2,7 +2,7 @@ from logging import Logger
 import xml.etree.ElementTree as ET
 from pymongo import ReplaceOne, UpdateOne
 import requests
-from routes.root.root_class import AirportValidation
+from core.root_class import AirportValidation
 
 class NASExtracts:
 

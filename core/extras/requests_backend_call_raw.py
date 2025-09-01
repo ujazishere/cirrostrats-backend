@@ -1,6 +1,6 @@
 from gate_processor import Gate_processor
-from dj.dj_app.root.weather_parse import Weather_parse
-from dj.dj_app.root.dep_des import Pull_flight_info
+from core.weather_parse import Weather_parse
+from core.dep_des import Pull_flight_info
 
 
 wp = Weather_parse()
