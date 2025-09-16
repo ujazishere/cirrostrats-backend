@@ -5,5 +5,5 @@ router = APIRouter()
 
 @router.get("/gates/{gate}")
 async def gate_returns(gate):
-    return gate_returns_service(gate)
+    return await gate_returns_service(gate)
    
