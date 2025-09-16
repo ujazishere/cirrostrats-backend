@@ -6,8 +6,7 @@ from core.root_class import Root_class
 from services.notification_service import send_telegram_notification_service
 from typing import Dict, List, Optional, Tuple
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 class Newark_departures_scrape(Root_class):
     def __init__(self) -> None:
@@ -87,7 +86,7 @@ class Newark_departures_scrape(Root_class):
             try:
                 raw_bs4_all_EWR_deps = flight_id_link[1:]
             except IndexError:
-                logger.warn("newark_depatures_scrape soups index error. soup ", s)
+                logger.warning("newark_depatures_scrape soups index error. soup %s", s)
                 break
 
             for element in raw_bs4_all_EWR_deps:
@@ -128,7 +127,7 @@ class Newark_departures_scrape(Root_class):
                 scheduled_tag = element.find('div', class_="flight-col flight-col__hour")
                 if not scheduled_tag:
                     # EWR_departures_and_links.append((flight_number, None))
-                    error_message = f"Scheduled time element not found in HTML structure for {flight_number}" + element
+                    error_message = f"Scheduled time element not found in HTML structure for {flight_number} {element}"
                     send_telegram_notification_service(message=error_message)
                     logger.warning(error_message)
                     continue
@@ -162,7 +161,7 @@ class Newark_departures_scrape(Root_class):
             # time_obj = datetime.strptime(time_str, "%H%M").time()         # Attempt to convert to datetime obj but gives error when saving to mongo
             return time_str
         else:
-            logger.info("Time issues in time_converter:", flight_id, time_data)
+            logger.info("Time issues in time_converter: %s %s", flight_id, time_data)
 
 
     def validate_date(self,flight_id, date_str):
@@ -171,7 +170,7 @@ class Newark_departures_scrape(Root_class):
             return date_str
             # return datetime.strptime(date_str, "%B %d, %Y").date()            # attemt to return datetime obj but mongo wouldnt take it unless its precise.
         except ValueError:
-            logger.warn("Date issues in validate_date:", date_str, flight_id)
+            logger.warning("Date issues in validate_date: %s %s", date_str, flight_id)
             return False
 
 
@@ -255,7 +254,7 @@ class Newark_departures_scrape(Root_class):
 
             # Log successful extraction
             if not all([extracts.get('Scheduled'), extracts.get('Gate')]):
-                logger.info("Partial flight details extracted (some fields missing),", type(extracts),extracts)
+                logger.info("Partial flight details extracted (some fields missing), %s %s", type(extracts), extracts)
 
         except Exception as e:
             logger.error(f"Unexpected error during flight details extraction: {str(e)}", exc_info=True)

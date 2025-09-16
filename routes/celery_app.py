@@ -15,8 +15,11 @@ from routes.root.gate_processor import Gate_processor
     instead use asyncio.run(async_function()) and this async_function() can be any async function you want to schedule. check example below for asyncio.run()
 '''
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+from utils.logging_config import setup_logging
+
+# Initialize structured logging for Celery context
+setup_logging(service="cirrostrats-backend-celery")
+logger = logging.getLogger(__name__)
 
 celery_app = Celery(
     'tasks',
@@ -33,16 +36,16 @@ zulutime = utc_now.strftime("%d %H:%M")
 
 
 # Mind the host name 'redis' instead of typical 'localhost' - 'redis' is the name of the service in docker-compose.yml
-r = redis.Redis(host='redis', port=6379, db=0)        
+r = redis.Redis(host='redis', port=6379, db=0)
 
 @celery_app.task
 def DatisFetch():
     # Read caution note for explanation on asyncio use here.
     asyncio.run(run_datis_fetch())           # run_datis_fetch() is an async function. DatisFetch() is a celery task that cannot be an async function.
 
-async def run_datis_fetch():    
+async def run_datis_fetch():
     Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='datis')
+    await Wf.bulk_fetch_and_store_by_type(weather_type='datis') # check on this time - Harsh
     return f'Celery task completed for fetching datis. timestamp - {zulutime}'
 
 
@@ -60,7 +63,7 @@ async def run_metar_fetch_async_function():
 def TAFFetch():
     asyncio.run(run_TAF_fetch())
 
-async def run_TAF_fetch():    
+async def run_TAF_fetch():
     Wf = Weather_fetch()
     await Wf.bulk_fetch_and_store_by_type(weather_type='taf')
     return f'Celery task completed for fetching TAF. timestamp - {zulutime}'
@@ -104,10 +107,10 @@ def nasFetch():
     if not nas_data:
         send_telegram_notification("Error: NAS", error=True)
         return "Error: NAS - nas_data empty"
-    
+
     nas_type = 'ground_stop_packet'      # Change this to the type of nas data you want to monitor.
     juice = nas_data.get(nas_type)
-    
+
     message = f"{nas_type} @ {zulutime} - {juice}"
     previous_juice = r.get('juice')     # Attempt to retrieve previous data for comparison.
     if previous_juice and json.loads(previous_juice.decode('utf-8')) != juice:
@@ -124,6 +127,8 @@ def nasFetch():
 
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
+# Ensure Celery does not override our logging configuration
+celery_app.conf.worker_hijack_root_logger = False
 
 
 # Add periodic task scheduling

@@ -3,8 +3,7 @@ from core.root_class import Root_class
 from typing import Optional
 from typing import Literal
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 ScrapeStatus = Literal['On time', 'Scheduled', 'Cancelled']
 
