@@ -41,7 +41,7 @@ class Weather_fetch:
 
         import os
         cwd = os.getcwd()
-        taf_positive_path = fr'{cwd}/routes/root/pkl/taf_positive_airports.pkl'
+        taf_positive_path = fr'{cwd}/core/pkl/taf_positive_airports.pkl'
         # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'
         with open(taf_positive_path, 'rb') as f:
             taf_positive_airport_codes = pickle.load(f)

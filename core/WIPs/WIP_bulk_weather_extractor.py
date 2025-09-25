@@ -90,7 +90,7 @@ class Bulk_weather_extractor:
         else:
             # 20,296 airport ID in list form. eg ['DAB', 'EWR', 'X50', 'AL44']
             # Load airport ID
-            with open(r'routes/root/pkl/airport_identifiers_US.pkl', 'rb') as f:
+            with open(r'core/pkl/airport_identifiers_US.pkl', 'rb') as f:
                 id = pickle.load(f)
                 return id
     
