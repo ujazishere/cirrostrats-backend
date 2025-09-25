@@ -26,5 +26,5 @@ class Tele_bot:
         for each_user in chat_id:
             payload = self.payload_prep(each_user, MESSAGE)
             r = requests.post(self.url, data=payload)
-            # this is a result of the post request could use a log for this. or atleast condition for ok:false to log warning.
             # print(r.json())
+            # r here isthe result of the post request could use it as a log. or atleast condition for ok:false to log warning.
