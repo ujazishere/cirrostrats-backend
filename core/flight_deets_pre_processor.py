@@ -2,26 +2,29 @@ import bs4
 from .weather_parse import Weather_parse
 from .dep_des import Pull_flight_info
 import json
-flt_info = Pull_flight_info()
 
+
+flt_info = Pull_flight_info()
 
 def weather_html_injection(weather_raw):
     """ Figured its important to keep html interjection separatre for reusability."""
     wp = Weather_parse()            
     return wp.processed_weather(weather_raw=weather_raw)     # Doing this to avoid nested weather dictionaries
     
-
-def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
+def resp_splitter(airport_code, resp_dict):
     metar,taf,datis = ['']*3
 
     for url,resp in resp_dict.items():
-        if f"metar?ids={airport_id}" in str(url):
+        if f"metar?ids={airport_code}" in str(url):
             metar = resp
-        elif f"taf?ids={airport_id}" in str(url):
+        elif f"taf?ids={airport_code}" in str(url):
             taf = resp
-        elif f"clowd.io/api/{airport_id}" in str(url):
+        elif f"clowd.io/api/{airport_code}" in str(url):
             datis = json.loads(resp)     # Apparently this is being returned within a list is being fed as is. Accounted for.
+    return metar,taf,datis
 
+def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
+    metar,taf,datis = resp_splitter(airport_id, resp_dict)
     raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
     # dep_weather = wp.processed_weather(weather_raw=dep_weather)
     
