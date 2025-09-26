@@ -222,11 +222,12 @@ class Weather_parse:
 
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
 
-        low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
+        # Add null checks before regex operations
+        low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw) if metar_raw else ""
         # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
-        low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
+        low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw) if taf_raw else ""
         # LIFR pattern for ceilings >>> anything below 5 to pink DATIS 
-        low_ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw)
+        low_ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw) if datis_raw else ""
         # print('within lowifr', datis_raw)
 
         # IFR Pattern for ceilings METAR
@@ -235,7 +236,7 @@ class Weather_parse:
         ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_taf_ceilings)
         # IFR pattern for ceilings DATIS
         ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_datis_ceilings)
-        
+
         # ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in betwee. SCA had this in TAF and its not accounted for.
 
         # LIFR PAttern for visibility >>> Anything below 5 to pink METAR
@@ -250,20 +251,20 @@ class Weather_parse:
 
         # original taf alternate for ceilings text color
         highlighted_taf = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_taf_visibility)
-        highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM")   # line break for FM section in TAF for HTML
+        highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM") if highlighted_taf else ""   # line break for FM section in TAF for HTML
         highlighted_datis = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_datis_visibility)
 
-        highlighted_datis = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis)
-        highlighted_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis)
-        highlighted_datis = re.sub(self.LLWS, self.yellow_warning, highlighted_datis)
-        highlighted_datis = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis)
-        
-        highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar)
+        highlighted_datis = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis) if highlighted_datis else ""
+        highlighted_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis) if highlighted_datis else ""
+        highlighted_datis = re.sub(self.LLWS, self.yellow_warning, highlighted_datis) if highlighted_datis else ""
+        highlighted_datis = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis) if highlighted_datis else ""
+
+        highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar) if highlighted_metar else ""
 
         # This was the original way of returning the uppercase keys. React did not like it so returning lowercase.
         # return dict({ 'D-ATIS': highlighted_datis,
         #               'D-ATIS_zt': zulu_recency(datis_raw,datis=True),
-                      
+                    
         #               'METAR': highlighted_metar, 
         #               'METAR_zt': zulu_recency(metar_raw),
 
@@ -272,18 +273,17 @@ class Weather_parse:
         #               })
 
         return dict({ 'datis': highlighted_datis,
-                      'datis_zt': self.zulu_recency(datis_raw,datis=True),
-                      'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis'),
-                      
-                      'metar': highlighted_metar, 
-                      'metar_zt': self.zulu_recency(metar_raw),
-                      'metar_ts': self.zulu_extraction(metar_raw,weather_type='metar'),
+                    'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
+                    'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
+                    
+                    'metar': highlighted_metar, 
+                    'metar_zt': self.zulu_recency(metar_raw) if metar_raw else "",
+                    'metar_ts': self.zulu_extraction(metar_raw,weather_type='metar') if metar_raw else "",
 
-                      'taf': highlighted_taf,
-                      'taf_zt': self.zulu_recency(taf_raw,taf=True),
-                      'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf'),
-                      })
-
+                    'taf': highlighted_taf,
+                    'taf_zt': self.zulu_recency(taf_raw,taf=True) if taf_raw else "",
+                    'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf') if taf_raw else "",
+                    })
 
     def nested_weather_dict_explosion(self,incoming_weather:dict):
         # Departure weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
