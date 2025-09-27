@@ -502,7 +502,7 @@ def register_routes(app):
 #             # try this: weather = weather.scrape(weather_query, datis_arr=True)
 #         # HTML injection to color code the weather data
 #         wp = Weather_parse()
-#         weather = wp.processed_weather(weather_raw=res)
+#         weather = wp.html_injected_weather(weather_raw=res)
 #         weather.update({'code':code})       # add airport code to the weather dict
 #         # print('res weather',weather )
 

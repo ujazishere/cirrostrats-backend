@@ -6,11 +6,6 @@ import json
 
 flt_info = Pull_flight_info()
 
-def weather_html_injection(weather_raw):
-    """ Figured its important to keep html interjection separatre for reusability."""
-    wp = Weather_parse()            
-    return wp.processed_weather(weather_raw=weather_raw)     # Doing this to avoid nested weather dictionaries
-    
 def resp_splitter(airport_code, resp_dict):
     metar,taf,datis = ['']*3
 
@@ -26,12 +21,12 @@ def resp_splitter(airport_code, resp_dict):
 def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
     metar,taf,datis = resp_splitter(airport_id, resp_dict)
     raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
-    # dep_weather = wp.processed_weather(weather_raw=dep_weather)
+    # dep_weather = wp.html_injected_weather(weather_raw=dep_weather)
     
+    wp = Weather_parse()            
     if html_injection:
-        return weather_html_injection(raw_weather_returns)
+        return wp.html_injected_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
     else:
-        wp = Weather_parse()
         datis_raw = wp.datis_processing(datis_raw=raw_weather_returns.get('datis','N/A'))
         raw_weather_returns['datis'] = datis_raw
         return raw_weather_returns

@@ -40,7 +40,7 @@ async def aviation_stack(flight_number):
 async def flight_aware_w_auth(flight_number, mock=False):
     if mock:
         md = Mock_data()
-        md.flight_data_init(html_injected_weather=False)
+        md.flight_data_init()
         print('mock flight aware data', md.flightAware)
         return md.flightAware
     

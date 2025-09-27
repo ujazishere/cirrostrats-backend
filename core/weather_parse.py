@@ -47,7 +47,6 @@ class Weather_parse:
         self.RW_IN_USE = r'()((SIMUL([A-Z]*)?,?|VISUAL (AP(P)?(ROA)?CH(E)?(S)?)|(ILS(/VA|,)?|(ARRIVALS )?EXPECT|RNAV|((ARVNG|LNDG) AND )?DEPG|LANDING)) (.*?)(IN USE\.|((RWY|RY|RUNWAY|APCH|ILS|DEP|VIS) )(\d{1,2}(R|L|C)?)\.))'
         # self.RW_IN_US = r'(ARRIVALS EXPECT|SIMUL|RUNWAYS|VISUAL|RNAV|ILS(,|RY|))(.*?)\.'
 
-
     def visibility_color_code(self,incoming_weather_data):
 
         # Surrounds the matched pattern with the html declared during initialization(the __init__ method).
@@ -62,47 +61,50 @@ class Weather_parse:
         else:
             # print('Nothing to process in visibility_color_code func')
             return incoming_weather_data
+
+    def datis_processing(self, datis_raw):
+        #     # DATIS NOTE: Major use in raw_weather_pull and html_injected_weather.
+        """
+        Process DATIS data into a consistent structure.
+        Args:
+            datis_raw (list or dict): Raw DATIS data, can be a list of dicts or a dict with an 'error' key.
+            if there is arr and dep, returns combined as N/A and arr and dep as is.
+            if there is only combined, returns combined as that value and the other as None.
+            for non list non dict input, returns N/A, None, None and triggers notification for investigation.
+
+        Returns: {
+            'combined': str or 'N/A',
+            'arr': str or None, 
+            'dep': str or None
+        }
+        """
+        # Initialize result structure
+        result = {'combined': 'N/A', 'arr': None, 'dep': None}
         
+        # # Handle error case
+        if isinstance(datis_raw, dict) and datis_raw.get('error'):
+            return result
+        # Rare case- Handle non-list,non-dict input (already processed or unexpected format) - return "N/A"
+        elif not isinstance(datis_raw, list):
+            # TODO: Consider logging/notification this unexpected format - if not dict if not list, then what?- Should be investigated
+            # logging.warning("Unexpected DATIS format: %s", datis_raw)
+            return result
+        
+        # Process list input
+        for item in datis_raw:
+            datis_text = item.get('datis', '')
+            data_type = item.get('type', '')
+            
+            if data_type == 'combined':
+                result['combined'] = datis_text
+            elif data_type == 'arr':
+                result['arr'] = datis_text
+            elif data_type == 'dep':
+                result['dep'] = datis_text
+        
+        return result    
 
-    def datis_processing(self,datis_raw,datis_arr=None):
-        # TODO VHP: Account for departure as well as arrival datis for return.
-        datis = datis_raw
-
-        if isinstance(datis, dict) and  datis.get('error'):         # datis that gives error handled here.
-            datis = 'N/A'
-
-        # D-ATIS processing for departure and arrival - for e.g PHL spits out two separate DATIS. This section accounts for it.
-        if type(datis) == list and 'datis' in datis[0].keys():
-            if len(datis) == 1:
-                datis_raw = datis[0]['datis']
-            elif len(datis) == 2:       # Departure and arrival datis separated
-                if datis[0]['type'] == 'arr':
-                    # TODO VHP: need to properly send this seperately for departure vs arrial for mdb.
-                    # print('Returned Arrival D-ATIS through weather_parse.py')           
-                    arr_datis = datis[0]['datis']
-                else:
-                    arr_datis = datis[1]['datis']
-                if datis[1]['type'] == 'dep':
-                    dep_datis = datis[1]['datis']
-                else:
-                    dep_datis = datis[0]['datis']
-                
-                if datis_arr:
-                    datis_raw = arr_datis
-                else:
-                    datis_raw = dep_datis
-            else:
-                print('Impossible else in DATIS')
-                datis_raw = 'N/A'
-        else:
-            # TODO Test: This is a tempp fix.
-            datis_raw = datis
-        # if not datis_raw:
-        #     datis_raw = 'N/A'
-        return datis_raw
-
-
-    def raw_weather_pull(self, query=None, datis_arr=None):
+    def raw_weather_pull(self, query=None,):
         
         # Find ways to convert raw query input into identifiable airport ID
             # What does this mean^^?
@@ -119,13 +121,14 @@ class Weather_parse:
         datis_api =  f"https://datis.clowd.io/api/{airport_id}"
         datis = requests.get(datis_api)
         datis = datis.json()
-        datis_raw = self.datis_processing(datis_raw=datis,datis_arr=datis_arr)
+
+        # DATIS TODO: This is where datis params needs fixed
+        datis_raw = self.datis_processing(datis_raw=datis)
         return dict({ 'datis': datis_raw,
                         'metar': metar_raw, 
                         'taf': taf_raw,
                         })
     
-
     def zulu_extraction(self, weather_input, weather_type:str):
         """ Extracts the zulu time from the weather input. 
             If datis is True, it will extract the zulu time from the datis input.
@@ -192,10 +195,14 @@ class Weather_parse:
             zulu_weather = 'N/A'
             return zulu_weather
         
-
-    def processed_weather(self, query=None, mock_test_data=None, datis_arr=None,
+    def html_injected_weather(self, mock_test_data=None,
                           weather_raw=None,
                           ):
+        """ This function takes in either mock_test_data or weather_raw as dict with datis, metar, taf data.
+            html injection is done here for highlighting purposes - LIFR, IFR, Alternate IFR, ATIS code, 
+            altimeter settings, LLWS, RW in use, and such are highlighted in this function.
+        """
+        # TODO DATIS: Next step logically seens to be to overhaul this function to return dict for datis returns
         if mock_test_data:
             metar_raw = mock_test_data['metar']
             datis_raw = mock_test_data['datis']
@@ -203,22 +210,10 @@ class Weather_parse:
         
         elif weather_raw:
             raw_return = weather_raw        # This wont do the datis processing.
-            datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'),datis_arr=datis_arr)
+            # DATIS TODO: This is where datis params needs fixed
+            datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'))
             metar_raw = raw_return.get('metar')
             taf_raw = raw_return.get('taf')
-
-        else:
-            # Pulls raw weather and will also do the datis processing within the function.
-            raw_return = self.raw_weather_pull(query=query,datis_arr=datis_arr)     
-            datis_raw = raw_return.get('datis')
-            metar_raw = raw_return.get('metar')
-            taf_raw = raw_return.get('taf')
-
-        # Exporting raw weather data for color code processing
-        # raw_weather_dummy_data = { 'D-ATIS': datis_raw, 'METAR': metar_raw, 'TAF': taf_raw} 
-        # with open(f'raw_weather_dummy_data{airport_id}.pkl', 'wb') as f:
-            # print(f"DUMPING RAW WEATHER DATA")
-            # pickle.dump(raw_weather_dummy_data, f)
 
         # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
 
@@ -261,17 +256,6 @@ class Weather_parse:
 
         highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar) if highlighted_metar else ""
 
-        # This was the original way of returning the uppercase keys. React did not like it so returning lowercase.
-        # return dict({ 'D-ATIS': highlighted_datis,
-        #               'D-ATIS_zt': zulu_recency(datis_raw,datis=True),
-                    
-        #               'METAR': highlighted_metar, 
-        #               'METAR_zt': zulu_recency(metar_raw),
-
-        #               'TAF': highlighted_taf,
-        #               'TAF_zt': zulu_recency(taf_raw,taf=True),
-        #               })
-
         return dict({ 'datis': highlighted_datis,
                     'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
                     'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
@@ -284,38 +268,3 @@ class Weather_parse:
                     'taf_zt': self.zulu_recency(taf_raw,taf=True) if taf_raw else "",
                     'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf') if taf_raw else "",
                     })
-
-    def nested_weather_dict_explosion(self,incoming_weather:dict):
-        # Departure weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
-        
-        weather_returns = {}
-        dep_datis = incoming_weather['dep_weather']['D-ATIS']
-        dep_metar = incoming_weather['dep_weather']['METAR']
-        dep_taf = incoming_weather['dep_weather']['TAF']
-        weather_returns['dep_metar'] = dep_metar
-        weather_returns['dep_datis'] = dep_datis
-        weather_returns['dep_taf'] = dep_taf
-
-        dep_datis_zt = incoming_weather['dep_weather']['D-ATIS_zt']
-        dep_metar_zt = incoming_weather['dep_weather']['METAR_zt']
-        dep_taf_zt = incoming_weather['dep_weather']['TAF_zt']
-        weather_returns['dep_metar_zt'] = dep_metar_zt
-        weather_returns['dep_datis_zt'] = dep_datis_zt
-        weather_returns['dep_taf_zt'] = dep_taf_zt
-
-        # Destionation Weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
-        dest_datis = incoming_weather['dest_weather']['D-ATIS']
-        dest_metar = incoming_weather['dest_weather']['METAR']
-        dest_taf = incoming_weather['dest_weather']['TAF']
-        weather_returns['dest_datis'] = dest_datis
-        weather_returns['dest_metar'] = dest_metar
-        weather_returns['dest_taf'] = dest_taf
-
-        dest_datis_zt = incoming_weather['dest_weather']['D-ATIS_zt']
-        dest_metar_zt = incoming_weather['dest_weather']['METAR_zt']
-        dest_taf_zt = incoming_weather['dest_weather']['TAF_zt']
-        weather_returns['dest_datis_zt'] = dest_datis_zt
-        weather_returns['dest_metar_zt'] = dest_metar_zt
-        weather_returns['dest_taf_zt'] = dest_taf_zt
-
-        return weather_returns

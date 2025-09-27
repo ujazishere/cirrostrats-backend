@@ -28,7 +28,7 @@ class Mock_data:
         pass
 
 
-    def flight_data_init(self,html_injected_weather):
+    def flight_data_init(self):
 
         self.jms_STDDS_clearance = {
             "towerAircraftID": "UAL4458",
@@ -137,22 +137,6 @@ class Mock_data:
                 }
         ]
 
-        self.weather_raw = {
-            'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
-            'datis_ts': "0756Z",
-            'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
-            'metar_ts': "300830Z",
-            'taf': 'KDEN 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015\n    FM030300 00000KT 1SM -SHRA FG OVC002\n    FM031300 19005KT 3/4SM BR OVC004\n    FM031500 23008KT 1/26SM OVC005\n    FM031800 25010KT 1/4SM OVC015\n    FM032100 25010KT M1/4SM BKN040',
-            'taf_ts': "300330Z",
-        }
-
-        if html_injected_weather:
-            wp = Weather_parse()
-            self.weather = wp.processed_weather(
-                mock_test_data=self.weather_raw)
-        else:
-            self.weather = self.weather_raw
-
         self.nas_singular_mock = {
                 'Ground Stop': {
                     'Airport': 'DEN',
@@ -181,6 +165,49 @@ class Mock_data:
                     }
             }
 
+    def weather_data_init(self,html_injected_weather):
+        self.raw_datis_combined = [{'airport': 'KEWR',
+                        'type': 'combined',
+                        'code': 'F',
+                        'datis': 'EWR ATIS INFO F 1751Z. 29011G17KT 1SM BKN004 BKN190 BKN250 29/15 A2981 (TWO NINER EIGHT ONE). ILS RWY 22L APCH IN USE. DEPARTING RY 22R FROM INT W 10,150 FEET TODA. RWY 22L TDZL OTS, RWY 22L CL LIGHTS OTS. GBAS OTS. VIP TFR. NO CLASS "B" SERVICES. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO F.',
+                        'time': '1751',
+                        'updatedAt': '2025-09-26T18:03:40.3038413Z'}]
+        self.raw_datis_arr_dep = [{'airport': 'KPHL',
+                        'type': 'arr',
+                        'code': 'L',
+                        'datis': 'PHL ARR INFO L 1754Z. 29009KT 1/2SM OVC004 28/15 A2984 (TWO NINER EIGHT FOUR) RMK AO2 SLP102 T02830150 10283 20211 58009. SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, OR VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY G CLSD BTN, TWY, J AND TWY E . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 2NM NE OF ZMRMN INTERSECTION AT ONE7N AOB 13500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO L.',
+                        'time': '1754',
+                        'updatedAt': '2025-09-26T18:03:13.6447762Z'},
+                        {'airport': 'KPHL',
+                        'type': 'dep',
+                        'code': 'Y',
+                        'datis': 'PHL DEP INFO Y 1754Z. 29009KT 1SM BKN015 SCT110 SCT260 28/15 A2984 (TWO NINER EIGHT FOUR) RMK AO2 SLP102 T02830150 10283 20211 58009. DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY G CLSD BTN, TWY, J AND TWY E . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 2NM NE OF ZMRMN INTERSECTION AT ONE7N AOB 13500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO Y.',
+                        'time': '1754',
+                        'updatedAt': '2025-09-26T18:03:14.6154463Z'}]
+        self.raw_datis_error = {'error': 'No results found'}
+
+        self.processed_datis_combined = Weather_parse().datis_processing(self.raw_datis_combined)
+        self.processed_datis_arr_dep = Weather_parse().datis_processing(self.raw_datis_arr_dep)
+        self.processed_datis_error = Weather_parse().datis_processing(self.raw_datis_error)
+
+        # TODO: if processed internally use the function instead of the raw data that was processed by the function. Then use this class to spit out structured data structure.
+
+        self.weather_raw = {
+            'datis': self.raw_datis_arr_dep,
+            # 'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
+            'datis_ts': "0756Z",
+            'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
+            'metar_ts': "300830Z",
+            'taf': 'KDEN 022355Z 0300/0324 00000KT 2SM BR VCSH FEW015 OVC060 TEMPO 0300/0303 1 1/2SM FG BKN015\n    FM030300 00000KT 1SM -SHRA FG OVC002\n    FM031300 19005KT 3/4SM BR OVC004\n    FM031500 23008KT 1/26SM OVC005\n    FM031800 25010KT 1/4SM OVC015\n    FM032100 25010KT M1/4SM BKN040',
+            'taf_ts': "300330Z",
+        }
+
+        if html_injected_weather:
+            wp = Weather_parse()
+            self.weather = wp.html_injected_weather(
+                mock_test_data=self.weather_raw)
+        else:
+            self.weather = self.weather_raw
 
     def collective(self,):
         """ initialize flight_data first to use this function since variables in here are from flight_data"""

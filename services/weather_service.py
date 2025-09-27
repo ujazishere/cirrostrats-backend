@@ -9,11 +9,8 @@ try:        # This is in order to keep going when collections are not available
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
-from core.root_class import Fetching_Mechanism, Root_source_links, Source_links_and_api
-from core.flight_deets_pre_processor import response_filter, raw_resp_weather_processing
-
-
-
+from core.root_class import Fetching_Mechanism, Root_source_links
+from core.flight_deets_pre_processor import raw_resp_weather_processing
 
 async def store_live_weather_service(
     mdbId: Optional[str] = None,
@@ -64,7 +61,6 @@ async def store_live_weather_service(
     # result = collection_weather.bulk_write(update_operations)
     return {"status": "success"}
 
-
 async def get_airport_data_service(airport_id):
     """Airport ID can be bson id itself for mongo or a icao/iata airportID code.
         4 letter ICAO codes are converted to 3 letter IATA codes for mdb weather collection.
@@ -101,7 +97,7 @@ async def get_airport_data_service(airport_id):
             # try this: weather = weather.scrape(weather_query, datis_arr=True)
         # HTML injection to color code the weather data
         wp = Weather_parse()
-        weather = wp.processed_weather(weather_raw=res)
+        weather = wp.html_injected_weather(weather_raw=res)
         weather.update({'code':code})       # add airport code to the weather dict
         # print('res weather',weather )
 

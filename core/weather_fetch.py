@@ -3,7 +3,7 @@ import json
 import pickle
 from pymongo import UpdateOne
 import requests
-from routes.route import send_telegram_notification
+from services.notification_service import send_telegram_notification_service
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
@@ -34,7 +34,7 @@ class Weather_fetch:
         response = requests.get(url)
         all_datis_airport_codes = response.json()
         if not all_datis_airport_codes or  not isinstance(all_datis_airport_codes,list):        # Check if response is valid list of airport codes
-            send_telegram_notification(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_airport_codes}')
+            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_airport_codes}')
             print('Error: Datis airport codes fetch failed. Returns:', all_datis_airport_codes)
             all_datis_airport_codes = []
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
@@ -111,7 +111,6 @@ class Weather_fetch:
 
     def bulk_datis_processing(self, resp_dict:dict):
         # TODO Test: a similar function exists in -- weather_parse().datis_processing().
-                    # Better to change label to 'bulk_datis_processing'
 
         # print('Processing Datis')
         # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
@@ -124,7 +123,7 @@ class Weather_fetch:
             else:
                 # ending up in this block means the code is broken somewhere.
                 # TODO Test: checkpoint here for notification- track how many times the code ends up here.
-                send_telegram_notification(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
+                send_telegram_notification_service(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
                 print('Error: Datis processing')
 
         return resp_dict
