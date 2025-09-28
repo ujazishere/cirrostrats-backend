@@ -106,7 +106,6 @@ class Weather_parse:
         
         return result    
 
-    
     def zulu_extraction(self, weather_input, weather_type:str):
         """ Extracts the zulu time from the weather input. 
             If datis is True, it will extract the zulu time from the datis input.
@@ -172,71 +171,65 @@ class Weather_parse:
         else:
             zulu_weather = 'N/A'
             return zulu_weather
-        
-    def html_injected_weather(self, mock_test_data=None,
-                          weather_raw=None,
-                          ):
+    
+
+    def color_code(self, weather:str, taf=False):
+        """
+        Function to color-code the weather data based on LIFR and IFR patterns.
+
+        Parameters:
+        weather (str): The weather data to be color-coded.
+        taf (bool): Whether to add line breaks or empty spaces before FM block for HTML in TAF.
+
+        Returns:
+        str: The color-coded weather data.
+        """
+
+        # LIFR pattern for ceilings >>> Anything below 500ft to pink.
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, weather) if weather else ""
+        # IFR pattern for below 1000ft.
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, html_injected_weather) if html_injected_weather else ""
+        # TODO: ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in between. SCA had this in TAF and its not accounted for.
+        # IFR and LIFR pattern for visibility >>> Anything below 3 to red and below 1 to pink.
+        html_injected_weather = self.visibility_color_code(html_injected_weather)
+        # Alternate for ceilings text color >> HIGHLIGHT FOR ANYTHING BELOW 2000ft
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, html_injected_weather)
+
+        if taf:     # This is for TAF only to add line breaks or empty spaces before FM block for HTML
+            html_injected_weather = html_injected_weather.replace("FM", "<br>\xa0\xa0\xa0\xa0FM") if html_injected_weather else ""   # line break for FM section in TAF for HTML
+
+        final_highlight = html_injected_weather
+        return final_highlight
+
+    def html_injected_weather(self, weather_raw):
         """ This function takes in either mock_test_data or weather_raw as dict with datis, metar, taf data.
             html injection is done here for highlighting purposes - LIFR, IFR, Alternate IFR, ATIS code, 
             altimeter settings, LLWS, RW in use, and such are highlighted in this function.
         """
-        # TODO DATIS: Next step logically seens to be to overhaul this function to return dict for datis returns
-        if mock_test_data:
-            metar_raw = mock_test_data['metar']
-            datis_raw = mock_test_data['datis']
-            taf_raw = mock_test_data['taf']
+
+        datis_raw = weather_raw.get('datis','N/A')
+        metar_raw = weather_raw.get('metar')
+        taf_raw = weather_raw.get('taf')
         
-        elif weather_raw:
-            raw_return = weather_raw        # This wont do the datis processing.
-            # DATIS TODO: This is where datis params needs fixed
-            datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'))
-            metar_raw = raw_return.get('metar')
-            taf_raw = raw_return.get('taf')
 
-        # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
-
-        # Add null checks before regex operations
-        low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw) if metar_raw else ""
-        # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
-        low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw) if taf_raw else ""
-        # LIFR pattern for ceilings >>> anything below 5 to pink DATIS 
-        low_ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw) if datis_raw else ""
-        # print('within lowifr', datis_raw)
-
-        # IFR Pattern for ceilings METAR
-        ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_metar_ceilings)
-        # IFR pattern for ceilings TAF
-        ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_taf_ceilings)
-        # IFR pattern for ceilings DATIS
-        ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_datis_ceilings)
-
-        # ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in betwee. SCA had this in TAF and its not accounted for.
-
-        # LIFR PAttern for visibility >>> Anything below 5 to pink METAR
-        lifr_ifr_metar_visibility = self.visibility_color_code(ifr_metar_ceilings)
-        # LIFR pattern for visibility >>> anything below 5 to pink TAF 
-        lifr_ifr_taf_visibility = self.visibility_color_code(ifr_taf_ceilings)
-        # LIFR pattern for visibility >>> anything below 5 to pink DATIS 
-        lifr_ifr_datis_visibility = self.visibility_color_code(ifr_datis_ceilings)
-
-        # original metar alternate for ceilings text color >> NEED HIGHLIGHT FOR ANYTHING BELOW 20
-        highlighted_metar = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_metar_visibility)
-
-        # original taf alternate for ceilings text color
-        highlighted_taf = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_taf_visibility)
-        highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM") if highlighted_taf else ""   # line break for FM section in TAF for HTML
-        highlighted_datis = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_datis_visibility)
-
-        highlighted_datis = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis) if highlighted_datis else ""
-        highlighted_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis) if highlighted_datis else ""
-        highlighted_datis = re.sub(self.LLWS, self.yellow_warning, highlighted_datis) if highlighted_datis else ""
-        highlighted_datis = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis) if highlighted_datis else ""
-
+        highlighted_metar = self.color_code(metar_raw)
         highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar) if highlighted_metar else ""
+        
+        highlighted_taf = self.color_code(taf_raw,taf=True)
+        
+        highlighted_datis = {}
+        for k,datis in datis_raw.items():
+            if datis:
+                highlighted_datis[k] = self.color_code(datis)
+                highlighted_datis[k] = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
+                highlighted_datis[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
+                highlighted_datis[k] = re.sub(self.LLWS, self.yellow_warning, highlighted_datis[k]) if highlighted_datis[k] else ""
+                highlighted_datis[k] = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis[k]) if highlighted_datis[k] else ""
+
 
         return dict({ 'datis': highlighted_datis,
-                    'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
-                    'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
+                    # 'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
+                    # 'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
                     
                     'metar': highlighted_metar, 
                     'metar_zt': self.zulu_recency(metar_raw) if metar_raw else "",

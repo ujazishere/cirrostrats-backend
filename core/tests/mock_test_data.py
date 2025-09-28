@@ -24,6 +24,7 @@ async def test_aws_jms():
 
 
 class Mock_data:
+    """ The way to use this is to init flight and weather data then use collective to combine them"""
     def __init__(self):
         pass
 
@@ -193,7 +194,7 @@ class Mock_data:
         # TODO: if processed internally use the function instead of the raw data that was processed by the function. Then use this class to spit out structured data structure.
 
         self.weather_raw = {
-            'datis': self.raw_datis_arr_dep,
+            'datis': Weather_parse().datis_processing(self.raw_datis_arr_dep),
             # 'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'datis_ts': "0756Z",
             'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
@@ -205,7 +206,7 @@ class Mock_data:
         if html_injected_weather:
             wp = Weather_parse()
             self.weather = wp.html_injected_weather(
-                mock_test_data=self.weather_raw)
+                weather_raw=self.weather_raw)
         else:
             self.weather = self.weather_raw
 
