@@ -18,7 +18,6 @@ from pymongo import UpdateOne
 import requests
 
 from config.database import collection_weather,collection_airports
-from core.flight_deets_pre_processor import raw_resp_weather_processing
 from core.weather_parse import Weather_parse
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
@@ -215,7 +214,8 @@ class Singular_weather_fetch:
         wl_dict = {weather_type:self.link_returns(weather_type,ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
         resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
 
-        weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=ICAO_code_to_fetch, html_injection=False)
+        wp = Weather_processor()
+        weather_dict = wp.raw_resp_weather_processing(resp_dict=resp_dict, airport_id=ICAO_code_to_fetch, html_injection=False)
 
         return weather_dict
 

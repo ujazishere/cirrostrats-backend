@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Union
 from bson import ObjectId
-from core.weather_fetch import Singular_weather_fetch
+from core.weather_fetch import Singular_weather_fetch, Weather_processor
 from schema.schemas import serialize_document_list
 from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
@@ -11,7 +11,6 @@ try:        # This is in order to keep going when collections are not available
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 from core.root_class import Fetching_Mechanism, Root_source_links
-from core.flight_deets_pre_processor import raw_resp_weather_processing
 
 
 async def store_live_weather_service(
@@ -112,20 +111,7 @@ async def liveAirportWeather_service(airportCode):
         Fetches live weather from source using icao airport code and returns it."""
 
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
+    swf  = Singular_weather_fetch()
+    weather_dict = swf.async_weather_dict(airportCode)
 
-    fm = Fetching_Mechanism()
-    rsl = Root_source_links
-    av = AirportValidation()
-
-    # Validate airport code and convert to ICAO if IATA is provided.
-    airport_data = av.validate_airport_id(airportCode, icao_return=True, supplied_param_type='liveAirportWeather route')
-    airportCode =  airport_data.get('icao')
-
-    def link_returns(weather_type, airport_id):
-        wl = rsl.weather(weather_type,airport_id)
-        return wl
-
-    wl_dict = {weather_type:link_returns(weather_type,airportCode) for weather_type in ('metar', 'taf','datis')}
-    resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
-    weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=airportCode, html_injection=True)
     return weather_dict
