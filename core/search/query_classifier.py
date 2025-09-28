@@ -8,7 +8,7 @@ from typing import Dict, List, Union, Optional, Tuple
 
 from pymongo import UpdateOne
 from config.database import collection_airports, collection_flights, db_UJ
-from config.database import collection_weather
+# from config.database import collection_weather
 from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""

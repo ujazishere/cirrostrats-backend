@@ -6,7 +6,7 @@ from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
 import bson
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather
+    from config.database import collection_airports, collection_weather, collection_weather_uj
     # from config.database import collection_flights, db_UJ         # uj collections
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
@@ -25,7 +25,7 @@ async def store_live_weather_service(
         """
 
     # TODO: This whole 3 way to using mdbid to get airport code from collection_airports then getting associated airport code
-        # to get collection_weather seems a bit redundant.
+        # to get collection_weather_uj seems a bit redundant.
     ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbId:
         find_crit = {"_id": ObjectId(mdbId)}
@@ -50,21 +50,21 @@ async def store_live_weather_service(
         # Now all you will have to do is get latest weather to upsert the data in the weather collection based on iata code povided
 
     swf  = Singular_weather_fetch()
-    weather_dict = swf.async_weather_dict(ICAO_code_to_fetch)
+    weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch)
 
     find_crit = {'code': mdb_weather_data.get('code')}
     return_crit = {'airport_id':1,'_id':0}
-    cwaid = collection_weather.find_one(find_crit, return_crit)
+    cwaid = collection_weather_uj.find_one(find_crit, return_crit)
 
     if cwaid and cwaid.get('airport_id'):
         if str(cwaid.get('airport_id')) == mdbId:
             print('Already in the database, updating it')
-            collection_weather.update_one(
+            collection_weather_uj.update_one(
                 {'code': mdb_weather_data.get('code')},
                 {'$set': {'weather': weather_dict},}
             )
 
-    # result = collection_weather.bulk_write(update_operations)
+    # result = collection_weather_uj.bulk_write(update_operations)
     return {"status": "success"}
 
 async def get_airport_data_service(airport_id):
@@ -96,7 +96,7 @@ async def get_airport_data_service(airport_id):
     return_crit = {'weather':1,'code':1,'_id':0}
 
     # mdb weather returns
-    res = collection_weather.find_one(find_crit, return_crit)
+    res = collection_weather_uj.find_one(find_crit, return_crit)
     code = res.get('code') if res else None
     if res:
         res = res.get('weather')
@@ -118,6 +118,6 @@ async def liveAirportWeather_service(airportCode):
 
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
     swf  = Singular_weather_fetch()
-    weather_dict = swf.async_weather_dict(airportCode)
+    weather_dict = await swf.async_weather_dict(airportCode)
 
     return weather_dict
