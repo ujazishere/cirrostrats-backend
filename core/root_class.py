@@ -139,8 +139,12 @@ class AirportValidation:
             returns:
                 iata, icao, airport
         """
-        
+        # TODO VHP: Subsequent UNV search from frontend is feeding KUNV. initial search is UNV.
+        # print('airportID', airport_id, )
         if isinstance(airport_id, str):
+            # TODO VHP: Temporary badaid for UNV IATA issues in collection airport/weather.
+            if 'UNV' in airport_id or 'KUNV' in airport_id:
+                return {"iata": 'SCE', "icao": 'KUNV'}
             iata_code = icao_code = None
             if len(airport_id) == 3 and iata_return:            # This is for IATA codes returned as is for NAS - prevents unnecessary mdb processing
                 return {'iata': airport_id}         # Return the 3-letter IATA code as is
@@ -158,7 +162,7 @@ class AirportValidation:
                 raise ValueError("Supply type of return - iata or icao")
             
             return_crit = {"_id": 0, "iata": 1, "icao": 1, "airport": 1}  # Fields to return
-            
+
             result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
             return result
 

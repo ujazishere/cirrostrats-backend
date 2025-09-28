@@ -29,6 +29,7 @@ async def store_live_weather_service(
     ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbId:
         find_crit = {"_id": ObjectId(mdbId)}
+        print(find_crit)
         # used collection_airports to get IATA code 
         mdb_weather_data = collection_airports.find_one(find_crit, {"code": 1})
         if mdb_weather_data:

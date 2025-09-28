@@ -218,13 +218,14 @@ class Weather_parse:
         highlighted_taf = self.color_code(taf_raw,taf=True)
         
         highlighted_datis = {}
-        for k,datis in datis_raw.items():
-            if datis:
-                highlighted_datis[k] = self.color_code(datis)
-                highlighted_datis[k] = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
-                highlighted_datis[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
-                highlighted_datis[k] = re.sub(self.LLWS, self.yellow_warning, highlighted_datis[k]) if highlighted_datis[k] else ""
-                highlighted_datis[k] = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis[k]) if highlighted_datis[k] else ""
+        if isinstance(datis_raw,dict):
+            for k,datis in datis_raw.items():
+                if datis:
+                    highlighted_datis[k] = self.color_code(datis)
+                    highlighted_datis[k] = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
+                    highlighted_datis[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
+                    highlighted_datis[k] = re.sub(self.LLWS, self.yellow_warning, highlighted_datis[k]) if highlighted_datis[k] else ""
+                    highlighted_datis[k] = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis[k]) if highlighted_datis[k] else ""
 
 
         return dict({ 'datis': highlighted_datis,
