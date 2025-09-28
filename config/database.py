@@ -35,14 +35,23 @@ The key value pairs within the documents are called fields. They maybe nested fi
 
 # Collection names
 collection_airports = db['airports']
+
+# TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
+    # 'code' key is used in search_index collection as well.
+    # Changing icao would mean changing the search_index collection as well.
+    # id's associated with the collection_airports are used in search_index collection as well for collection cached airports.
+    # collection_airports documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
+
 collection_weather = db['Weather']
+# TODO: I thought we're not using searchtrack from Luis' db and were migrated to UJ mdb?
 collection_searchTrack = db['SearchTrack']
 
 collection_gates = db['US-gates']
 collection_flights = db_UJ['flights']
+collection_weather_uj = db_UJ['airport-weather']
+airport_collection_uj = db_UJ['icao_iata']
 
 # From here on its all custom code for database crud operation.
-
 
 # This function creates data within the datbase. Currently/previously only used to feed data into database through
     # Python rather than having to manually create items on the mongoDB server through browser.

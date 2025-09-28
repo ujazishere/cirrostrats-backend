@@ -6,24 +6,30 @@ from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
 import bson
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_searchTrack
-    from config.database import collection_flights, db_UJ
+    from config.database import collection_airports, collection_weather
+    # from config.database import collection_flights, db_UJ         # uj collections
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
-from core.root_class import Fetching_Mechanism, Root_source_links
+# from core.root_class import Fetching_Mechanism, Root_source_links
 
 
 async def store_live_weather_service(
     mdbId: Optional[str] = None,
     rawCode: Optional[str] = None,
 ):
-    """ fetches and saves weather based on airport code provided from frontend.
-        This function is called at frontend request to update old data in mongo if it exists."""
+    """ airport code/mdbId provided from frontend.
+        The mdbID is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports' _id.
+        that is used retrieve airport 'code' (IATA) from the collection_airports.
+        That airport code is in used to fetch the latest weather from the weather collection .
+        This function is called at frontend request to update old data in mongo if it exists.
+        """
 
+    # TODO: This whole 3 way to using mdbid to get airport code from collection_airports then getting associated airport code
+        # to get collection_weather seems a bit redundant.
     ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbId:
         find_crit = {"_id": ObjectId(mdbId)}
-        # Check if the mdbId exists in the collection
+        # used collection_airports to get IATA code 
         mdb_weather_data = collection_airports.find_one(find_crit, {"code": 1})
         if mdb_weather_data:
             av = AirportValidation()

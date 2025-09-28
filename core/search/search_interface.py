@@ -26,7 +26,7 @@ class SearchInterface(QueryClassifier):
         return TYPE_STANDARDS.get(val_type, val_type.lower())
 
 
-    def raw_submit_handler(self,collection_weather, search):
+    def raw_submit_handler(self, search):
         """ the raw submit is supposed to return frontend formatted reference_id, display and type for
             /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
             contain similar format with display field for display and search within fuzzfind"""

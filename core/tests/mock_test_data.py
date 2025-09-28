@@ -250,16 +250,16 @@ class Mock_data:
             Fields:
                 r_id: is the reference ID of the associated collection for associated data retrival.
                 type: type of search term(st) -- associated with a particular type of collection - airport, fid(flightID), terminal/gate
-                ph: Popularity hit prorcessed through QueryClassifier's normalization function.
+                ph: Popularity hit - a form of ranking score that is prorcessed through QueryClassifier's normalization function. 
                 submits: the submits on the frontend.
         """
         self.search_index_collection = [
             {
                 # airport search index collection doc
                 '_id': ObjectId('6821b9805795b7ff557e3153'),
-                'r_id': ObjectId('66176711170d1d57a24df7ce'),
+                'r_id': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airport
                 'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
-                'ph': 2.4973989440488236,
+                'ph': 2.4973989440488236,           # Popularity hit - ranking score
                 'submits': [
                     datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
                     datetime.datetime(2025, 6, 1, 7, 20, 45, 448000)]},
@@ -283,7 +283,24 @@ class Mock_data:
 
             },
         ]
-        
+
+        self.collection_airport = [
+            {'_id': ObjectId('66176711170d1d57a24df6a5'),
+            'name': 'Troy Municipal At N Kenneth Campbell Field Airport',
+            'code': 'TOI'}
+        ] 
+
+        self.collection_weather = [
+            {'_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
+            'airport_id': ObjectId('66176711170d1d57a24dfc58'),
+            'code': 'PHL',
+            'weather': {'datis': 'PHL DEP INFO V 1854Z. 09007KT 10SM FEW042 FEW270 29/17 A3006 (THREE ZERO ZERO SIX) RMK AO2 SLP177 T02890167. DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO V.',
+                        'metar': 'METAR KPHL 281854Z 08007KT 10SM FEW042 FEW270 29/17 A3006 RMK AO2 SLP177 T02890167 $',
+                        'taf': 'TAF KPHL 281720Z 2818/2924 36005KT P6SM FEW250 \n  FM282300 26002KT P6SM SKC \n  FM291100 04005KT P6SM SCT250 \n  FM291800 07004KT P6SM BKN250\n'
+                        }
+            }
+        ]
+
         self.gate_collection = [
             {
                 'Scheduled': 'July 21, 2025 18:00',

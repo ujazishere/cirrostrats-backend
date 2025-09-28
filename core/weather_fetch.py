@@ -3,7 +3,7 @@ For use in jupyter
 
 test datis returns:
 from core.weather_fetch import Bulk_weather_fetch
-bwf = Bulk_eather_fetch()
+bwf = Bulk_weather_fetch()
 
 bwf.bulk_fetch_and_store_by_type(weather_type='datis')
 datis = bwf.datis_returns
@@ -17,7 +17,9 @@ import pickle
 from pymongo import UpdateOne
 import requests
 
-from config.database import collection_weather,collection_airports
+from config.database import collection_weather_uj,collection_airports
+# TODO temp: This is just to check the new collection with datis as dict and how it behaves. possibly even change code to ICAO/IATA
+collection_weather_uj
 from core.weather_parse import Weather_parse
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
@@ -76,6 +78,7 @@ class Bulk_weather_fetch:
     def bulk_weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
 
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
         all_mdb_airport_codes = [i['code'] for i in collection_airports.find({},{'code':1})]
 
         url = 'https://datis.clowd.io/api/stations'
@@ -104,6 +107,7 @@ class Bulk_weather_fetch:
     def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
         # TODO: collection_airports code issue fix
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
@@ -129,20 +133,32 @@ class Bulk_weather_fetch:
 
         return resp_dict
 
-    async def bulk_fetch_and_store_by_type(self,weather_type):
-        # print(f'{weather_type} async fetch in progress..')
-        # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+    async def bulk_weather_fetch(self,weather_type):
+        
+        """
+        Fetches and processes weather data for a given type and returns a dictionary
+        containing the processed weather data. If the type is 'datis', it will
+        process the raw datis data and return the processed data.
+
+        Parameters:
+        weather_type (str): The type of weather to fetch. Should be either 'datis', 'metar' or 'taf'.
+
+        Returns:
+        dict: A dictionary containing the processed weather data.
+        """
         resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
 
         if weather_type == 'datis':
-            processed_datis = self.bulk_datis_processing(resp_dict=resp_dict)
-            self.weather_returns[weather_type] = processed_datis
-            self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
-        else:
-            self.weather_returns[weather_type] = resp_dict
-            self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
-        
-        # print(f'{weather_type} fetch done.')
+            resp_dict = self.bulk_datis_processing(resp_dict=resp_dict)
+
+        self.weather_returns[weather_type] = resp_dict
+        return self.weather_returns
+
+    async def bulk_fetch_and_store_by_type(self,weather_type):
+        # print(f'{weather_type} async fetch in progress..')
+        # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        resp_dict = await self.bulk_weather_fetch(weather_type=weather_type)
+        self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
 
     
     def mdb_unset(self,):
@@ -152,10 +168,10 @@ class Bulk_weather_fetch:
             'taf':'',
             'datis':''
         }
-        for each_d in collection_weather.find():
-            airport_id = "K"+each_d['code']
+        for each_d in collection_weather_uj.find():
+            airport_id = each_d['ICAO']
         
-            collection_weather.update_one(
+            collection_weather_uj.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
                 
                 {'$unset': {'weather':weather}},
@@ -175,18 +191,21 @@ class Bulk_weather_fetch:
             # TODO: collection_airports code issue fix -- thinking about getting rid of the 3 char altogether.
                 # This wont fix the issue of needing 3 char airport codes for suggestion mix.
                     # To fix this would need to supply 3 char if its not the same as the 4 char airport code[1:].
-            airport_code_trailing = str(url)[-3:]
-
+            airport_code_trailing = str(url)[-4:]
+        
             update_operations.append(
-                UpdateOne({'code': airport_code_trailing},      # Finds the document with airport code 
-                          {'$set': {f'weather.{weather_type}': weather},}
-
-                        # TODO Test: Check if this can work since it has be used to pick out the airports that are not fetched more frequently and notify devs.
-                        #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     
-                          )       # sets the weather subfield of that document
+                UpdateOne(
+                    {'code': airport_code_trailing[-3:]},      # Finds the document with airport code 
+                    {'$set': {
+                        f'weather.{weather_type}': weather,
+                        'ICAO': airport_code_trailing,      # Finds the document with airport code 
+                        }},       # sets the weather subfield of that document
+                    upsert=True)
+                    # TODO Test: Check if this can work since it has be used to pick out the airports that are not fetched more frequently and notify devs.
+                    #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     
             )
-
-        result = collection_weather.bulk_write(update_operations)
+        
+        result = collection_weather_uj.bulk_write(update_operations)
         # print(result)
 
 
@@ -225,8 +244,7 @@ class Singular_weather_fetch:
             Only use I see for this is when async is not working and you need a reliable synchronous code to return weather
         """
         
-        swf = Singular_weather_fetch()
-        wl_dict = {weather_type:swf.link_returns(weather_type,airport_code) for weather_type in ('metar', 'taf','datis')}
+        wl_dict = {weather_type:self.link_returns(weather_type,airport_code) for weather_type in ('metar', 'taf','datis')}
         weather: dict = {}
         for weather_type, url in wl_dict.items():
             resp = requests.get(url)
