@@ -133,9 +133,11 @@ class AirportValidation:
         self.airport_collection = db_UJ['icao_iata']
 
 
-    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, param_name=None):
+    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, supplied_param_type=None):
         """ This function validates the airport ID and returns the corresponding IATA or ICAO code.
             Accounting for formats within flightStats derived 3-letter codes, NAS returns, weather input compliance, etc.
+            returns:
+                iata, icao, airport
         """
         
         if isinstance(airport_id, str):
@@ -144,14 +146,16 @@ class AirportValidation:
                 return {'iata': airport_id}         # Return the 3-letter IATA code as is
             elif len(airport_id) == 3 and icao_return:
                 iata_code = airport_id
-                find_crit = {"iata": iata_code}  # Example query to find an airport by ICAO code
+                find_crit = {"iata": iata_code}  # Example query to find an airport by IATA code to return its associated ICAO
             elif len(airport_id) == 4 and iata_return:
                 icao_code = airport_id
                 find_crit = {"icao": icao_code}
             elif len(airport_id) == 4 and icao_return:
                 return {'icao': airport_id}         # Return the 4-letter ICAO code as is
+            elif len(airport_id) != 3 and len(airport_id) != 4:
+                raise ValueError(f"Invalid {supplied_param_type} airport code: must be 4 or 3 characters")
             else:
-                raise ValueError(f"Invalid {param_name} airport ID: must be 4 or 3 characters")
+                raise ValueError("Supply type of return - iata or icao")
             
             return_crit = {"_id": 0, "iata": 1, "icao": 1, "airport": 1}  # Fields to return
             
@@ -160,7 +164,7 @@ class AirportValidation:
 
 
 class Root_source_links:
-
+    # TODO Datis - This needs fixing- weather needs self arg. and all over this class is ussed as is and not as Root_source_links().
     def __init__(self) -> None:
         pass
 

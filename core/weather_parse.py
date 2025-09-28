@@ -1,3 +1,5 @@
+""" This is a class for parsing individual DATIS, METAR and TAF data."""
+
 import re
 import pickle
 from bs4 import BeautifulSoup as bs4
@@ -104,30 +106,6 @@ class Weather_parse:
         
         return result    
 
-    def raw_weather_pull(self, query=None,):
-        
-        # Find ways to convert raw query input into identifiable airport ID
-            # What does this mean^^?
-        airport_id = query
-        awc_metar_api = f"https://aviationweather.gov/api/data/metar?ids={airport_id}"
-        metar_raw = requests.get(awc_metar_api)
-        metar_raw = metar_raw.content
-        metar_raw = metar_raw.decode("utf-8")
-        awc_taf_api = f"https://aviationweather.gov/api/data/taf?ids={airport_id}"
-        taf_raw = requests.get(awc_taf_api)
-        taf_raw = taf_raw.content
-        taf_raw = taf_raw.decode("utf-8")
-
-        datis_api =  f"https://datis.clowd.io/api/{airport_id}"
-        datis = requests.get(datis_api)
-        datis = datis.json()
-
-        # DATIS TODO: This is where datis params needs fixed
-        datis_raw = self.datis_processing(datis_raw=datis)
-        return dict({ 'datis': datis_raw,
-                        'metar': metar_raw, 
-                        'taf': taf_raw,
-                        })
     
     def zulu_extraction(self, weather_input, weather_type:str):
         """ Extracts the zulu time from the weather input. 

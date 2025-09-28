@@ -1,19 +1,68 @@
-from config.database import collection_weather,collection_airports
+"""
+For use in jupyter
+
+test datis returns:
+from core.weather_fetch import Bulk_weather_fetch
+bwf = Bulk_eather_fetch()
+
+bwf.bulk_fetch_and_store_by_type(weather_type='datis')
+datis = bwf.datis_returns
+
+bwf.bulk_fetch_and_store_by_type(weather_type='metar')
+bwf.bulk_fetch_and_store_by_type(weather_type='taf')
+
+"""
 import json
 import pickle
 from pymongo import UpdateOne
 import requests
-from services.notification_service import send_telegram_notification_service
+
+from config.database import collection_weather,collection_airports
+from core.flight_deets_pre_processor import raw_resp_weather_processing
+from core.weather_parse import Weather_parse
 try:
     from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 except:
     print('jupyter import for root_class')
     from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-from core.weather_parse import Weather_parse
+from services.notification_service import send_telegram_notification_service
+
+class Weather_processor:
+    def __init__(self) -> None:
+        pass
+
+    def resp_splitter(self, airport_code, resp_dict):
+        metar,taf,datis = ['']*3
+
+        for url,resp in resp_dict.items():
+            if f"metar?ids={airport_code}" in str(url):
+                metar = resp
+            elif f"taf?ids={airport_code}" in str(url):
+                taf = resp
+            elif f"clowd.io/api/{airport_code}" in str(url):
+                datis = json.loads(resp)     # Apparently this is being returned within a list is being fed as is. Accounted for.
+        return metar,taf,datis
+
+    def raw_resp_weather_processing(self, resp_dict, airport_id, html_injection=False):
+        # TODO Datis: Why is this here?
+        metar,taf,datis = self.resp_splitter(airport_id, resp_dict)
+        raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
+        # dep_weather = wp.html_injected_weather(weather_raw=dep_weather)
+        
+        wp = Weather_parse()            
+        if html_injection:
+            return wp.html_injected_weather(weather_raw=raw_weather_returns)     # Doing this to avoid nested weather dictionaries
+        else:
+            datis_raw = wp.datis_processing(datis_raw=raw_weather_returns.get('datis','N/A'))
+            raw_weather_returns['datis'] = datis_raw
+            return raw_weather_returns
 
 
-class Weather_fetch:
+class Bulk_weather_fetch:
     """
+    This class is used to bulk fetch weather data - datis, metar and taf
+    and save it to mongoDB. Its primary used in celery tasks.
+
     TODO LP Feature: This link contains abbreviations for weather that can be used to decode coded NOTAMS/Weather. https://asrs.arc.nasa.gov/docs/dbol/ASRS_Abbreviations.pdf
     """
 
@@ -23,9 +72,9 @@ class Weather_fetch:
         self.fm = Fetching_Mechanism()
         self.rsl = Root_source_links
         self.weather_returns = {}
-        self.weather_links_dict = self.weather_link_returns()
+        self.weather_links_dict = self.bulk_weather_link_returns()
 
-    def weather_link_returns(self) -> None:
+    def bulk_weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
 
         all_mdb_airport_codes = [i['code'] for i in collection_airports.find({},{'code':1})]
@@ -48,12 +97,12 @@ class Weather_fetch:
 
         #  All airport codes from mongo db and pickle
         return {
-            "datis": self.list_of_weather_links('datis',all_datis_airport_codes),
-            "metar": self.list_of_weather_links('metar',all_mdb_airport_codes),
-            "taf": self.list_of_weather_links('taf',taf_positive_airport_codes),
+            "datis": self.bulk_list_of_weather_links('datis',all_datis_airport_codes),
+            "metar": self.bulk_list_of_weather_links('metar',all_mdb_airport_codes),
+            "taf": self.bulk_list_of_weather_links('taf',taf_positive_airport_codes),
         }
 
-    def list_of_weather_links(self,type_of_weather,list_of_airport_codes):
+    def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
         # TODO: collection_airports code issue fix
         prepend = ""
@@ -62,7 +111,41 @@ class Weather_fetch:
         
         return [self.rsl.weather(weather_type=type_of_weather,airport_id=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
 
+    def bulk_datis_processing(self, resp_dict:dict):
+        # TODO Test: a similar function exists in -- weather_parse().datis_processing().
 
+        # print('Processing Datis')
+        # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
+        # This function processess the raw list and returns just the pure datis
+        for url,datis in resp_dict.items():
+            if not 'error' in datis:
+                raw_datis_from_api = json.loads(datis)
+                raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
+                resp_dict[url]=raw_datis
+            else:
+                # ending up in this block means the code is broken somewhere.
+                # TODO Test: checkpoint here for notification- track how many times the code ends up here.
+                send_telegram_notification_service(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
+                print('Error: Datis processing')
+
+        return resp_dict
+
+    async def bulk_fetch_and_store_by_type(self,weather_type):
+        # print(f'{weather_type} async fetch in progress..')
+        # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
+        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
+
+        if weather_type == 'datis':
+            processed_datis = self.bulk_datis_processing(resp_dict=resp_dict)
+            self.weather_returns[weather_type] = processed_datis
+            self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
+        else:
+            self.weather_returns[weather_type] = resp_dict
+            self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
+        
+        # print(f'{weather_type} fetch done.')
+
+    
     def mdb_unset(self,):
         # Attempt to update the document. In this case remove a field(key value pair).
         weather = {             # This weather dict wouldnt be necessary since the unset operator is removing the whole weather field itself.
@@ -82,7 +165,6 @@ class Weather_fetch:
                 upsert=True
                 )
     
-
     def mdb_updates(self,resp_dict: dict, weather_type):
         # This function creates a list of fields/items that need to be upated and passes it as bulk operation to the collection.
         # TODO Test: account for new airport codes, maybe upsert or maybe just none for now.
@@ -109,49 +191,64 @@ class Weather_fetch:
         # print(result)
 
 
-    def bulk_datis_processing(self, resp_dict:dict):
-        # TODO Test: a similar function exists in -- weather_parse().datis_processing().
+class Singular_weather_fetch:
+    """ This class is used to fetch weather from different sources and return it as a dictionary.
+        Given an airport ID, it will fetch datis, metar and taf.
 
-        # print('Processing Datis')
-        # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
-        # This function processess the raw list and returns just the pure datis
-        for url,datis in resp_dict.items():
-            if not 'error' in datis:
-                raw_datis_from_api = json.loads(datis)
-                raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
-                resp_dict[url]=raw_datis
-            else:
-                # ending up in this block means the code is broken somewhere.
-                # TODO Test: checkpoint here for notification- track how many times the code ends up here.
-                send_telegram_notification_service(message=f'Error: Datis processing. URL is: {url} and datis is: {datis}')
-                print('Error: Datis processing')
+        Returns:
+            ** Mind DATIS as dict since it contains arr/dep/combined data and not a singular string.
+            weather_dict: {'datis': {}, 'metar': '', 'taf': ''}
+    """
 
-        return resp_dict
+    def __init__(self) -> None:
+        pass
 
+    def link_returns(self, weather_type, airport_id):
+        # TODO datis: This Requires refactoring at source in Root_source_links.weather since weather doesnt have self arg.
+        rsl = Root_source_links
+        wl = rsl.weather(weather_type,airport_id)
+        return wl
 
-    async def bulk_fetch_and_store_by_type(self,weather_type):
-        # print(f'{weather_type} async fetch in progress..')
-        # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
-        resp_dict: dict = await self.fm.async_pull(self.weather_links_dict[weather_type])        
+    async def async_weather_dict(self, ICAO_code_to_fetch):
 
-        if weather_type == 'datis':
-            processed_datis = self.bulk_datis_processing(resp_dict=resp_dict)
-            self.weather_returns[weather_type] = processed_datis
-            self.mdb_updates(resp_dict=processed_datis,weather_type=weather_type)
-        else:
-            self.weather_returns[weather_type] = resp_dict
-            self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
+        fm = Fetching_Mechanism()
+        wl_dict = {weather_type:self.link_returns(weather_type,ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
+        resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
+
+        weather_dict = raw_resp_weather_processing(resp_dict=resp_dict, airport_id=ICAO_code_to_fetch, html_injection=False)
+
+        return weather_dict
+
+    def synchronous_weather_fetch(self, airport_code):    # Deprecated
+        """ This is deprecated. Use raw_resp_weather_processing instead.
+            This was older synchronous code that did not employe async.
+            Only use I see for this is when async is not working and you need a reliable synchronous code to return weather
+        """
         
-        # print(f'{weather_type} fetch done.')
+        swf = Singular_weather_fetch()
+        wl_dict = {weather_type:swf.link_returns(weather_type,airport_code) for weather_type in ('metar', 'taf','datis')}
+        weather: dict = {}
+        for weather_type, url in wl_dict.items():
+            resp = requests.get(url)
+            if weather_type == 'datis':
+                datis = resp.json()
+                wp = Weather_parse()
+                datis = wp.datis_processing(datis_raw=datis)
+                weather[weather_type] = datis
+            else:
+                resp = resp.content
+                resp = resp.decode("utf-8")
+                weather[weather_type] = resp
+        return weather
 
-    
+
 # Only for use on fastapi if celery doesn't work.
 # import datetime as dt
 # import threading
 # class Weather_fetch_thread(threading.Thread):
 #     def __init__(self):
 #         super().__init__()
-#         self.Wf = Weather_fetch()
+#         self.bwf = Bulk_weather_fetch()
 
 #     # run method is inherited through .Thread; It gets called as
 #     def run(self):
@@ -159,7 +256,7 @@ class Weather_fetch:
 #         while True:
 #             print('Weather fetch in progress...')
 
-#             self.Wf.bulk_fetch_and_store_datis()
+#             self.bwf.bulk_fetch_and_store_datis()
 #             yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
 #             utc_now = yyyymmddhhmm
 #             print('Weather fetched at:', utc_now)
@@ -167,18 +264,3 @@ class Weather_fetch:
             
 #             dt.time.sleep(1800)        
 #     # flights = Gate_checker('').ewr_UA_gate()
-
-"""
-# For use in jupyter
-
-# test datis returns:
-from core.weather_fetch import Weather_fetch
-Wf = Weather_fetch()
-
-Wf.bulk_fetch_and_store_by_type(weather_type='datis')
-datis = Wf.datis_returns
-
-# Wf.bulk_fetch_and_store_by_type(weather_type='metar')
-# Wf.bulk_fetch_and_store_by_type(weather_type='taf')
-
-"""

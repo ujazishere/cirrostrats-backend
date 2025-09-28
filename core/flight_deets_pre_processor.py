@@ -19,6 +19,7 @@ def resp_splitter(airport_code, resp_dict):
     return metar,taf,datis
 
 def raw_resp_weather_processing(resp_dict, airport_id, html_injection=False):
+    # TODO Datis: Why is this here?
     metar,taf,datis = resp_splitter(airport_id, resp_dict)
     raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
     # dep_weather = wp.html_injected_weather(weather_raw=dep_weather)

@@ -7,7 +7,7 @@ import json
 import redis
 from utils.tele import Tele_bot
 from core.api.nas import NASExtracts
-from core.weather_fetch import Weather_fetch  # Used for periodic scheduling
+from core.weather_fetch import Bulk_weather_fetch  # Used for periodic scheduling
 from core.gate_processor import Gate_processor
 
 '''     ***CAUTION***
@@ -41,8 +41,8 @@ def DatisFetch():
     asyncio.run(run_datis_fetch())           # run_datis_fetch() is an async function. DatisFetch() is a celery task that cannot be an async function.
 
 async def run_datis_fetch():    
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='datis')
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='datis')
     return f'Celery task completed for fetching datis. timestamp - {zulutime}'
 
 
@@ -51,8 +51,8 @@ def MetarFetch():
     asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
 async def run_metar_fetch_async_function():
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='metar')
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='metar')
     return f'Celery task completed for fetching metar. timestamp - {zulutime}'
 
 
@@ -61,8 +61,8 @@ def TAFFetch():
     asyncio.run(run_TAF_fetch())
 
 async def run_TAF_fetch():    
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='taf')
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='taf')
     return f'Celery task completed for fetching TAF. timestamp - {zulutime}'
 
 # Gate fetchers
