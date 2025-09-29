@@ -184,7 +184,8 @@ class Root_source_links:
 class Source_links_and_api:
     def __init__(self,):
         pass
-
+        # TODO LP: use this to get status about flights, gate, times and delay status.
+        # "https://flyrichmond.com/"
     def ua_dep_dest_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.

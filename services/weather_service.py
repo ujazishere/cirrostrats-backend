@@ -121,4 +121,7 @@ async def liveAirportWeather_service(airportCode):
     swf  = Singular_weather_fetch()
     weather_dict = await swf.async_weather_dict(airportCode)
 
+    wp = Weather_parse()
+    weather_dict = wp.html_injected_weather(weather_raw=weather_dict)
+
     return weather_dict
