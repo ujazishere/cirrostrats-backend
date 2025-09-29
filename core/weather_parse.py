@@ -217,18 +217,42 @@ class Weather_parse:
         
         highlighted_taf = self.color_code(taf_raw,taf=True)
         
-        highlighted_datis = {}
+        datis_collective = {}
         if isinstance(datis_raw,dict):
             for k,datis in datis_raw.items():
                 if datis:
-                    highlighted_datis[k] = self.color_code(datis)
-                    highlighted_datis[k] = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
-                    highlighted_datis[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis[k]) if highlighted_datis[k] else ""
-                    highlighted_datis[k] = re.sub(self.LLWS, self.yellow_warning, highlighted_datis[k]) if highlighted_datis[k] else ""
-                    highlighted_datis[k] = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis[k]) if highlighted_datis[k] else ""
+                    datis_collective[k] = {
+                        'datis': self.color_code(datis),
+                        'datis_zt': self.zulu_recency(datis, datis=True) if datis else "",
+                        'datis_ts': self.zulu_extraction(datis, weather_type='datis') if datis else ""
+                    }
+                    
+                    # Apply all the regex substitutions to the 'datis' field
+                    processed_datis = datis_collective[k]['datis']
+                    processed_datis = re.sub(self.ATIS_INFO, self.box_around_text, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.LLWS, self.yellow_warning, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.RW_IN_USE, self.box_around_text, processed_datis) if processed_datis else ""
+                    
+                    datis_collective[k]['datis'] = processed_datis
+
+                    # datis_collective[k] = self.color_code(datis)
+                    # datis_collective[k] = re.sub(self.ATIS_INFO, self.box_around_text, datis_collective[k]) if datis_collective[k] else ""
+                    # datis_collective[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, datis_collective[k]) if datis_collective[k] else ""
+                    # datis_collective[k] = re.sub(self.LLWS, self.yellow_warning, datis_collective[k]) if datis_collective[k] else ""
+                    # datis_collective[k] = re.sub(self.RW_IN_USE, self.box_around_text,datis_collective[k]) if datis_collective[k] else ""
+
+                    # datis_collective[k].get('datis_zt',self.zulu_recency(metar_raw) if metar_raw else "")
+                    # datis_collective[k].get('datis_st',self.zulu_extraction(metar_raw,weather_type='metar') if metar_raw else "")
+                    # datis_collective[k].get('datis_zt',self.color_code(datis))
+                    # datis_collective[k].get('datis_zt',re.sub(self.ATIS_INFO, self.box_around_text, datis_collective[k]) if datis_collective[k] else "")
+                    # datis_collective[k].get('datis_zt',re.sub(self.ALTIMETER_PATTERN, self.box_around_text, datis_collective[k]) if datis_collective[k] else "")
+                    # datis_collective[k].get('datis_zt',re.sub(self.LLWS, self.yellow_warning, datis_collective[k]) if datis_collective[k] else "")
+                    # datis_collective[k].get('datis_zt',re.sub(self.RW_IN_USE, self.box_around_text,datis_collective[k]) if datis_collective[k] else "")
 
 
-        return dict({ 'datis': highlighted_datis,
+
+        return dict({ 'datis': datis_collective,
                     # 'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
                     # 'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
                     
