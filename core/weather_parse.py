@@ -236,25 +236,7 @@ class Weather_parse:
                     
                     datis_collective[k]['datis'] = processed_datis
 
-                    # datis_collective[k] = self.color_code(datis)
-                    # datis_collective[k] = re.sub(self.ATIS_INFO, self.box_around_text, datis_collective[k]) if datis_collective[k] else ""
-                    # datis_collective[k] = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, datis_collective[k]) if datis_collective[k] else ""
-                    # datis_collective[k] = re.sub(self.LLWS, self.yellow_warning, datis_collective[k]) if datis_collective[k] else ""
-                    # datis_collective[k] = re.sub(self.RW_IN_USE, self.box_around_text,datis_collective[k]) if datis_collective[k] else ""
-
-                    # datis_collective[k].get('datis_zt',self.zulu_recency(metar_raw) if metar_raw else "")
-                    # datis_collective[k].get('datis_st',self.zulu_extraction(metar_raw,weather_type='metar') if metar_raw else "")
-                    # datis_collective[k].get('datis_zt',self.color_code(datis))
-                    # datis_collective[k].get('datis_zt',re.sub(self.ATIS_INFO, self.box_around_text, datis_collective[k]) if datis_collective[k] else "")
-                    # datis_collective[k].get('datis_zt',re.sub(self.ALTIMETER_PATTERN, self.box_around_text, datis_collective[k]) if datis_collective[k] else "")
-                    # datis_collective[k].get('datis_zt',re.sub(self.LLWS, self.yellow_warning, datis_collective[k]) if datis_collective[k] else "")
-                    # datis_collective[k].get('datis_zt',re.sub(self.RW_IN_USE, self.box_around_text,datis_collective[k]) if datis_collective[k] else "")
-
-
-
         return dict({ 'datis': datis_collective,
-                    # 'datis_zt': self.zulu_recency(datis_raw,datis=True) if datis_raw else "",
-                    # 'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis') if datis_raw else "",
                     
                     'metar': highlighted_metar, 
                     'metar_zt': self.zulu_recency(metar_raw) if metar_raw else "",

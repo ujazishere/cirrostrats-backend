@@ -17,7 +17,7 @@ async def store_live_weather_service(
     mdbId: Optional[str] = None,
     rawCode: Optional[str] = None,
 ):
-    """ airport code/mdbId provided from frontend.
+    """ This function fetches lives weather and stores it in mdbairport code/mdbId provided from frontend.
         The mdbID is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports' _id.
         that is used retrieve airport 'code' (IATA) from the collection_airports.
         That airport code is in used to fetch the latest weather from the weather collection .

@@ -18,14 +18,8 @@ from pymongo import UpdateOne
 import requests
 
 from config.database import collection_weather_uj,collection_airports
-# TODO temp: This is just to check the new collection with datis as dict and how it behaves. possibly even change code to ICAO/IATA
-collection_weather_uj
 from core.weather_parse import Weather_parse
-try:
-    from .root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
-except:
-    print('jupyter import for root_class')
-    from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 from services.notification_service import send_telegram_notification_service
 
 class Weather_processor:
@@ -157,7 +151,10 @@ class Bulk_weather_fetch:
     async def bulk_fetch_and_store_by_type(self,weather_type):
         # print(f'{weather_type} async fetch in progress..')
         # TODO VHP Weather: Need to make sure if the return links are actually all in list form since the async_pull function processes it in list form. check await link in the above function.
-        resp_dict = await self.bulk_weather_fetch(weather_type=weather_type)
+
+        weather_dict = await self.bulk_weather_fetch(weather_type=weather_type)
+        resp_dict = weather_dict[weather_type]
+
         self.mdb_updates(resp_dict=resp_dict,weather_type=weather_type)
 
     
@@ -169,7 +166,7 @@ class Bulk_weather_fetch:
             'datis':''
         }
         for each_d in collection_weather_uj.find():
-            airport_id = each_d['ICAO']
+            airport_id = each_d.get('ICAO')
         
             collection_weather_uj.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document

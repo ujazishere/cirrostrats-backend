@@ -48,9 +48,9 @@ async def run_datis_fetch():
 
 @celery_app.task
 def MetarFetch():
-    asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
+    asyncio.run(run_metar_fetch())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
-async def run_metar_fetch_async_function():
+async def run_metar_fetch():
     bwf = Bulk_weather_fetch()
     await bwf.bulk_fetch_and_store_by_type(weather_type='metar')
     return f'Celery task completed for fetching metar. timestamp - {zulutime}'
