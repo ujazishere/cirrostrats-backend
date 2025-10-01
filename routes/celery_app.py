@@ -164,7 +164,7 @@ celery_app.conf.beat_schedule = {
     'gateRecurrentUpdater-every-4mins-daytime': {
         'task': 'routes.celery_app.GateRecurrentUpdater',
         # 'schedule': crontab(minute=35, hour='3'),     # test
-        'schedule': crontab(minute='2-58/4', hour='0,1,8-23'),  # Run every 4 minutes 2 past to 58 past and between 800-2300z
+        'schedule': crontab(minute='2-58/4', hour='0-3,8-23'),  # Run every 4 minutes 2 past to 58 past and between 800-2300z
     },
     'gateClear-eveyr-5-hours-daytime': {
         'task': 'routes.celery_app.GateClear',

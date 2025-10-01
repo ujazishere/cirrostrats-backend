@@ -1,7 +1,7 @@
 """
 # Safe to copy all this commented code and paste for bulk metar, taf and datis fetch and save
 
-from routes.root.WIPs.WIP_bulk_weather_extractor import Bulk_weather_extractor
+from core.WIPs.WIP_bulk_weather_extractor import Bulk_weather_extractor
 
 # For use in Jupyter
 we = Bulk_weather_extractor()
