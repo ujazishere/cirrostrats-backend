@@ -67,7 +67,6 @@ class NASExtracts:
                 }
 
 
-
 class NAS:
     def __init__(self) -> None:
         pass

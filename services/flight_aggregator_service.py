@@ -17,6 +17,9 @@ async def aws_jms_service(flightID, mock=False):
             # still needs work to address dict returns and arrival and destinationAirport mismatch.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
 
+    # TODO VHP: Can this not be handled in the frontend in ts or nodejs itself to avoid an extra call?
+                # parse_query possibly can be written in ts/node but regardlesss this func would have to be called the same amount?
+                #  So better let backend handle it since its server side(reduces frontend processing?) and secure?
     # qc = QueryClassifier()
     # TODO: This airlinecode parsing is dangerous. Fix it. 
     if flightID:
@@ -154,6 +157,8 @@ async def flight_aware_w_auth_service(flight_number, mock=False):
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
+
+
 
 
 async def get_edct_info_service(flightID: str, origin: str, destination: str):

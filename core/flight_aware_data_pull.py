@@ -1,12 +1,12 @@
 from decouple import config
-import requests
 import pickle
 from time import sleep
 from .root_class import Root_class
 # from dj.dj_app.root.root_class import Root_class
 import re
 
-# TODO VHP: Fix wrong flights showing up - One way is to cross check with other sources - JMS, flightstats, etc.
+# TODO VHP: Route from here and clearance and/or dep des is not matching
+        # Fix wrong flights showing up - One way is to cross check with other sources - JMS, flightstats, etc.
         # But that will cause utc and local time clashes.  redundancies to cross check and verify and use reliable sources.
 
 class Flight_aware_pull(Root_class):
@@ -281,7 +281,6 @@ def flight_aware_data_pull(airline_code=None, flt_num=None,pre_process=None, ret
                 "fa_terminal_destination": terminal_destination,
                 "fa_gate_origin": gate_origin,
                 "fa_gate_destination": gate_destination,
-                "fa_terminal_origin": terminal_origin,
                 'fa_filed_altitude':filed_altitude, 
                 'fa_filed_ete':filed_ete,
                 'fa_route': route,

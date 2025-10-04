@@ -306,9 +306,6 @@ class Newark_departures_scrape(Root_class):
         
 
 
-
-
-
 """
 # This is a backup to gate fetch - for ORD - have not tested for EWR.
 import requests

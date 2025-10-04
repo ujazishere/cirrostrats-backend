@@ -5,10 +5,10 @@ from celery.schedules import crontab
 import datetime as dt
 import json
 import redis
-from routes.tele import Tele_bot
-from routes.root.api.nas import NASExtracts
-from routes.root.weather_fetch import Weather_fetch  # Used for periodic scheduling
-from routes.root.gate_processor import Gate_processor
+from utils.tele import Tele_bot
+from core.api.nas import NASExtracts
+from core.weather_fetch import Weather_fetch  # Used for periodic scheduling
+from core.gate_processor import Gate_processor
 
 '''     ***CAUTION***
     Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.

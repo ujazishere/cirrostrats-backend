@@ -4,4 +4,4 @@ router = APIRouter()
     
 @router.get("/testDataReturns")
 async def test_flight_deet_data(airportLookup: str = None):
-    return test_flight_deet_data_service(airportLookup)
+    return await test_flight_deet_data_service(airportLookup)
