@@ -48,10 +48,10 @@ class Mock_data:
             "registration": "N445UA",
 
             # NOTE: Temporary discrepancy between FDPS and flightstats and flightaware to fix discrepancy issue in frontend
-            "departure": "KEWR",            
-            "departureAlternate": "KDEN",
-            
+            "departure": "KMCO",            
             "arrival": "KDEN",
+
+            "departureAlternate": "KDEN",
             'arrivalAlternate': 'KDEN',
             'estimatedDepartureTime': '2025-06-05T18:00:00Z',
             "route": "KDEN.SUMMR2.STOKD..SERFR.SERFR4.KDEN/1646",
@@ -223,7 +223,7 @@ class Mock_data:
             **self.jms_STDDS_clearance,
             **self.jms_FDPS_base,
             **self.flightStats,
-            **self.flightView,
+            # **self.flightView,
             **self.flightAware,
         }
 

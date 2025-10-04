@@ -19,20 +19,20 @@ class SearchData(BaseModel):
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
 def validate_IATA_airport_code(v: str) -> str:
     if not v.isalpha() or len(v) != 3 or not v.isupper():
-        raise ValueError('Airport code must be 3 uppercase letters')
+        raise ValueError(f'Airport code must be 3 uppercase letters. Rather this was supplied {v}')
     return v
 
 def validate_fs_delay_status(v: str) -> str:
-    if v not in ['On time', 'Scheduled', 'Delayed']:
-        raise ValueError('Delay status must be one of: On time, Scheduled, Delayed')
+    if v not in ['On time', 'Scheduled', 'Delayed', 'Estimated']:
+        raise ValueError(f'Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
     return v
 
 def validate_fs_time_format(v: str) -> str:
     if not v or v == "-- ":  # Handle empty and "--" cases
         return v
-    if v and not re.match(r'^\d{1,2}:\d{2} [A-Z]{3}$', v):
-        raise ValueError('Time must be in format "HH:MM TZ"')
-    return v
+    # Allow both "HH:MM TZ" and "HH:MM +XX" formats
+    if not re.match(r'^\d{1,2}:\d{2} (?:[A-Z]{3}|[+-]\d{2})$', v):
+        raise ValueError(f'Time must be in format "HH:MM TZ" or "HH:MM +XX". Rather this was supplied {v}')
 
 # Create custom types
 AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
