@@ -46,6 +46,7 @@ def validate_fs_delay_status(v: str) -> str:
 
 def validate_fs_time_format(v: str) -> str:
     if not v or v == "-- ":  # Handle empty and "--" cases
+        send_telegram_notification_service(message=f"Time format error. Supplied: {v}")
         return v
     # Allow both "HH:MM TZ" and "HH:MM +XX" formats
     if not re.match(r'^\d{1,2}:\d{2} (?:[A-Z]{3}|[+-]\d{2})$', v):
