@@ -39,8 +39,10 @@ class Pull_flight_info(Root_class):
                             'flightStatsOriginGate': departure.get('TerminalGate'),
                             'flightStatsDestinationGate': arrival.get('TerminalGate'),
                             'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),
+                            'flightStatsActualDepartureTime': departure.get('ActualTime'),
                             'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),
-                            'flightStatsDelayStatus-NIDHI': fs_data.get('fsDelayStatus'),
+                            'flightStatsActualArrivalTime': arrival.get('ScheduledTime'),
+                            'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
                                             }
         return bulk_flight_deet
 

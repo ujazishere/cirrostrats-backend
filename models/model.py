@@ -1,7 +1,58 @@
 from datetime import datetime
-from typing import Union
-from pydantic import BaseModel
+import re
+from typing import Annotated, Optional, Union
+from pydantic import AfterValidator, BaseModel
 
+# TODO VHP: Use pydantic to validate the data for all route returns:
+        # For example, flighStats returns a 4 letter ICAO code, times,
+        # delay status etc. validate this data(received data vs expected data) for consistency:
+        # fire notification for outlaws
+
+# Validate incoming SearchData request
+class SearchData(BaseModel):
+    email: str
+    stId: Union[str, None]        # submitTerm can be string or null type of variable from react
+    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
+    timestamp: datetime
+
+# Define validator functions OUTSIDE the class
+# NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
+def validate_IATA_airport_code(v: str) -> str:
+    if not v.isalpha() or len(v) != 3 or not v.isupper():
+        raise ValueError('Airport code must be 3 uppercase letters')
+    return v
+
+def validate_fs_delay_status(v: str) -> str:
+    if v not in ['On time', 'Scheduled', 'Delayed']:
+        raise ValueError('Delay status must be one of: On time, Scheduled, Delayed')
+    return v
+
+def validate_fs_time_format(v: str) -> str:
+    if not v or v == "-- ":  # Handle empty and "--" cases
+        return v
+    if v and not re.match(r'^\d{1,2}:\d{2} [A-Z]{3}$', v):
+        raise ValueError('Time must be in format "HH:MM TZ"')
+    return v
+
+# Create custom types
+AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
+DelayStatus = Annotated[str, AfterValidator(validate_fs_delay_status)]
+TimeFormat = Annotated[str, AfterValidator(validate_fs_time_format)]
+
+class FlightStatsResponse(BaseModel):
+    flightStatsFlightID: str
+    flightStatsOrigin: AirportCode
+    flightStatsDestination: AirportCode
+    flightStatsOriginGate: Optional[str] = None
+    flightStatsDestinationGate: Optional[str] = None
+    flightStatsScheduledDepartureTime: Optional[TimeFormat] = None
+    flightStatsActualDepartureTime: Optional[TimeFormat] = None
+    flightStatsScheduledArrivalTime: Optional[TimeFormat] = None
+    flightStatsActualArrivalTime: Optional[TimeFormat] = None
+    flightStatsDelayStatus: Optional[DelayStatus] = None
+
+
+# Old code - not used anymore
 class FlightData(BaseModel):
     flightID: str
     origin: str
@@ -23,14 +74,8 @@ class FlightData(BaseModel):
     gate: str
     destination: str
 
+# Old code - not used anymore
 class Airport (BaseModel):
     id: str
     name: str
     code: str
-
-# Define a Pydantic model to validate incoming SearchData request
-class SearchData(BaseModel):
-    email: str
-    stId: Union[str, None]        # submitTerm can be string or null type of variable from react
-    submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
-    timestamp: datetime

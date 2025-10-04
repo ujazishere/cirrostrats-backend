@@ -6,6 +6,7 @@ from core.dep_des import Pull_flight_info
 from core.flight_deets_pre_processor import response_filter
 from core.root_class import Fetching_Mechanism, Source_links_and_api
 from core.search.query_classifier import QueryClassifier
+from models.model import FlightStatsResponse
 
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 sic_docs = qc.initialize_search_index_collection()
@@ -121,7 +122,9 @@ async def flight_stats_url_service(flightID):      # time zone pull
     
     fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
         airline_code=airline_code,flt_num_query=flightID_digits,)
-
+    if fs_departure_arr_time_zone:
+        validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)
+        return validated_data.dict()
     return fs_departure_arr_time_zone
 
 

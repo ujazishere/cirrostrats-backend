@@ -29,7 +29,9 @@ class QueryClassifier:
             icao_file_path: Path to the pickle file containing ICAO codes and their counts
         """
         self.classified_suggestions = {}
-        self.icao_codes_separated = "UA|AA|DL|G7|GJS|UCA|UAX"  # Default common codes
+        # TODO: These are IATA equivalent of the 3 char ICAO airline codes
+        extra_codes = "FI|NK|B6|RJC|WN|AS|F9|HA|AC|WS|BA|5X|FX|K4|5Y|9S"
+        self.icao_codes_separated = extra_codes + "UA|AA|DL|G7|GJS|UCA|UAX"  # Default common codes
 
         # Load ICAO codes if provided
         if icao_file_path:

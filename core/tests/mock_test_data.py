@@ -46,8 +46,11 @@ class Mock_data:
             "organization": "UAL",
             "aircraftType": "A320",
             "registration": "N445UA",
-            "departure": "KDEN",
+
+            # NOTE: Temporary discrepancy between FDPS and flightstats and flightaware to fix discrepancy issue in frontend
+            "departure": "KEWR",            
             "departureAlternate": "KDEN",
+            
             "arrival": "KDEN",
             'arrivalAlternate': 'KDEN',
             'estimatedDepartureTime': '2025-06-05T18:00:00Z',
@@ -82,25 +85,28 @@ class Mock_data:
         self.flightStats = {
                 'flightStatsFlightID': 'UA4508',
                 'flightStatsOrigin': 'EWR',
-                "flightStatsDestination": "KIAH",
+                "flightStatsDestination": "IAH",
                 'flightStatsOriginGate': 'C-101',
                 'flightStatsDestinationGate': 'D-1',
                 'flightStatsScheduledDepartureTime': '15:55 EDT',
-                'flightStatsScheduledArrivalTime': '18:09 EDT'
+                'flightStatsActualDepartureTime': '15:59 EDT',
+                'flightStatsScheduledArrivalTime': '18:09 EDT',
+                'flightStatsActualArrivalTime': "18:09 EDT",
+                'flightStatsDelayStatus':"On time",
             }
 
-        # Depricated
-        self.flightView = {
-                "flightViewArrivalGate": "\nD - D1A\n",
-                "flightViewDeparture": "EWR",
-                "flightViewDepartureGate": "\nC - C103\n",
-                "flightViewDestination": "IAH"
-            }
+        # # Depricated
+        # self.flightView = {
+        #         "flightViewArrivalGate": "\nD - D1A\n",
+        #         "flightViewDeparture": "EWR",
+        #         "flightViewDepartureGate": "\nC - C103\n",
+        #         "flightViewDestination": "IAH"
+        #     }
 
         self.flightAware = {
                 'fa_ident_icao': 'GJS4558',
-                'fa_origin': 'KDEN',
-                'fa_destination': 'KDEN',
+                'fa_origin': 'KEWR',
+                'fa_destination': 'KIAH',
                 'fa_registration': 'N551GJ',
                 'fa_date_out': '20250606',
                 'fa_scheduled_out': '1530Z',
