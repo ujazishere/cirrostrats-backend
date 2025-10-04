@@ -6,7 +6,7 @@ from models.model import SearchData
 from bson import ObjectId
 from schema.schemas import serialize_document_list
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_searchTrack
+    from config.database import collection_airports, collection_searchTrack
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
@@ -77,6 +77,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
             # Plus its ugly -- abstract this away since flight ID is using the same logic.
             # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
+            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
             return_crit = {'name': 1, 'code':1}
             case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
             
@@ -199,4 +200,4 @@ async def raw_search_handler_service(search: str = None):
     """ handles the submit that is NOT the drop down suggestion. So just willy nilly taking
     the organic search submit handlling it here by converting to a form that is acceptable in details.jsx"""
     si = SearchInterface()
-    return si.raw_submit_handler(collection_weather=collection_weather,search=search)
+    return si.raw_submit_handler(search=search)

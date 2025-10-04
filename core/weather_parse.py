@@ -1,3 +1,5 @@
+""" This is a class for parsing individual DATIS, METAR and TAF data."""
+
 import re
 import pickle
 from bs4 import BeautifulSoup as bs4
@@ -47,7 +49,6 @@ class Weather_parse:
         self.RW_IN_USE = r'()((SIMUL([A-Z]*)?,?|VISUAL (AP(P)?(ROA)?CH(E)?(S)?)|(ILS(/VA|,)?|(ARRIVALS )?EXPECT|RNAV|((ARVNG|LNDG) AND )?DEPG|LANDING)) (.*?)(IN USE\.|((RWY|RY|RUNWAY|APCH|ILS|DEP|VIS) )(\d{1,2}(R|L|C)?)\.))'
         # self.RW_IN_US = r'(ARRIVALS EXPECT|SIMUL|RUNWAYS|VISUAL|RNAV|ILS(,|RY|))(.*?)\.'
 
-
     def visibility_color_code(self,incoming_weather_data):
 
         # Surrounds the matched pattern with the html declared during initialization(the __init__ method).
@@ -62,69 +63,48 @@ class Weather_parse:
         else:
             # print('Nothing to process in visibility_color_code func')
             return incoming_weather_data
+
+    def datis_processing(self, datis_raw):
+        #     # DATIS NOTE: Major use in raw_weather_pull and html_injected_weather.
+        """
+        Process DATIS data into a consistent structure.
+        Args:
+            datis_raw (list or dict): Raw DATIS data, can be a list of dicts or a dict with an 'error' key.
+            if there is arr and dep, returns combined as N/A and arr and dep as is.
+            if there is only combined, returns combined as that value and the other as None.
+            for non list non dict input, returns N/A, None, None and triggers notification for investigation.
+
+        Returns: {
+            'combined': str or 'N/A',
+            'arr': str or None, 
+            'dep': str or None
+        }
+        """
+        # Initialize result structure
+        result = {'combined': 'N/A', 'arr': None, 'dep': None}
         
-
-    def datis_processing(self,datis_raw,datis_arr=None):
-        # TODO VHP: Account for departure as well as arrival datis for return.
-        datis = datis_raw
-
-        if isinstance(datis, dict) and  datis.get('error'):         # datis that gives error handled here.
-            datis = 'N/A'
-
-        # D-ATIS processing for departure and arrival - for e.g PHL spits out two separate DATIS. This section accounts for it.
-        if type(datis) == list and 'datis' in datis[0].keys():
-            if len(datis) == 1:
-                datis_raw = datis[0]['datis']
-            elif len(datis) == 2:       # Departure and arrival datis separated
-                if datis[0]['type'] == 'arr':
-                    # TODO VHP: need to properly send this seperately for departure vs arrial for mdb.
-                    # print('Returned Arrival D-ATIS through weather_parse.py')           
-                    arr_datis = datis[0]['datis']
-                else:
-                    arr_datis = datis[1]['datis']
-                if datis[1]['type'] == 'dep':
-                    dep_datis = datis[1]['datis']
-                else:
-                    dep_datis = datis[0]['datis']
-                
-                if datis_arr:
-                    datis_raw = arr_datis
-                else:
-                    datis_raw = dep_datis
-            else:
-                print('Impossible else in DATIS')
-                datis_raw = 'N/A'
-        else:
-            # TODO Test: This is a tempp fix.
-            datis_raw = datis
-        # if not datis_raw:
-        #     datis_raw = 'N/A'
-        return datis_raw
-
-
-    def raw_weather_pull(self, query=None, datis_arr=None):
+        # # Handle error case
+        if isinstance(datis_raw, dict) and datis_raw.get('error'):
+            return result
+        # Rare case- Handle non-list,non-dict input (already processed or unexpected format) - return "N/A"
+        elif not isinstance(datis_raw, list):
+            # TODO: Consider logging/notification this unexpected format - if not dict if not list, then what?- Should be investigated
+            # logging.warning("Unexpected DATIS format: %s", datis_raw)
+            return result
         
-        # Find ways to convert raw query input into identifiable airport ID
-            # What does this mean^^?
-        airport_id = query
-        awc_metar_api = f"https://aviationweather.gov/api/data/metar?ids={airport_id}"
-        metar_raw = requests.get(awc_metar_api)
-        metar_raw = metar_raw.content
-        metar_raw = metar_raw.decode("utf-8")
-        awc_taf_api = f"https://aviationweather.gov/api/data/taf?ids={airport_id}"
-        taf_raw = requests.get(awc_taf_api)
-        taf_raw = taf_raw.content
-        taf_raw = taf_raw.decode("utf-8")
-
-        datis_api =  f"https://datis.clowd.io/api/{airport_id}"
-        datis = requests.get(datis_api)
-        datis = datis.json()
-        datis_raw = self.datis_processing(datis_raw=datis,datis_arr=datis_arr)
-        return dict({ 'datis': datis_raw,
-                        'metar': metar_raw, 
-                        'taf': taf_raw,
-                        })
-    
+        # Process list input
+        for item in datis_raw:
+            datis_text = item.get('datis', '')
+            data_type = item.get('type', '')
+            
+            if data_type == 'combined':
+                result['combined'] = datis_text
+            elif data_type == 'arr':
+                result['arr'] = datis_text
+            elif data_type == 'dep':
+                result['dep'] = datis_text
+        
+        return result    
 
     def zulu_extraction(self, weather_input, weather_type:str):
         """ Extracts the zulu time from the weather input. 
@@ -191,131 +171,78 @@ class Weather_parse:
         else:
             zulu_weather = 'N/A'
             return zulu_weather
+    
+
+    def color_code(self, weather:str, taf=False):
+        """
+        Function to color-code the weather data based on LIFR and IFR patterns.
+
+        Parameters:
+        weather (str): The weather data to be color-coded.
+        taf (bool): Whether to add line breaks or empty spaces before FM block for HTML in TAF.
+
+        Returns:
+        str: The color-coded weather data.
+        """
+
+        # LIFR pattern for ceilings >>> Anything below 500ft to pink.
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, weather) if weather else ""
+        # IFR pattern for below 1000ft.
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, html_injected_weather) if html_injected_weather else ""
+        # TODO: ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in between. SCA had this in TAF and its not accounted for.
+        # IFR and LIFR pattern for visibility >>> Anything below 3 to red and below 1 to pink.
+        html_injected_weather = self.visibility_color_code(html_injected_weather)
+        # Alternate for ceilings text color >> HIGHLIGHT FOR ANYTHING BELOW 2000ft
+        html_injected_weather = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, html_injected_weather)
+
+        if taf:     # This is for TAF only to add line breaks or empty spaces before FM block for HTML
+            html_injected_weather = html_injected_weather.replace("FM", "<br>\xa0\xa0\xa0\xa0FM") if html_injected_weather else ""   # line break for FM section in TAF for HTML
+
+        final_highlight = html_injected_weather
+        return final_highlight
+
+    def html_injected_weather(self, weather_raw):
+        """ This function takes in either mock_test_data or weather_raw as dict with datis, metar, taf data.
+            html injection is done here for highlighting purposes - LIFR, IFR, Alternate IFR, ATIS code, 
+            altimeter settings, LLWS, RW in use, and such are highlighted in this function.
+        """
+
+        datis_raw = weather_raw.get('datis','N/A')
+        metar_raw = weather_raw.get('metar')
+        taf_raw = weather_raw.get('taf')
         
 
-    def processed_weather(self, query=None, mock_test_data=None, datis_arr=None,
-                          weather_raw=None,
-                          ):
-        if mock_test_data:
-            metar_raw = mock_test_data['metar']
-            datis_raw = mock_test_data['datis']
-            taf_raw = mock_test_data['taf']
+        highlighted_metar = self.color_code(metar_raw)
+        highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar) if highlighted_metar else ""
         
-        elif weather_raw:
-            raw_return = weather_raw        # This wont do the datis processing.
-            datis_raw = self.datis_processing(datis_raw=raw_return.get('datis','N/A'),datis_arr=datis_arr)
-            metar_raw = raw_return.get('metar')
-            taf_raw = raw_return.get('taf')
-
-        else:
-            # Pulls raw weather and will also do the datis processing within the function.
-            raw_return = self.raw_weather_pull(query=query,datis_arr=datis_arr)     
-            datis_raw = raw_return.get('datis')
-            metar_raw = raw_return.get('metar')
-            taf_raw = raw_return.get('taf')
-
-        # Exporting raw weather data for color code processing
-        # raw_weather_dummy_data = { 'D-ATIS': datis_raw, 'METAR': metar_raw, 'TAF': taf_raw} 
-        # with open(f'raw_weather_dummy_data{airport_id}.pkl', 'wb') as f:
-            # print(f"DUMPING RAW WEATHER DATA")
-            # pickle.dump(raw_weather_dummy_data, f)
-
-        # LIFR PAttern for ceilings >>> Anything below 5 to pink METAR
-
-        low_ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, metar_raw)
-        # LIFR pattern for ceilings >>> anything below 5 to pink TAF 
-        low_ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, taf_raw)
-        # LIFR pattern for ceilings >>> anything below 5 to pink DATIS 
-        low_ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_LIFR, self.pink_text_color, datis_raw)
-        # print('within lowifr', datis_raw)
-
-        # IFR Pattern for ceilings METAR
-        ifr_metar_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_metar_ceilings)
-        # IFR pattern for ceilings TAF
-        ifr_taf_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_taf_ceilings)
-        # IFR pattern for ceilings DATIS
-        ifr_datis_ceilings = re.sub(self.BKN_OVC_PATTERN_IFR, self.red_text_color, low_ifr_datis_ceilings)
+        highlighted_taf = self.color_code(taf_raw,taf=True)
         
-        # ACCOUNT FOR VISIBILITY `1 /2 SM`  mind the space in betwee. SCA had this in TAF and its not accounted for.
+        datis_collective = {}
+        if isinstance(datis_raw,dict):
+            for k,datis in datis_raw.items():
+                if datis:
+                    datis_collective[k] = {
+                        'datis': self.color_code(datis),
+                        'datis_zt': self.zulu_recency(datis, datis=True) if datis else "",
+                        'datis_ts': self.zulu_extraction(datis, weather_type='datis') if datis else ""
+                    }
+                    
+                    # Apply all the regex substitutions to the 'datis' field
+                    processed_datis = datis_collective[k]['datis']
+                    processed_datis = re.sub(self.ATIS_INFO, self.box_around_text, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.LLWS, self.yellow_warning, processed_datis) if processed_datis else ""
+                    processed_datis = re.sub(self.RW_IN_USE, self.box_around_text, processed_datis) if processed_datis else ""
+                    
+                    datis_collective[k]['datis'] = processed_datis
 
-        # LIFR PAttern for visibility >>> Anything below 5 to pink METAR
-        lifr_ifr_metar_visibility = self.visibility_color_code(ifr_metar_ceilings)
-        # LIFR pattern for visibility >>> anything below 5 to pink TAF 
-        lifr_ifr_taf_visibility = self.visibility_color_code(ifr_taf_ceilings)
-        # LIFR pattern for visibility >>> anything below 5 to pink DATIS 
-        lifr_ifr_datis_visibility = self.visibility_color_code(ifr_datis_ceilings)
+        return dict({ 'datis': datis_collective,
+                    
+                    'metar': highlighted_metar, 
+                    'metar_zt': self.zulu_recency(metar_raw) if metar_raw else "",
+                    'metar_ts': self.zulu_extraction(metar_raw,weather_type='metar') if metar_raw else "",
 
-        # original metar alternate for ceilings text color >> NEED HIGHLIGHT FOR ANYTHING BELOW 20
-        highlighted_metar = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_metar_visibility)
-
-        # original taf alternate for ceilings text color
-        highlighted_taf = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_taf_visibility)
-        highlighted_taf = highlighted_taf.replace("FM", "<br>\xa0\xa0\xa0\xa0FM")   # line break for FM section in TAF for HTML
-        highlighted_datis = re.sub(self.BKN_OVC_PATTERN_alternate, self.yellow_highlight, lifr_ifr_datis_visibility)
-
-        highlighted_datis = re.sub(self.ATIS_INFO, self.box_around_text, highlighted_datis)
-        highlighted_datis = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_datis)
-        highlighted_datis = re.sub(self.LLWS, self.yellow_warning, highlighted_datis)
-        highlighted_datis = re.sub(self.RW_IN_USE, self.box_around_text,highlighted_datis)
-        
-        highlighted_metar = re.sub(self.ALTIMETER_PATTERN, self.box_around_text, highlighted_metar)
-
-        # This was the original way of returning the uppercase keys. React did not like it so returning lowercase.
-        # return dict({ 'D-ATIS': highlighted_datis,
-        #               'D-ATIS_zt': zulu_recency(datis_raw,datis=True),
-                      
-        #               'METAR': highlighted_metar, 
-        #               'METAR_zt': zulu_recency(metar_raw),
-
-        #               'TAF': highlighted_taf,
-        #               'TAF_zt': zulu_recency(taf_raw,taf=True),
-        #               })
-
-        return dict({ 'datis': highlighted_datis,
-                      'datis_zt': self.zulu_recency(datis_raw,datis=True),
-                      'datis_ts': self.zulu_extraction(datis_raw, weather_type='datis'),
-                      
-                      'metar': highlighted_metar, 
-                      'metar_zt': self.zulu_recency(metar_raw),
-                      'metar_ts': self.zulu_extraction(metar_raw,weather_type='metar'),
-
-                      'taf': highlighted_taf,
-                      'taf_zt': self.zulu_recency(taf_raw,taf=True),
-                      'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf'),
-                      })
-
-
-    def nested_weather_dict_explosion(self,incoming_weather:dict):
-        # Departure weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
-        
-        weather_returns = {}
-        dep_datis = incoming_weather['dep_weather']['D-ATIS']
-        dep_metar = incoming_weather['dep_weather']['METAR']
-        dep_taf = incoming_weather['dep_weather']['TAF']
-        weather_returns['dep_metar'] = dep_metar
-        weather_returns['dep_datis'] = dep_datis
-        weather_returns['dep_taf'] = dep_taf
-
-        dep_datis_zt = incoming_weather['dep_weather']['D-ATIS_zt']
-        dep_metar_zt = incoming_weather['dep_weather']['METAR_zt']
-        dep_taf_zt = incoming_weather['dep_weather']['TAF_zt']
-        weather_returns['dep_metar_zt'] = dep_metar_zt
-        weather_returns['dep_datis_zt'] = dep_datis_zt
-        weather_returns['dep_taf_zt'] = dep_taf_zt
-
-        # Destionation Weather: assigning dedicated keys for data rather than a nested dictionary to simplify use on front end
-        dest_datis = incoming_weather['dest_weather']['D-ATIS']
-        dest_metar = incoming_weather['dest_weather']['METAR']
-        dest_taf = incoming_weather['dest_weather']['TAF']
-        weather_returns['dest_datis'] = dest_datis
-        weather_returns['dest_metar'] = dest_metar
-        weather_returns['dest_taf'] = dest_taf
-
-        dest_datis_zt = incoming_weather['dest_weather']['D-ATIS_zt']
-        dest_metar_zt = incoming_weather['dest_weather']['METAR_zt']
-        dest_taf_zt = incoming_weather['dest_weather']['TAF_zt']
-        weather_returns['dest_datis_zt'] = dest_datis_zt
-        weather_returns['dest_metar_zt'] = dest_metar_zt
-        weather_returns['dest_taf_zt'] = dest_taf_zt
-
-        return weather_returns
+                    'taf': highlighted_taf,
+                    'taf_zt': self.zulu_recency(taf_raw,taf=True) if taf_raw else "",
+                    'taf_ts': self.zulu_extraction(taf_raw,weather_type='taf') if taf_raw else "",
+                    })

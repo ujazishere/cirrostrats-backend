@@ -7,7 +7,7 @@ import json
 import redis
 from utils.tele import Tele_bot
 from core.api.nas import NASExtracts
-from core.weather_fetch import Weather_fetch  # Used for periodic scheduling
+from core.weather_fetch import Bulk_weather_fetch  # Used for periodic scheduling
 from core.gate_processor import Gate_processor
 
 '''     ***CAUTION***
@@ -44,18 +44,18 @@ def DatisFetch():
     asyncio.run(run_datis_fetch())           # run_datis_fetch() is an async function. DatisFetch() is a celery task that cannot be an async function.
 
 async def run_datis_fetch():
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='datis') # check on this time - Harsh
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='datis')
     return f'Celery task completed for fetching datis. timestamp - {zulutime}'
 
 
 @celery_app.task
 def MetarFetch():
-    asyncio.run(run_metar_fetch_async_function())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
+    asyncio.run(run_metar_fetch())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
 
-async def run_metar_fetch_async_function():
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='metar')
+async def run_metar_fetch():
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='metar')
     return f'Celery task completed for fetching metar. timestamp - {zulutime}'
 
 
@@ -64,8 +64,8 @@ def TAFFetch():
     asyncio.run(run_TAF_fetch())
 
 async def run_TAF_fetch():
-    Wf = Weather_fetch()
-    await Wf.bulk_fetch_and_store_by_type(weather_type='taf')
+    bwf = Bulk_weather_fetch()
+    await bwf.bulk_fetch_and_store_by_type(weather_type='taf')
     return f'Celery task completed for fetching TAF. timestamp - {zulutime}'
 
 # Gate fetchers
@@ -169,7 +169,7 @@ celery_app.conf.beat_schedule = {
     'gateRecurrentUpdater-every-4mins-daytime': {
         'task': 'routes.celery_app.GateRecurrentUpdater',
         # 'schedule': crontab(minute=35, hour='3'),     # test
-        'schedule': crontab(minute='2-58/4', hour='0,1,8-23'),  # Run every 4 minutes 2 past to 58 past and between 800-2300z
+        'schedule': crontab(minute='2-58/4', hour='0-3,8-23'),  # Run every 4 minutes 2 past to 58 past and between 800-2300z
     },
     'gateClear-eveyr-5-hours-daytime': {
         'task': 'routes.celery_app.GateClear',

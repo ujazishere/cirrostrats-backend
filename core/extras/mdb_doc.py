@@ -51,7 +51,7 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 
 """
 
-# Create a proof of concept. Details can be worked on later with cleaning and improving efficiency.
+""" *** This file serves as a document and guide only ***"""
 
 from config.database import collection_airports, collection_weather
 from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
@@ -139,16 +139,6 @@ def mdb_updates(resp_dict: dict, weather_type):
     result = collection_weather.bulk_write(update_operations)
     print(result)
     
-def datis_processing(resp_dict:dict):
-    # datis raw returns is a list of dictionary when resp code is 200 otherwise its a json return as error.
-    # This function processess the raw list and returns just the pure datis
-    for url,datis in resp_dict.items():
-        if not 'error' in datis:
-            raw_datis_from_api = json.loads(datis)
-            raw_datis = Weather_parse().datis_processing(raw_datis_from_api)
-            resp_dict[url]=raw_datis
-    return resp_dict
-
 all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 with open(all_datis_airports_path, 'rb') as f:
     all_datis_airport_codes = pickle.load(f)
@@ -162,14 +152,8 @@ weather_links_dict = {
 for weather_type, weather_links in weather_links_dict.items():
     # This is one way to do it in the terminal. Or rather outside of the jupyter. Might need dunder name == main for it tho. -check bulk_datis_extrator
     # Check datis bulk extract and bulk weather extract for help on this.
-    resp_dict = asyncio.run(resp_dict_returns(weather_links))
     
     # Datis needs special processing before you put into collection. This bit accomplishes it
-    if weather_type == 'datis':
-        resp_dict = datis_processing(resp_dict)
-    
-    mdb_updates(resp_dict,weather_type)
-    # THATS IT. WORK ON GETTING THAT DATA ON THE FRONTEND AVAILABLE AND HAVE IT HIGHLIGHTED.
     
 
 def weather_field_metar_returns():

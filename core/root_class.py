@@ -133,34 +133,42 @@ class AirportValidation:
         self.airport_collection = db_UJ['icao_iata']
 
 
-    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, param_name=None):
+    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, supplied_param_type=None):
         """ This function validates the airport ID and returns the corresponding IATA or ICAO code.
             Accounting for formats within flightStats derived 3-letter codes, NAS returns, weather input compliance, etc.
+            returns:
+                iata, icao, airport
         """
-        
+        # TODO VHP: Subsequent UNV search from frontend is feeding KUNV. initial search is UNV.
+        # print('airportID', airport_id, )
         if isinstance(airport_id, str):
+            # TODO VHP: Temporary badaid for UNV IATA issues in collection airport/weather.
+            if 'UNV' in airport_id or 'KUNV' in airport_id:
+                return {"iata": 'SCE', "icao": 'KUNV'}
             iata_code = icao_code = None
             if len(airport_id) == 3 and iata_return:            # This is for IATA codes returned as is for NAS - prevents unnecessary mdb processing
                 return {'iata': airport_id}         # Return the 3-letter IATA code as is
             elif len(airport_id) == 3 and icao_return:
                 iata_code = airport_id
-                find_crit = {"iata": iata_code}  # Example query to find an airport by ICAO code
+                find_crit = {"iata": iata_code}  # Example query to find an airport by IATA code to return its associated ICAO
             elif len(airport_id) == 4 and iata_return:
                 icao_code = airport_id
                 find_crit = {"icao": icao_code}
             elif len(airport_id) == 4 and icao_return:
                 return {'icao': airport_id}         # Return the 4-letter ICAO code as is
+            elif len(airport_id) != 3 and len(airport_id) != 4:
+                raise ValueError(f"Invalid {supplied_param_type} airport code: must be 4 or 3 characters")
             else:
-                raise ValueError(f"Invalid {param_name} airport ID: must be 4 or 3 characters")
+                raise ValueError("Supply type of return - iata or icao")
             
             return_crit = {"_id": 0, "iata": 1, "icao": 1, "airport": 1}  # Fields to return
-            
+
             result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
             return result
 
 
 class Root_source_links:
-
+    # TODO Datis - This needs fixing- weather needs self arg. and all over this class is ussed as is and not as Root_source_links().
     def __init__(self) -> None:
         pass
 
@@ -176,7 +184,8 @@ class Root_source_links:
 class Source_links_and_api:
     def __init__(self,):
         pass
-
+        # TODO LP: use this to get status about flights, gate, times and delay status.
+        # "https://flyrichmond.com/"
     def ua_dep_dest_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.

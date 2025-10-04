@@ -1,5 +1,5 @@
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_searchTrack
+    # from config.database import collection_airports, collection_weather, collection_searchTrack
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)

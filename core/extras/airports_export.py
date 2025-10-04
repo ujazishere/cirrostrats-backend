@@ -2,6 +2,17 @@ import json
 import pickle
 import re
 
+"""
+Dumps all US airports from a pickle file allegedly. 
+this is the source structure key as state : value as [link, [airport_1, airport_2, airport_3]]
+example:
+{'Alabama': ['https://skyvector.com/airports/United%20States/Alabama',
+  ['TOI - Troy Municipal At N Kenneth Campbell Field Airport',
+
+final return is a list of dictionaries with id, name and code
+the label code would be better used as either ICAO or IATA
+"""
+
 airports = r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\all_US_airports_dict.pkl'
 with open(airports, 'rb') as f:
     x = pickle.load(f)

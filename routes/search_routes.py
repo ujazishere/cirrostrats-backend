@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from models.model import SearchData
 from services.search_service import get_search_suggestions_service,track_search_service,get_search_timeline_service,get_all_searches_service,get_user_searches_service,raw_search_handler_service
 
 router = APIRouter()
@@ -11,8 +12,8 @@ async def get_search_suggestions(email: str, query: str, limit: int = 500):
 
 
 @router.post('/searches/track')
-async def track_search(email: str, query: str, limit: int = 500):
-    return await track_search_service(email, query, limit)
+async def track_search(data: SearchData):
+    return await track_search_service(data)
 
 @router.get('/searches/timeline')
 async def get_search_timeline():
