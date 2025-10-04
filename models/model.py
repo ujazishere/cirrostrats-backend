@@ -29,11 +29,24 @@ def validate_IATA_airport_code(v: str) -> str:
     return v
 
 def validate_fs_delay_status(v: str) -> str:
-    if v not in ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed']:
-        message = f'Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}'
-        send_telegram_notification_service(message=message)
+    allowed_statuses = ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed']
+
+    # Regex for: "Delayed by <number> minute(s) ago"
+    delayed_pattern = re.compile(r"^Delayed by (\d+)(?: minutes? ago|m)$")
+
+    if v in allowed_statuses:
+        return v
+    elif delayed_pattern.match(v):
+        return v
+    else:
+        message = (
+            f"Delay status must be one of: {', '.join(allowed_statuses)} "
+            f"or match 'Delayed by <number> minutes ago'. "
+            f"Rather this was supplied: {v}"
+        )
+        # send_telegram_notification_service(message=message)
         raise ValueError(message)
-    return v
+
 
 def validate_fs_time_format(v: str) -> str:
     if not v or v == "-- ":  # Handle empty and "--" cases
