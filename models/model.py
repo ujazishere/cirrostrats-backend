@@ -3,6 +3,10 @@ import re
 from typing import Annotated, Optional, Union
 from pydantic import AfterValidator, BaseModel
 
+from services.notification_service import send_telegram_notification_service
+
+
+
 # TODO VHP: Use pydantic to validate the data for all route returns:
         # For example, flighStats returns a 4 letter ICAO code, times,
         # delay status etc. validate this data(received data vs expected data) for consistency:
@@ -19,12 +23,16 @@ class SearchData(BaseModel):
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
 def validate_IATA_airport_code(v: str) -> str:
     if not v.isalpha() or len(v) != 3 or not v.isupper():
-        raise ValueError(f'Airport code must be 3 uppercase letters. Rather this was supplied {v}')
+        message = f'Airport code must be 3 uppercase letters. Rather this was supplied {v}'
+        send_telegram_notification_service(message=message)
+        raise ValueError(message)
     return v
 
 def validate_fs_delay_status(v: str) -> str:
-    if v not in ['On time', 'Scheduled', 'Delayed', 'Estimated']:
-        raise ValueError(f'Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
+    if v not in ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed']:
+        message = f'Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}'
+        send_telegram_notification_service(message=message)
+        raise ValueError(message)
     return v
 
 def validate_fs_time_format(v: str) -> str:
@@ -32,7 +40,9 @@ def validate_fs_time_format(v: str) -> str:
         return v
     # Allow both "HH:MM TZ" and "HH:MM +XX" formats
     if not re.match(r'^\d{1,2}:\d{2} (?:[A-Z]{3}|[+-]\d{2})$', v):
-        raise ValueError(f'Time must be in format "HH:MM TZ" or "HH:MM +XX". Rather this was supplied {v}')
+        message = f'Time must be in format "HH:MM TZ" or "HH:MM +XX". Rather this was supplied {v}'
+        send_telegram_notification_service(message=message)
+        raise ValueError(message)
 
 # Create custom types
 AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
