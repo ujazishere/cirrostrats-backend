@@ -19,6 +19,8 @@ Updating VS code to the latest build should fix the issue. If it doesn't,
 Try using command promt window or terminal window outside of VS code instead of using the vs code terminal.
 To troubeshoot make sure to print the connection string to see whats actuallly being used by the system.
 """
+# NOTE: Multiple mondo DB instances - one from UJ and one from Luis.
+# TODO: Idea is to try and migrate all data from Luis' DB to UJ DB.
 client = MongoClient(config('connection_string'), tlsCAFile=certifi.where())
 client_UJ = MongoClient(config('connection_string_uj'), tlsCAFile=certifi.where())
 # client = MongoClient(config('connection_string'))

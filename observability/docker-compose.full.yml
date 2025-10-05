@@ -4,8 +4,11 @@
 version: '3.8'
 
 networks:
-  observability:
-    driver: bridge
+  # observability:
+  #   driver: bridge
+  base-network:
+    external: true
+    # driver: bridge
 
 volumes:
   loki-data:
@@ -26,7 +29,7 @@ services:
     hostname: loki
     command: ["-config.file=/etc/loki/loki-config.yml"]
     networks:
-      - observability
+      - base-network
     ports:
       - "3100:3100"
     volumes:
@@ -54,7 +57,7 @@ services:
     hostname: promtail
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     networks:
-      - observability
+      - base-network
     volumes:
       - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
       - promtail-positions:/tmp
@@ -79,7 +82,7 @@ services:
     hostname: tempo
     command: ["-config.file=/etc/tempo/tempo-config.yml"]
     networks:
-      - observability
+      - base-network
     ports:
       - "3200:3200"   # Tempo HTTP
       - "4317"        # OTLP gRPC (internal only)
@@ -109,7 +112,7 @@ services:
     hostname: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     networks:
-      - observability
+      - base-network
     ports:
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP HTTP receiver
@@ -150,7 +153,7 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
-      - observability
+      - base-network
     ports:
       - "9090:9090"
     volumes:
@@ -179,7 +182,7 @@ services:
     container_name: grafana
     hostname: grafana
     networks:
-      - observability
+      - base-network
     ports:
       - "3000:3000"
     environment:
