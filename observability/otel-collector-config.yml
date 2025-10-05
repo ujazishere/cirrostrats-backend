@@ -1,0 +1,86 @@
+# OpenTelemetry Collector Configuration
+# Receives traces/metrics from backend, processes, and exports to Tempo/Prometheus
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  # OTLP receiver for traces and metrics from instrumented apps
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch processor for efficient export
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+  # Tail sampling: Keep all errors/slow traces, sample 10% of fast/success traces
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 1000
+    expected_new_traces_per_sec: 10
+    policies:
+      # Always keep error traces
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+
+      # Keep slow traces (>500ms)
+      - name: slow_requests
+        type: latency
+        latency:
+          threshold_ms: 500
+
+      # Sample 10% of normal traces
+      - name: probabilistic_sample
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: dev
+        action: insert
+      - key: service.namespace
+        value: cirrostrats
+        action: insert
+
+exporters:
+  # Export traces to Tempo
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Export metrics to Prometheus
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: cirrostrats
+
+  # Logging exporter for debugging (optional)
+  logging:
+    verbosity: basic
+
+service:
+  extensions: [health_check]
+  pipelines:
+    # Traces pipeline: receive -> process -> export to Tempo
+    traces:
+      receivers: [otlp]
+      processors: [batch, tail_sampling, resource]
+      exporters: [otlp/tempo, logging]
+
+    # Metrics pipeline: receive -> process -> export to Prometheus
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [prometheus, logging]

@@ -7,44 +7,86 @@ positions:
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 100ms
+      max_period: 10s
+      max_retries: 10
 
 scrape_configs:
   - job_name: docker-logs
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
     relabel_configs:
+      # Container name
       - source_labels: ['__meta_docker_container_name']
-        target_label: container
+        target_label: container_name
         regex: '/(.*)'
+
+      # Container ID
       - source_labels: ['__meta_docker_container_id']
         target_label: container_id
+
+      # Compose service name
       - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
         target_label: compose_service
+
+      # Compose project name
       - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
         target_label: compose_project
+
+      # Container log path
       - source_labels: ['__meta_docker_container_id']
         target_label: __path__
         replacement: /var/lib/docker/containers/$1/$1-json.log
+
     pipeline_stages:
+      # Parse Docker JSON format
       - docker: {}
+
+      # Parse application JSON logs for backend/celery
       - match:
-          selector: '{compose_service=~".*backend.*|.*celery.*|.*nginx.*|.*frontend.*"}'
+          selector: '{container_name=~"cirrostrats-backend|.*celery.*"}'
           stages:
+            # Parse JSON log line
             - json:
                 expressions:
+                  timestamp: asctime
                   level: levelname
                   logger: name
                   msg: message
                   service: service
+                  env: env
                   request_id: request_id
+                  trace_id: trace_id
+                  span_id: span_id
                   http_method: http_method
                   http_path: http_path
                   status_code: status_code
+                  client_ip: client_ip
+                  user_agent: user_agent
                   latency_ms: latency_ms
+
+            # Extract labels for filtering
             - labels:
                 level:
                 logger:
                 service:
-                compose_service:
-                compose_project:
+                env:
+                container_name:
+
+            # Set timestamp from log
+            - timestamp:
+                source: timestamp
+                format: "2006-01-02 15:04:05,000"
+                location: "UTC"
+
+      # Pass through other containers (nginx, frontend) without JSON parsing
+      - match:
+          selector: '{container_name!~"cirrostrats-backend|.*celery.*"}'
+          stages:
+            - labels:
+                container_name:

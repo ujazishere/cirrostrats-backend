@@ -1,32 +1,41 @@
 FROM python:3.11-slim-bullseye
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Set the working directory  in the container
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file to the working directory
-COPY requirements.txt .
-
-# get chrome
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    wget gnupg \
-    # && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
-    # && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    # && apt-get install -y google-chrome-stable \
+    wget \
+    gnupg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies. no-cache-dir will prevent storing packages in the cache so rebuilds are latest.
+# Copy only requirements first for better layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY . .
 
-# Expose the port (if needed) This is only to docment does not actually bind. 
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose the port
 EXPOSE 8000
 
-# Start the Uvicorn server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--no-access-log"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start the Uvicorn server (production settings)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

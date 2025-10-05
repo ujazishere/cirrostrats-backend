@@ -36,8 +36,28 @@ class RequestContextFilter(logging.Filter):
         if not hasattr(record, "request_id"):
             record.request_id = rid
 
+        # Inject OpenTelemetry trace context for log-trace correlation
+        try:
+            from opentelemetry import trace
+            span = trace.get_current_span()
+            if span:
+                ctx = span.get_span_context()
+                if ctx and ctx.is_valid:
+                    record.trace_id = format(ctx.trace_id, '032x')
+                    record.span_id = format(ctx.span_id, '016x')
+                else:
+                    record.trace_id = None
+                    record.span_id = None
+            else:
+                record.trace_id = None
+                record.span_id = None
+        except Exception:
+            # If OpenTelemetry not available, set to None
+            record.trace_id = None
+            record.span_id = None
+
         # Placeholders to make downstream parsing stable
-        for attr in ("trace_id", "span_id", "http_method", "http_path", "status_code", "client_ip", "user_agent", "latency_ms"):
+        for attr in ("http_method", "http_path", "status_code", "client_ip", "user_agent", "latency_ms"):
             if not hasattr(record, attr):
                 setattr(record, attr, None)
         return True

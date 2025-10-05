@@ -1,0 +1,44 @@
+# Prometheus Configuration
+# Metrics collection, storage, and alerting
+
+global:
+  scrape_interval: 15s        # Scrape targets every 15 seconds
+  evaluation_interval: 15s    # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'cirrostrats-dev'
+    environment: 'dev'
+
+# Scrape configurations
+scrape_configs:
+  # FastAPI backend metrics
+  - job_name: 'cirrostrats-backend'
+    static_configs:
+      - targets: ['backend:8000']  # Backend service name in Docker network
+        labels:
+          service: 'cirrostrats-backend-api'
+          env: 'dev'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # OTel Collector metrics
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+        labels:
+          service: 'otel-collector'
+    scrape_interval: 15s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+# Remote write (receive metrics from Tempo metrics generator)
+remote_write:
+  - url: http://localhost:9090/api/v1/write
+    queue_config:
+      max_shards: 10
+      max_samples_per_send: 500

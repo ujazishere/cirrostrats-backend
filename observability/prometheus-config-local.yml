@@ -1,0 +1,43 @@
+# Prometheus Configuration for Local Backend Development
+# Scrapes metrics from backend running on host machine (not Docker)
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'cirrostrats-dev'
+    environment: 'dev'
+
+scrape_configs:
+  # FastAPI backend metrics - running on host machine
+  - job_name: 'cirrostrats-backend'
+    static_configs:
+      - targets: ['host.docker.internal:8000']  # Backend on host machine
+        labels:
+          service: 'cirrostrats-backend-api'
+          env: 'dev'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # OTel Collector metrics
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+        labels:
+          service: 'otel-collector'
+    scrape_interval: 15s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+# Remote write (receive metrics from Tempo metrics generator)
+remote_write:
+  - url: http://localhost:9090/api/v1/write
+    queue_config:
+      max_shards: 10
+      max_samples_per_send: 500

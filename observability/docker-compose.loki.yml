@@ -1,4 +1,5 @@
 services:
+  # Loki - Log aggregation
   loki:
     image: grafana/loki:2.9.4
     command: ["-config.file=/etc/loki/loki-config.yml"]
@@ -8,6 +9,7 @@ services:
       - ./loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki-data:/loki
 
+  # Promtail - Log collection agent
   promtail:
     image: grafana/promtail:2.9.4
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
@@ -20,6 +22,50 @@ services:
     depends_on:
       - loki
 
+  # Tempo - Distributed tracing backend
+  tempo:
+    image: grafana/tempo:2.4.1
+    command: ["-config.file=/etc/tempo/tempo-config.yml"]
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317"        # OTLP gRPC (internal only)
+      - "4318"        # OTLP HTTP (internal only)
+    volumes:
+      - ./tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - tempo-data:/tmp/tempo
+
+  # OpenTelemetry Collector - Telemetry pipeline
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.97.0
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics exporter
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    depends_on:
+      - tempo
+      - loki
+
+  # Prometheus - Metrics storage and querying
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - otel-collector
+
+  # Grafana - Observability dashboards
   grafana:
     image: grafana/grafana:10.4.2
     ports:
@@ -27,11 +73,18 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
     depends_on:
       - loki
+      - tempo
+      - prometheus
 
 volumes:
   loki-data: {}
   promtail-positions: {}
+  tempo-data: {}
+  prometheus-data: {}
+  grafana-data: {}

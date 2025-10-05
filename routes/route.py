@@ -1,7 +1,11 @@
 # routes/register.py
-from routes import  search_routes, test_routes, weather_routes, notification_routes, gate_routes, flight_aggregator_routes, misc_route
+from routes import search_routes, test_routes, weather_routes, notification_routes, gate_routes, flight_aggregator_routes, misc_route, health_routes
 
 def register_routes(app):
+    # Health endpoints first (no prefix for Kubernetes/Docker health checks)
+    app.include_router(health_routes.router)
+
+    # Application routes
     app.include_router(search_routes.router)
     app.include_router(test_routes.router)
     app.include_router(weather_routes.router)

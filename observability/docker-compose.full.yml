@@ -1,0 +1,267 @@
+# Production-ready Docker Compose with complete observability stack
+# Includes: Backend, Loki, Tempo, Prometheus, OTel Collector, Grafana
+
+version: '3.8'
+
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  loki-data:
+  tempo-data:
+  prometheus-data:
+  grafana-data:
+  promtail-positions:
+
+services:
+  # ============================================================================
+  # APPLICATION SERVICES
+  # ============================================================================
+
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.backend
+    container_name: cirrostrats-backend
+    hostname: backend
+    networks:
+      - observability
+    ports:
+      - "8000:8000"
+    environment:
+      # Application config
+      - ENV=dev
+      - SERVICE_NAME=cirrostrats-backend-api
+      - SERVICE_VERSION=1.0.0
+
+      # OpenTelemetry config
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=cirrostrats-backend-api
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=dev,service.version=1.0.0
+
+      # Database config (from .env file)
+      - connection_string=${connection_string}
+      - connection_string_uj=${connection_string_uj}
+      - ujazzzmay0525api=${ujazzzmay0525api:-}
+      - TELE_MAIN_BOT_TOKEN=${TELE_MAIN_BOT_TOKEN:-}
+    env_file:
+      - ../.env
+    depends_on:
+      - otel-collector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+      - "logging=promtail"
+      - "metrics.scrape=true"
+      - "metrics.port=8000"
+      - "metrics.path=/metrics"
+
+  # ============================================================================
+  # OBSERVABILITY STACK
+  # ============================================================================
+
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    hostname: loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    networks:
+      - observability
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Promtail - Log collection agent
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    hostname: promtail
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    networks:
+      - observability
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - promtail-positions:/tmp
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # Tempo - Distributed tracing backend
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: tempo
+    hostname: tempo
+    command: ["-config.file=/etc/tempo/tempo-config.yml"]
+    networks:
+      - observability
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317"        # OTLP gRPC (internal only)
+      - "4318"        # OTLP HTTP (internal only)
+    volumes:
+      - ./tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - tempo-data:/tmp/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # OpenTelemetry Collector - Telemetry pipeline
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.97.0
+    container_name: otel-collector
+    hostname: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    networks:
+      - observability
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics exporter
+      - "13133:13133" # Health check endpoint
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    depends_on:
+      - tempo
+      - loki
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Prometheus - Metrics storage and querying
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    hostname: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - observability
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - otel-collector
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Grafana - Observability dashboards
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    hostname: grafana
+    networks:
+      - observability
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_INSTALL_PLUGINS=
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_LOG_LEVEL=info
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
