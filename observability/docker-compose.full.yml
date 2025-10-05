@@ -16,61 +16,6 @@ volumes:
 
 services:
   # ============================================================================
-  # APPLICATION SERVICES
-  # ============================================================================
-
-  backend:
-    build:
-      context: ..
-      dockerfile: Dockerfile.backend
-    container_name: cirrostrats-backend
-    hostname: backend
-    networks:
-      - observability
-    ports:
-      - "8000:8000"
-    environment:
-      # Application config
-      - ENV=dev
-      - SERVICE_NAME=cirrostrats-backend-api
-      - SERVICE_VERSION=1.0.0
-
-      # OpenTelemetry config
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=cirrostrats-backend-api
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=dev,service.version=1.0.0
-
-      # Database config (from .env file)
-      - connection_string=${connection_string}
-      - connection_string_uj=${connection_string_uj}
-      - ujazzzmay0525api=${ujazzzmay0525api:-}
-      - TELE_MAIN_BOT_TOKEN=${TELE_MAIN_BOT_TOKEN:-}
-    env_file:
-      - ../.env
-    depends_on:
-      - otel-collector
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    labels:
-      - "logging=promtail"
-      - "metrics.scrape=true"
-      - "metrics.port=8000"
-      - "metrics.path=/metrics"
-
-  # ============================================================================
   # OBSERVABILITY STACK
   # ============================================================================
 
