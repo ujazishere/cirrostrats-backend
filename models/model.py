@@ -53,6 +53,7 @@ def validate_fs_time_format(v: str) -> str:
         message = f'Time must be in format "HH:MM TZ" or "HH:MM +XX". Rather this was supplied {v}'
         send_telegram_notification_service(message=message)
         raise ValueError(message)
+    return v
 
 # Create custom types
 AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]

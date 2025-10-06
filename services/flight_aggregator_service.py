@@ -124,7 +124,7 @@ async def flight_stats_url_service(flightID):      # time zone pull
         airline_code=airline_code,flt_num_query=flightID_digits,)
     if fs_departure_arr_time_zone:
         validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)
-        return validated_data.dict()
+        return validated_data.model_dump()
     return fs_departure_arr_time_zone
 
 

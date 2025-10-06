@@ -87,7 +87,7 @@ class FlightStatsExtractor:
                 
                 # print(extracts['data'])
                 extracts.append(i.text)
-    
+        self.ticket_extracts = extracts         # for troubleshooting access.
         returns = {}
         if len(extracts) < 13:
             print('Validation failed: not enough data extracted from the ticket card. Continuation would result in index error.')
@@ -133,12 +133,12 @@ class FlightStatsExtractor:
         delay_status = self.delay_status(soup_fs=soup_fs)
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
 
-        multi_flight = soup_fs.select('[class*="past-upcoming-flights__TextHelper"]')           # returns a list of classes that matches..
-        for i in multi_flight:
-            # TODO: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
-            # print(i.get_text())
-            # print(i.get('class'), i.get_text())
-            pass
+        # # TODO: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
+        # multi_flight = soup_fs.select('[class*="past-upcoming-flights__TextHelper"]')           # returns a list of classes that matches..
+        # for i in multi_flight:
+        #     # print(i.get_text())
+        #     # print(i.get('class'), i.get_text())
+        #     pass
         
         if len(Ticket_Card) == 2:
             # if len of Ticket_card is 2 first one is dep second one is arrival

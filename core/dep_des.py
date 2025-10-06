@@ -31,7 +31,7 @@ class Pull_flight_info(Root_class):
         # TODO Test: validation at source - make sure there 3 chars .isalpha mostly but 
                 #  can be isnumeric.
                 # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
-        # TODO Test: If this is unavailable, which has been the case latey- May 2024, use the other source for determining scheduled and actual departure and arriavl times
+        # TODO Test: If this is unavailable, which has been the case lately- May 2024, use the other source for determining scheduled and actual departure and arriavl times
         # TODO VHP: Return Estimated/ Actual to show delay times for the flights.
         bulk_flight_deet = {'flightStatsFlightID': airline_code+flt_num_query,
                             'flightStatsOrigin':departure.get('Code'),
