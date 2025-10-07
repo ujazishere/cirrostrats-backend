@@ -23,7 +23,8 @@ class SearchData(BaseModel):
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
 def validate_IATA_airport_code(v: str) -> str:
     if not v.isalpha() or len(v) != 3 or not v.isupper():
-        message = f'Airport code must be 3 uppercase letters. Rather this was supplied {v}'
+        # TODO airport code: is this supposed to be alphanumeric?
+        message = f'Airport code must be 3 uppercase .isalpha letters. Rather this was supplied {v}'
         send_telegram_notification_service(message=message)
         raise ValueError(message)
     return v
@@ -39,7 +40,7 @@ def validate_fs_delay_status(v: str) -> str:
     elif delayed_pattern.match(v):
         return v
     else:
-        message = (f'Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
+        message = (f'FS Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
         send_telegram_notification_service(message=message)
         # raise ValueError(message)
 

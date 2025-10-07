@@ -27,9 +27,7 @@ class Pull_flight_info(Root_class):
         departure = fs_data.get('fsDeparture')
         arrival = fs_data.get('fsArrival')
 
-        # TODO VHP: Departure and arrival are 3 char returns theyre not ICAO and hence the weathre lookup doesn't work.
-        # TODO Test: validation at source - make sure there 3 chars .isalpha mostly but 
-                #  can be isnumeric.
+        # TODO Test: 
                 # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
         # TODO Test: If this is unavailable, which has been the case lately- May 2024, use the other source for determining scheduled and actual departure and arriavl times
         # TODO VHP: Return Estimated/ Actual to show delay times for the flights.
@@ -38,10 +36,12 @@ class Pull_flight_info(Root_class):
                             'flightStatsDestination':arrival.get('Code'),
                             'flightStatsOriginGate': departure.get('TerminalGate'),
                             'flightStatsDestinationGate': arrival.get('TerminalGate'),
+                            'flightStatsScheduledDepartureDate': departure.get('ScheduledDate'),
                             'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),
+                            'flightStatsEstimatedDepartureTime': departure.get('EstimatedTime'),
                             'flightStatsActualDepartureTime': departure.get('ActualTime'),
                             'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),
-                            'flightStatsActualArrivalTime': arrival.get('ScheduledTime'),
+                            # 'flightStatsActualArrivalTime': arrival.get('ScheduledTime'),
                             'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
                                             }
         return bulk_flight_deet

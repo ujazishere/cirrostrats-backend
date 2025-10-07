@@ -29,7 +29,7 @@ class QueryClassifier:
             icao_file_path: Path to the pickle file containing ICAO codes and their counts
         """
         self.classified_suggestions = {}
-        # TODO: These are IATA equivalent of the 3 char ICAO airline codes
+        # TODO: These are IATA equivalent of the 3 char ICAO airline codes. Need them other way to convert them to ICAO for jms matching.
         extra_codes = "FI|NK|B6|RJC|WN|AS|F9|HA|AC|WS|BA|5X|FX|K4|5Y|9S|"
         self.icao_codes_separated = extra_codes + "UA|AA|DL|G7|GJS|UCA|UAX"  # Default common codes
 
