@@ -32,17 +32,19 @@ class Pull_flight_info(Root_class):
         # TODO Test: If this is unavailable, which has been the case lately- May 2024, use the other source for determining scheduled and actual departure and arriavl times
         # TODO VHP: Return Estimated/ Actual to show delay times for the flights.
         bulk_flight_deet = {'flightStatsFlightID': airline_code+flt_num_query,
+                            'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
                             'flightStatsOrigin':departure.get('Code'),
                             'flightStatsDestination':arrival.get('Code'),
                             'flightStatsOriginGate': departure.get('TerminalGate'),
                             'flightStatsDestinationGate': arrival.get('TerminalGate'),
-                            'flightStatsScheduledDepartureDate': departure.get('ScheduledDate'),
-                            'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),
-                            'flightStatsEstimatedDepartureTime': departure.get('EstimatedTime'),
-                            'flightStatsActualDepartureTime': departure.get('ActualTime'),
-                            'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),
-                            # 'flightStatsActualArrivalTime': arrival.get('ScheduledTime'),
-                            'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
+                            # departure date and time
+                            'flightStatsScheduledDepartureDate': departure.get('ScheduledDate'),    # Date
+                            'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),    # Scheduled Time
+                            'flightStatsEstimatedDepartureTime': departure.get('EstimatedTime'),    # Estimated Time
+                            'flightStatsActualDepartureTime': departure.get('ActualTime'),          # Actual Time
+                            # arrival times
+                            'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),        # Scheduled arrival time
+                            'flightStatsActualArrivalTime': arrival.get('ActualTime'),              # Actual arrival time
                                             }
         return bulk_flight_deet
 

@@ -1,4 +1,5 @@
 import json
+import logging
 from core.EDCT_Lookup import EDCT_LookUp
 import requests
 from core.tests.mock_test_data import Mock_data
@@ -7,6 +8,10 @@ from core.flight_deets_pre_processor import response_filter
 from core.root_class import Fetching_Mechanism, Source_links_and_api
 from core.search.query_classifier import QueryClassifier
 from models.model import FlightStatsResponse
+from services.notification_service import send_telegram_notification_service
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 qc = QueryClassifier(icao_file_path="unique_icao.pkl")
 sic_docs = qc.initialize_search_index_collection()
@@ -123,9 +128,14 @@ async def flight_stats_url_service(flightID):      # time zone pull
     fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
         airline_code=airline_code,flt_num_query=flightID_digits,)
     if fs_departure_arr_time_zone:
-        validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)
-        return validated_data.model_dump()
-    return fs_departure_arr_time_zone
+        try : 
+            validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)
+            return validated_data.model_dump()
+        except Exception as e:
+            # Accounting for Validation error in case Scheduled date or time is unavailable but most else is available.
+            message=f"Flightstats validation error: Flightstats necessary field data not found for {flightID}, Error: {e}, \n data: {fs_departure_arr_time_zone}"
+            send_telegram_notification_service(message=message)
+            logger.error(message)
 
 
 async def aviation_stack_service(flight_number):
@@ -160,6 +170,7 @@ async def flight_aware_w_auth_service(flight_number, mock=False):
 
     # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
     return flight_aware_data
+
 
 async def get_edct_info_service(flightID: str, origin: str, destination: str):
     el = EDCT_LookUp()

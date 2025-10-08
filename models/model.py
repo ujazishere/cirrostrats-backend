@@ -1,13 +1,16 @@
 from datetime import datetime
+import logging
 import re
 from typing import Annotated, Optional, Union
 from pydantic import AfterValidator, BaseModel
 
 from services.notification_service import send_telegram_notification_service
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 
-# TODO VHP: Use pydantic to validate the data for all route returns:
+# TODO Test: Use pydantic to validate the data for all route returns:
         # For example, flighStats returns a 4 letter ICAO code, times,
         # delay status etc. validate this data(received data vs expected data) for consistency:
         # fire notification for outlaws
@@ -19,6 +22,8 @@ class SearchData(BaseModel):
     submitTerm: Union[str, None]        # submitTerm can be string or null type of variable from react
     timestamp: datetime
 
+
+
 # Define validator functions OUTSIDE the class
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
 def validate_IATA_airport_code(v: str) -> str:
@@ -26,7 +31,8 @@ def validate_IATA_airport_code(v: str) -> str:
         # TODO airport code: is this supposed to be alphanumeric?
         message = f'Airport code must be 3 uppercase .isalpha letters. Rather this was supplied {v}'
         send_telegram_notification_service(message=message)
-        raise ValueError(message)
+        logger.warning(message)
+        # raise ValueError(message)
     return v
 
 def validate_fs_delay_status(v: str) -> str:
@@ -42,36 +48,64 @@ def validate_fs_delay_status(v: str) -> str:
     else:
         message = (f'FS Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
         send_telegram_notification_service(message=message)
+        logger.warning(message)
         # raise ValueError(message)
 
-
 def validate_fs_time_format(v: str) -> str:
+    """ Validate time format e.g "12:00 +01" or "12:00 CST" or "02:00 ChST" """
     if not v or v == "-- ":  # Handle empty and "--" cases
-        send_telegram_notification_service(message=f"Time format error. Supplied: {v}")
+        # Thes logs are discarded because Actual/Estimated times could be empty 
+        # message=f"Time format error. Supplied: {v}"
+        # send_telegram_notification_service(message)
+        # logger.warning(message)
         return v
     # Allow both "HH:MM TZ" and "HH:MM +XX" formats
-    if not re.match(r'^\d{1,2}:\d{2} (?:[A-Z]{3}|[+-]\d{2})$', v):
+    time_pattern_w_tz = r'^\d{1,2}:\d{2} (?:[A-Za-z]{1,2}[A-Z]{2}|[+-]\d{2})$'
+    if not re.match(time_pattern_w_tz, v):
         message = f'Time must be in format "HH:MM TZ" or "HH:MM +XX". Rather this was supplied {v}'
         send_telegram_notification_service(message=message)
-        raise ValueError(message)
+        logger.warning(message)
+        # raise ValueError(message)
+    return v
+
+def validate_fs_date_format(v: str) -> str:
+    """ Validate date format e.g "04-Oct-2025" """
+    if not v:  
+        message=f"Date format error. Supplied: {v}"
+        send_telegram_notification_service(message)
+        logger.warning(message)
+        return v
+    # Validate "DD-MMM-YYYY" format
+    pattern = r'^\d{1,2}-[A-Za-z]{3,4}-\d{4}$'
+    if not re.match(pattern, v):
+        message = f'Date must be in format "DD-MMM-YYYY". Rather this was supplied {v}'
+        send_telegram_notification_service(message=message)
+        logger.warning(message)
+        # raise ValueError(message)
     return v
 
 # Create custom types
 AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
 DelayStatus = Annotated[str, AfterValidator(validate_fs_delay_status)]
 TimeFormat = Annotated[str, AfterValidator(validate_fs_time_format)]
+DateFormat = Annotated[str, AfterValidator(validate_fs_date_format)]
 
 class FlightStatsResponse(BaseModel):
     flightStatsFlightID: str
-    flightStatsOrigin: AirportCode
-    flightStatsDestination: AirportCode
+    flightStatsDelayStatus: Optional[DelayStatus] = None
+    flightStatsOrigin: AirportCode          # Origin - A necessary field
+    flightStatsDestination: AirportCode     # Destination - A necessary field
     flightStatsOriginGate: Optional[str] = None
     flightStatsDestinationGate: Optional[str] = None
-    flightStatsScheduledDepartureTime: Optional[TimeFormat] = None
-    flightStatsActualDepartureTime: Optional[TimeFormat] = None
+    # departure date and time
+    flightStatsScheduledDepartureDate: DateFormat      # Date - A necessary field
+    flightStatsScheduledDepartureTime: TimeFormat      # Scheduled Time - A necessary field
+    flightStatsEstimatedDepartureTime: Optional[TimeFormat] = None      # Estimated Time
+    flightStatsActualDepartureTime: Optional[TimeFormat] = None         # Actual Time
+    # arrival times
     flightStatsScheduledArrivalTime: Optional[TimeFormat] = None
     flightStatsActualArrivalTime: Optional[TimeFormat] = None
-    flightStatsDelayStatus: Optional[DelayStatus] = None
+
 
 
 # Old code - not used anymore
