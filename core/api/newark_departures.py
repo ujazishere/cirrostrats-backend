@@ -227,7 +227,7 @@ class Newark_departures_scrape(Root_class):
                     hhmm = self.time_converter(flight_id, departure_time_raw)
                     extracts.update({"Departed":hhmm})
                 else:
-                    error_message = f"Outlaw in estimated/actual time -- departure extract - flight id:" + flight_id
+                    error_message = "Outlaw in estimated/actual time -- departure extract - flight id:" + flight_id
                     send_telegram_notification_service(message=error_message)
                     logger.warning(error_message)
                     
@@ -293,7 +293,7 @@ class Newark_departures_scrape(Root_class):
 
         flight_rows = []
         
-        if test==True:
+        if test:
             all_day_EWR_departures = all_day_EWR_departures[:30]
         
         for flight_id,scheduled_time,link in all_day_EWR_departures:

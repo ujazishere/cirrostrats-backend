@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import logging
 from pymongo import ReplaceOne
 import pytz
-import re
 
 """ The idea is to keep the processing separate from the scrapes so scrapes can be reused elsewhere if needed.
     This will keep all api and scrapes separate from the processings.

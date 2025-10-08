@@ -1,6 +1,5 @@
 import logging
 from core.root_class import Root_class
-from typing import Optional
 from typing import Literal
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,8 +31,8 @@ class FlightStatsExtractor:
         try:
             th_element = th[0]
             # return self.extract_flight_status(th)
-        except:
-            logger.error('Delay status error in FlightStatsExtractor.tc')
+        except IndexError as e:
+            logger.error(f'Delay status error in FlightStatsExtractor.tc,{e}')
             return None
 
         flight_status = None

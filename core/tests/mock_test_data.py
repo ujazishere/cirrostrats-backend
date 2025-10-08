@@ -27,10 +27,56 @@ class Mock_data:
     """ The way to use this is to init flight and weather data then use collective to combine them"""
     def __init__(self):
         pass
+    
+    def flightStats_data_init(self):
+        # This will be the new version of returns for flightstats.
+        self.flightStats_pre_processed = {
+            'fsDeparture': {'Code': 'HAM',
+                'City': 'Hamburg, DE',
+                'AirportName': 'Hamburg Airport',
+                'ScheduledDate': '20-Jul-2025',
+                'ScheduledTime': '13:35 CEST',
+                'ActualTime': '13:38 CEST',
+                'TerminalGate': '2'},
+            'fsArrival': {'Code': 'DUB',
+                'City': 'Dublin, IE',
+                'AirportName': 'Dublin Airport',
+                'ScheduledDate': '20-Jul-2025',
+                'ScheduledTime': '14:35 IST',
+                'ActualTime': '14:39 IST',
+                'TerminalGate': 'T2'},
+            'fsDelayStatus': 'On time'
+                }
+
+        self.flightStats = {'flightStatsFlightID': 'UA8452',
+                                'flightStatsDelayStatus': 'Scheduled',
+                                'flightStatsOrigin': 'ORD',
+                                'flightStatsDestination': 'YUL',
+                                'flightStatsOriginGate': '2-E2',
+                                'flightStatsDestinationGate': 'C80',
+                                'flightStatsScheduledDepartureDate': '08-Oct-2025',
+                                'flightStatsScheduledDepartureTime': '08:40 CDT',
+                                'flightStatsEstimatedDepartureTime': '09:30 CDT',
+                                'flightStatsActualDepartureTime': None,
+                                'flightStatsScheduledArrivalTime': '11:57 EDT',
+                                'flightStatsActualArrivalTime': None}
+        
+        self.fs_estimated_delayed = self.flightStats
+        self.fs_actual_delayed = {'flightStatsFlightID': 'UA8452',
+                                'flightStatsDelayStatus': 'Scheduled',
+                                'flightStatsOrigin': 'ORD',
+                                'flightStatsDestination': 'YUL',
+                                'flightStatsOriginGate': '2-E2',
+                                'flightStatsDestinationGate': 'C80',
+                                'flightStatsScheduledDepartureDate': '08-Oct-2025',
+                                'flightStatsScheduledDepartureTime': '08:40 CDT',
+                                'flightStatsEstimatedDepartureTime': '-- ',
+                                'flightStatsActualDepartureTime': '09:50 CDT',
+                                'flightStatsScheduledArrivalTime': '11:57 EDT',
+                                'flightStatsActualArrivalTime': None}
 
 
-    def flight_data_init(self):
-
+    def jms_data_init(self):
         self.jms_STDDS_clearance = {
             "towerAircraftID": "UAL4458",
             "timestamp": "2025-05-10T15:10:03.243000",
@@ -63,46 +109,11 @@ class Mock_data:
             "version_created_at": "2025-05-10T15:52:10.527000"
         }
 
-        # This will be the new version of returns for flightstats.
-        self.flightStatsv2 = {
-            'fsDeparture': {'Code': 'HAM',
-                'City': 'Hamburg, DE',
-                'AirportName': 'Hamburg Airport',
-                'ScheduledDate': '20-Jul-2025',
-                'ScheduledTime': '13:35 CEST',
-                'ActualTime': '13:38 CEST',
-                'TerminalGate': '2'},
-            'fsArrival': {'Code': 'DUB',
-                'City': 'Dublin, IE',
-                'AirportName': 'Dublin Airport',
-                'ScheduledDate': '20-Jul-2025',
-                'ScheduledTime': '14:35 IST',
-                'ActualTime': '14:39 IST',
-                'TerminalGate': 'T2'},
-            'fsDelayStatus': 'On time'
-                }
-        
-        self.flightStats = {
-                'flightStatsFlightID': 'UA4508',
-                'flightStatsOrigin': 'EWR',
-                "flightStatsDestination": "IAH",
-                'flightStatsOriginGate': 'C-101',
-                'flightStatsDestinationGate': 'D-1',
-                'flightStatsScheduledDepartureTime': '15:55 EDT',
-                'flightStatsActualDepartureTime': '15:59 EDT',
-                'flightStatsScheduledArrivalTime': '18:09 EDT',
-                'flightStatsActualArrivalTime': "18:09 EDT",
-                'flightStatsDelayStatus':"On time",
-            }
+        # Other intermediate data:
+        self.ajms_mock = {'latest': None, 'mongo': [{'flightID': 'GJS4404', 'matching_versions': [{'timestamp': '2025-08-26T18:17:33.889000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'estimatedDepartureTime': '2025-08-26T18:45:00Z', 'route': 'KEWR..PARKE.J6.COLNS.GAVNN7.KCVG/0132', 'requestedAltitude': '30000.0', 'towerAircraftID': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': 'GJS4404'}, 'destinationAirport': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': 'KCVG'}, 'clearance': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': '001 GJS4404\t1676\tKEWR CRJ7/L\tP1845 958\t300 KEWR PARKE J6 COLNS GAVNN7 KCVG @TCAS           CLEARED EWR5 DEPARTURE    MAINTAIN 2500FT EXP 300 10 MIN AFT DP,DPFRQ 119.2 CTC GROUND 121.8 FOR TAXI   '}, 'towerBeaconCode': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': '1676'}, 'version_created_at': '2025-08-26T18:19:31.516000'}, {'timestamp': '2025-08-26T19:03:54.927000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'route': 'KEWR..PARKE.J6.COLNS.GAVNN7.KCVG/2035', 'assignedAltitude': '30000.0', 'currentBeacon': '1676', 'version_created_at': '2025-08-26T19:05:06.015000'}, {'timestamp': '2025-08-26T19:30:10.576000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'route': 'KEWR./.PARKE251038..STEVY.GAVNN7.KCVG/2035', 'assignedAltitude': '30000.0', 'currentBeacon': '1676', 'version_created_at': '2025-08-26T19:31:37.248000'}]}]}
 
-        # # Depricated
-        # self.flightView = {
-        #         "flightViewArrivalGate": "\nD - D1A\n",
-        #         "flightViewDeparture": "EWR",
-        #         "flightViewDepartureGate": "\nC - C103\n",
-        #         "flightViewDestination": "IAH"
-        #     }
 
+    def flightAware_data_init(self):
         self.flightAware = {
                 'fa_ident_icao': 'GJS4558',
                 'fa_origin': 'KEWR',
@@ -123,6 +134,7 @@ class Mock_data:
                 'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
             }
 
+    def edct_init(self):
         import datetime as dt
         utc_now = dt.datetime.now(dt.UTC)
         current_time = utc_now.strftime("%m/%d/%Y %H:%M")
@@ -143,7 +155,8 @@ class Mock_data:
                 'flightCancelled': 'No'
                 }
         ]
-
+    
+    def nas_init(self):
         self.nas_singular_mock = {
                 'Ground Stop': {
                     'Airport': 'DEN',
@@ -171,16 +184,31 @@ class Mock_data:
                     'Trend': 'Increasing'
                     }
             }
-        self.ajms_mock = {'latest': None, 'mongo': [{'flightID': 'GJS4404', 'matching_versions': [{'timestamp': '2025-08-26T18:17:33.889000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'estimatedDepartureTime': '2025-08-26T18:45:00Z', 'route': 'KEWR..PARKE.J6.COLNS.GAVNN7.KCVG/0132', 'requestedAltitude': '30000.0', 'towerAircraftID': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': 'GJS4404'}, 'destinationAirport': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': 'KCVG'}, 'clearance': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': '001 GJS4404\t1676\tKEWR CRJ7/L\tP1845 958\t300 KEWR PARKE J6 COLNS GAVNN7 KCVG @TCAS           CLEARED EWR5 DEPARTURE    MAINTAIN 2500FT EXP 300 10 MIN AFT DP,DPFRQ 119.2 CTC GROUND 121.8 FOR TAXI   '}, 'towerBeaconCode': {'timestamp': '2025-08-26T18:17:39.247778+00:00', 'value': '1676'}, 'version_created_at': '2025-08-26T18:19:31.516000'}, {'timestamp': '2025-08-26T19:03:54.927000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'route': 'KEWR..PARKE.J6.COLNS.GAVNN7.KCVG/2035', 'assignedAltitude': '30000.0', 'currentBeacon': '1676', 'version_created_at': '2025-08-26T19:05:06.015000'}, {'timestamp': '2025-08-26T19:30:10.576000', 'organization': 'GJS', 'aircraftType': 'CRJ7', 'registration': 'N562GJ', 'departure': 'KEWR', 'arrival': 'KCVG', 'route': 'KEWR./.PARKE251038..STEVY.GAVNN7.KCVG/2035', 'assignedAltitude': '30000.0', 'currentBeacon': '1676', 'version_created_at': '2025-08-26T19:31:37.248000'}]}]}
+
+    def flight_data_init(self):
+        """ initialize flight_data first to access the associated flight data variables """
+        self.flightStats_data_init()
+        self.jms_data_init()
+        self.flightAware_data_init()
+        self.edct_init()
+        self.nas_init()
+
+        # # Depricated
+        # self.flightView = {
+        #         "flightViewArrivalGate": "\nD - D1A\n",
+        #         "flightViewDeparture": "EWR",
+        #         "flightViewDepartureGate": "\nC - C103\n",
+        #         "flightViewDestination": "IAH"
+        #     }
 
     def weather_data_init(self,html_injected_weather):
-        self.raw_datis_combined = [{'airport': 'KEWR',
+        self.pre_processed_datis_combined = [{'airport': 'KEWR',
                         'type': 'combined',
                         'code': 'F',
                         'datis': 'EWR ATIS INFO F 1751Z. 29011G17KT 1SM BKN004 BKN190 BKN250 29/15 A2981 (TWO NINER EIGHT ONE). ILS RWY 22L APCH IN USE. DEPARTING RY 22R FROM INT W 10,150 FEET TODA. RWY 22L TDZL OTS, RWY 22L CL LIGHTS OTS. GBAS OTS. VIP TFR. NO CLASS "B" SERVICES. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO F.',
                         'time': '1751',
                         'updatedAt': '2025-09-26T18:03:40.3038413Z'}]
-        self.raw_datis_arr_dep = [{'airport': 'KPHL',
+        self.pre_processed_datis_arr_dep = [{'airport': 'KPHL',
                         'type': 'arr',
                         'code': 'L',
                         'datis': 'PHL ARR INFO L 1754Z. 29009KT 1/2SM OVC004 28/15 A2984 (TWO NINER EIGHT FOUR) RMK AO2 SLP102 T02830150 10283 20211 58009. SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, OR VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY G CLSD BTN, TWY, J AND TWY E . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 2NM NE OF ZMRMN INTERSECTION AT ONE7N AOB 13500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO L.',
@@ -194,14 +222,14 @@ class Mock_data:
                         'updatedAt': '2025-09-26T18:03:14.6154463Z'}]
         self.raw_datis_error = {'error': 'No results found'}
 
-        self.processed_datis_combined = Weather_parse().datis_processing(self.raw_datis_combined)
-        self.processed_datis_arr_dep = Weather_parse().datis_processing(self.raw_datis_arr_dep)
+        self.processed_datis_combined = Weather_parse().datis_processing(self.pre_processed_datis_combined)
+        self.processed_datis_arr_dep = Weather_parse().datis_processing(self.pre_processed_datis_arr_dep)
         self.processed_datis_error = Weather_parse().datis_processing(self.raw_datis_error)
 
         # TODO: if processed internally use the function instead of the raw data that was processed by the function. Then use this class to spit out structured data structure.
 
         self.weather_raw = {
-            'datis': Weather_parse().datis_processing(self.raw_datis_arr_dep),
+            'datis': Weather_parse().datis_processing(self.pre_processed_datis_arr_dep),
             # 'datis': 'DEN ARR INFO L 1953Z. 27025G33KT 10SM FEW080 SCT130 SCT200 01/M19 A2955 (TWO NINER FIVE FIVE) RMK AO2 PK WND 29040/1933 SLP040. LLWS ADZYS IN EFCT. HAZUS WX INFO FOR CO, KS, NE, WY AVBL FM FLT SVC. PIREP 30 SW DEN, 2005Z B58T RPRTD MDT-SVR, TB, BTN 14THSD AND 10 THSD DURD. PIREP DEN AREA,, 1929Z PC24 RPRTD MDT, TB, BTN AND FL 190 DURD. EXPC ILS, RNAV, OR VISUAL APCH, SIMUL APCHS IN USE, RWY 25, RWY 26. NOTICE TO AIR MISSION. S C DEICE PAD CLOSED. DEN DME OTS. BIRD ACTIVITY VICINITY ARPT. ...ADVS YOU HAVE INFO L.',
             'datis_ts': "0756Z",
             'metar': 'KDEN 012054Z 16004KT 1/2SM R05L/P6000FT BR OVC004 08/08 A2978 RMK AO2 SFC VIS 3 SLP085 T00830078 56006',
@@ -219,11 +247,11 @@ class Mock_data:
 
     def collective(self,):
         """ initialize flight_data first to use this function since variables in here are from flight_data"""
+        self.flight_data_init()     # this will initialize flight_data
         self.primary_flight_data_collective = {
             **self.jms_STDDS_clearance,
             **self.jms_FDPS_base,
             **self.flightStats,
-            # **self.flightView,
             **self.flightAware,
         }
 
@@ -241,13 +269,13 @@ class Mock_data:
             'departureNAS': self.nas_singular_mock,
         }
 
-        self.collective = {
+        self.complete_collection = {
             'flightData':self.primary_flight_data_collective,
             'weather': self.weather_collective,
             'NAS': self.NAS_collective,
             'EDCT': self.EDCT_data,
         }
-        return self.collective
+        return self.complete_collection
 
 
     def mongo_collection_mock(self,):
