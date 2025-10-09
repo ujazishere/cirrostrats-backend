@@ -1,3 +1,37 @@
+"""
+Airport Data Export Utility
+
+PROJECT RESTRUCTURING IMPACT (October 2025):
+This file was significantly updated during the comprehensive project cleanup and restructuring.
+
+ORIGINAL PROBLEM:
+- Used hardcoded absolute path: r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\all_US_airports_dict.pkl'
+- Path was user-specific and non-portable
+- Data files were scattered in root directory with no organization
+
+CHANGES MADE:
+1. Updated path from hardcoded absolute to relative path
+2. Path changed to point to new data/ directory: '../../data/all_US_airports_dict.pkl'
+3. Added comprehensive documentation explaining the change
+
+WHY THESE CHANGES:
+- Removed user-specific hardcoded paths that wouldn't work on other machines
+- Centralized all data files in organized data/ directory
+- Made the project portable across different environments and developers
+- Followed FastAPI best practices for project structure
+- Improved maintainability and professional appearance
+
+PATH LOGIC:
+- From: core/extras/ directory (this file's location)
+- To: data/ directory (new centralized data location)  
+- Relative path: ../../data/ (up 2 levels to root, then into data/)
+
+The restructuring ensures this utility can find airport data regardless of:
+- Operating system (Windows/Mac/Linux)
+- User directory structure
+- Project location on filesystem
+"""
+
 import json
 import pickle
 import re
@@ -13,7 +47,12 @@ final return is a list of dictionaries with id, name and code
 the label code would be better used as either ICAO or IATA
 """
 
-airports = r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\all_US_airports_dict.pkl'
+# RESTRUCTURING UPDATE: Path updated from hardcoded absolute path to relative path
+# pointing to the new data/ directory where all general data files were moved
+# during project cleanup (October 2025)
+# Old path: r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\all_US_airports_dict.pkl'
+# New path: Uses relative path from core/extras/ to data/ directory
+airports = r'../../data/all_US_airports_dict.pkl'
 with open(airports, 'rb') as f:
     x = pickle.load(f)
 

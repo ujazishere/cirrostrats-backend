@@ -12,7 +12,9 @@ except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
 
-qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+# RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+# File moved from root to data/ directory during project cleanup
+qc = QueryClassifier(icao_file_path="../data/unique_icao.pkl")
 sic_docs = qc.initialize_search_index_collection()
 
 

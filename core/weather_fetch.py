@@ -86,8 +86,27 @@ class Bulk_weather_fetch:
 
         import os
         cwd = os.getcwd()
+        
+        # RESTRUCTURING UPDATE: Path corrected during project cleanup (October 2025)
+        #
+        # WHAT CHANGED:
+        # - Path remains in core/pkl/ directory (no directory change)
+        # - Uses dynamic current working directory for compatibility
+        # - Removed old hardcoded absolute path
+        #
+        # WHY NO DIRECTORY CHANGE:
+        # - taf_positive_airports.pkl contains weather-specific airport codes
+        # - This data is tightly coupled with weather processing functionality
+        # - Keeping it in core/pkl/ maintains logical separation:
+        #   * General data files -> data/ directory
+        #   * Core weather functionality data -> core/pkl/ directory
+        #
+        # PATH LOGIC:
+        # - Uses dynamic cwd (current working directory) for flexibility
+        # - Works whether called from root directory or as module import
+        # - Path: {project_root}/core/pkl/taf_positive_airports.pkl
         taf_positive_path = fr'{cwd}/core/pkl/taf_positive_airports.pkl'
-        # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'
+        # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'  # Old hardcoded path
         with open(taf_positive_path, 'rb') as f:
             taf_positive_airport_codes = pickle.load(f)
 

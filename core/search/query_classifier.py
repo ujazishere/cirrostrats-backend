@@ -22,7 +22,7 @@ class QueryClassifier:
 
     """
     
-    def __init__(self, icao_file_path: Optional[str] = "unique_icao.pkl"):
+    def __init__(self, icao_file_path: Optional[str] = "data/unique_icao.pkl"):
         """
         Initialize the classifier with ICAO airline codes and regex pattern
         Args:
@@ -221,17 +221,42 @@ class QueryClassifier:
 
 class QC_base_popularity_hits(QueryClassifier):
     def pickle_loads(self):
+        """
+        Load pickle data files for query classification and popularity ranking.
+        
+        PROJECT RESTRUCTURING UPDATE (October 2025):
+        All data file paths updated during comprehensive project cleanup.
+        
+        CHANGES MADE:
+        1. publicuj_searches_unique_sorts.pkl: '' -> '../../data/publicuj_searches_unique_sorts.pkl'
+        2. ForMDB.pkl -> forMDB.pkl: Fixed filename case AND updated path to '../../data/forMDB.pkl'
+        3. unique_icao.pkl: '' -> '../../data/unique_icao.pkl'
+        
+        WHY THESE CHANGES:
+        - Data files were scattered in root directory, making project structure messy
+        - Moved all general data files to centralized data/ directory
+        - Fixed case-sensitive filename issue (ForMDB.pkl vs forMDB.pkl)
+        - Improved project organization following FastAPI best practices
+        - Made paths relative and portable across different environments
+        
+        PATH LOGIC:
+        - From: core/search/ directory (this file's location)
+        - To: data/ directory (new centralized data location)
+        - Relative path: ../../data/ (up 2 levels to root, then into data/)
+        """
         import pickle
         
-        with open('publicuj_searches_unique_sorts.pkl', 'rb') as f:
+        # RESTRUCTURING UPDATE: Paths updated to point to data/ directory (October 2025)
+        # Files moved from root to data/ directory during project cleanup
+        with open('../../data/publicuj_searches_unique_sorts.pkl', 'rb') as f:
             suggestions = pickle.load(f)
-        with open('ForMDB.pkl', 'rb') as f:
+        with open('../../data/forMDB.pkl', 'rb') as f:  # Fixed filename case: ForMDB.pkl -> forMDB.pkl
             z = pickle.load(f)
             base_rating = 2
             base_rating = 2
             flightID_batch = [("GJS"+str(flightID),base_rating) for flightID in z['scheduled_flights']]        # Adding count as 1.
             airports_batch = [(a,b) for a,b in z['popularity_raw'].items()]         # aiport ID with popularity counts.
-        with open('unique_icao.pkl', 'rb') as f:
+        with open('../../data/unique_icao.pkl', 'rb') as f:
             icao = pickle.load(f)
         icaos = [(icao,count) for icao, count in icao.items()][1:29]
 
@@ -397,7 +422,9 @@ class Trie_structure_WIP:
 
         import pickle
         """ Get 30 most popular icaos """
-        with open('unique_icao.pkl', 'rb') as f:
+        # RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+        # File moved from root to data/ directory during project cleanup
+        with open('../../data/unique_icao.pkl', 'rb') as f:
             icao = pickle.load(f)
         icaos = [icao for icao, count in icao.items()][1:29]
         

@@ -19,6 +19,7 @@ cirrostrats-backend/
 ├── utils/                 # Utility functions
 ├── data/                  # Data files (JSON, pickle)
 ├── docs/                  # Documentation
+├── notebooks/             # Jupyter notebooks (development)
 ├── config/                # Configuration files
 ├── .github/               # GitHub workflows
 ├── main.py               # FastAPI application entry point

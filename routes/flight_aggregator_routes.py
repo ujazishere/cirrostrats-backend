@@ -7,7 +7,9 @@ from core.flight_deets_pre_processor import response_filter
 from core.root_class import Fetching_Mechanism, Source_links_and_api
 from core.search.query_classifier import QueryClassifier
 
-qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+# RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+# File moved from root to data/ directory during project cleanup
+qc = QueryClassifier(icao_file_path="../data/unique_icao.pkl")
 sic_docs = qc.initialize_search_index_collection()
 
 

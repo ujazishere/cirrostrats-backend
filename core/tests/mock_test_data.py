@@ -1,3 +1,22 @@
+"""
+Mock Test Data Module
+
+PROJECT RESTRUCTURING IMPACT (October 2025):
+This file was updated during the comprehensive project cleanup to account for data files
+being moved from the root directory to the organized data/ directory structure.
+
+Changes made:
+- Updated mock_ajms_data.pkl path from root to data/ directory
+- Path changed from 'mock_ajms_data.pkl' to '../../data/mock_ajms_data.pkl'
+- This ensures the test data can still be loaded after the restructuring
+
+The restructuring improved project organization by:
+- Centralizing all data files in data/ directory
+- Separating development artifacts (notebooks/) from production code
+- Creating clear documentation structure (docs/)
+- Following FastAPI best practices for project layout
+"""
+
 from bson import ObjectId
 from config.database import db_UJ        # UJ mongoDB
 from datetime import datetime, timedelta
@@ -11,7 +30,9 @@ async def test_aws_jms():
     """ This wont work because of circular imports. take it out into a jupyter interactive and it shall work
         This ajms data structure is --> latest(redis) and mongo. Then gets processed according to the route function which parses the data.
     """
-    with open('mock_ajms_data.pkl','rb') as f:
+    # RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+    # File moved from root to data/ directory during project cleanup
+    with open('../../data/mock_ajms_data.pkl','rb') as f:
         data = pickle.load(f)
        # Process each flight
     results = []
