@@ -18,7 +18,8 @@ class RequestContextLogMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        self.logger = logging.getLogger("uvicorn.access")
+        # Use custom logger name to avoid conflicts with uvicorn's default access logger
+        self.logger = logging.getLogger("app.access")
 
     async def dispatch(self, request: Request, call_next: Callable):
         start = time.perf_counter()

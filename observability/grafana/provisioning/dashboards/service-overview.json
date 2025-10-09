@@ -119,24 +119,27 @@
         }
       },
       {
-        "title": "Request Rate by Endpoint",
+        "title": "Total Requests by Endpoint (Last Hour)",
         "type": "bargauge",
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
         "datasource": { "uid": "prometheus" },
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\"}[5m])) by (handler)",
+            "expr": "topk(10, sum(increase(http_requests_total{service=\"cirrostrats-backend-api\"}[1h])) by (handler))",
             "legendFormat": "{{handler}}",
             "refId": "A"
           }
         ],
         "options": {
           "orientation": "horizontal",
-          "displayMode": "gradient"
+          "displayMode": "gradient",
+          "showUnfilled": true
         },
         "fieldConfig": {
           "defaults": {
-            "unit": "reqps"
+            "unit": "short",
+            "decimals": 0,
+            "color": { "mode": "palette-classic" }
           }
         }
       },

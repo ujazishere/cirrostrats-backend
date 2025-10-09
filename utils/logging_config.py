@@ -127,7 +127,10 @@ def build_logging_config(service: str | None = None, env: str | None = None, lev
             # Uvicorn loggers
             "uvicorn": {"level": log_level, "handlers": ["console"], "propagate": False},
             "uvicorn.error": {"level": log_level, "handlers": ["console"], "propagate": False},
-            "uvicorn.access": {"level": log_level, "handlers": ["console"], "propagate": False},
+            # Disable uvicorn's default access logger - we use app.access instead
+            "uvicorn.access": {"level": "WARNING", "handlers": [], "propagate": False},
+            # Custom access logger (from RequestContextLogMiddleware)
+            "app.access": {"level": log_level, "handlers": ["console"], "propagate": False},
             # Celery loggers
             "celery": {"level": log_level, "handlers": ["console"], "propagate": False},
             # Root/app

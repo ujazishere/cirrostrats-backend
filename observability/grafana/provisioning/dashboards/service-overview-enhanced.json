@@ -1,0 +1,574 @@
+{
+  "title": "Cirrostrats Backend - Enhanced Overview",
+  "tags": ["cirrostrats", "backend", "overview", "enhanced"],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "endpoint",
+        "type": "query",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(http_requests_total{service=\"cirrostrats-backend-api\"}, handler)",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "label": "Endpoint"
+      },
+      {
+        "name": "status_code",
+        "type": "query",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(http_requests_total{service=\"cirrostrats-backend-api\"}, status)",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "label": "Status Code"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "🎯 Quick Stats",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "Request Rate"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"cirrostrats-backend-api\"}[5m])) * 100",
+          "refId": "B",
+          "legendFormat": "Error Rate"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"cirrostrats-backend-api\"}[5m])) by (le)) * 1000",
+          "refId": "C",
+          "legendFormat": "p95 Latency"
+        },
+        {
+          "expr": "count(count by (handler) (http_requests_total{service=\"cirrostrats-backend-api\"}))",
+          "refId": "D",
+          "legendFormat": "Endpoints"
+        }
+      ],
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Request Rate" },
+            "properties": [
+              { "id": "unit", "value": "reqps" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Error Rate" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "value": null, "color": "green" },
+                    { "value": 1, "color": "yellow" },
+                    { "value": 5, "color": "red" }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "p95 Latency" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "value": null, "color": "green" },
+                    { "value": 200, "color": "yellow" },
+                    { "value": 500, "color": "red" }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Endpoints" },
+            "properties": [
+              { "id": "unit", "value": "short" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "📊 Request Rate by Endpoint (Click to view logs)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\",status=~\"$status_code\"}[1m])) by (handler)",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20,
+            "showPoints": "never"
+          },
+          "links": [
+            {
+              "title": "View Logs for ${__field.labels.handler}",
+              "url": "/d/${__dashboard.uid}?var-endpoint=${__field.labels.handler}&viewPanel=100"
+            }
+          ]
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] }
+      }
+    },
+    {
+      "title": "⚡ Latency by Endpoint (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[1m])) by (handler, le)) * 1000",
+          "legendFormat": "{{handler}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[1m])) by (handler, le)) * 1000",
+          "legendFormat": "{{handler}} p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[1m])) by (handler, le)) * 1000",
+          "legendFormat": "{{handler}} p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          },
+          "links": [
+            {
+              "title": "View Slow Requests for ${__field.labels.handler}",
+              "url": "/d/${__dashboard.uid}?var-endpoint=${__field.labels.handler}&viewPanel=100"
+            }
+          ]
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] }
+      }
+    },
+    {
+      "title": "🔢 Total Requests by Endpoint (Last Hour) - Click to view logs",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "topk(15, sum(increase(http_requests_total{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[1h])) by (handler))",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": { "mode": "palette-classic" },
+          "links": [
+            {
+              "title": "View All Logs for ${__field.labels.handler}",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcontainer_name%3D%5C%22cirrostrats-backend%5C%22%7D%20%7C%20json%20%7C%20http_path%3D%5C%22${__field.labels.handler}%5C%22%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "🚨 Error Rate by Endpoint",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "topk(10, sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",status=~\"5..\",handler=~\"$endpoint\"}[5m])) by (handler) / sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[5m])) by (handler) * 100)",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 1, "color": "yellow" },
+              { "value": 5, "color": "orange" },
+              { "value": 10, "color": "red" }
+            ]
+          },
+          "links": [
+            {
+              "title": "View Error Logs for ${__field.labels.handler}",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcontainer_name%3D%5C%22cirrostrats-backend%5C%22%7D%20%7C%20json%20%7C%20http_path%3D%5C%22${__field.labels.handler}%5C%22%20%7C%20status_code%3E%3D500%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "📈 Status Code Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(http_requests_total{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\",status=~\"$status_code\"}[1h])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": ["value", "percent"]
+        },
+        "pieType": "donut"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "links": [
+            {
+              "title": "View Logs with status ${__field.labels.status}",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcontainer_name%3D%5C%22cirrostrats-backend%5C%22%7D%20%7C%20json%20%7C%20status_code%3D${__field.labels.status}%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "⏱️ Slowest Endpoints (p95 Latency)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[5m])) by (handler, le))) * 1000",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "handler": "Endpoint",
+              "Value": "p95 Latency (ms)"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "displayMode": "auto"
+          },
+          "links": [
+            {
+              "title": "View Slow Requests for ${__data.fields.Endpoint}",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcontainer_name%3D%5C%22cirrostrats-backend%5C%22%7D%20%7C%20json%20%7C%20http_path%3D%5C%22${__data.fields.Endpoint}%5C%22%20%7C%20latency_ms%3E100%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "p95 Latency (ms)" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              { "id": "decimals", "value": 2 },
+              {
+                "id": "custom.displayMode",
+                "value": "gradient-gauge"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "value": null, "color": "green" },
+                    { "value": 100, "color": "yellow" },
+                    { "value": 500, "color": "red" }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "📊 Request Volume Timeline",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(http_requests_total{service=\"cirrostrats-backend-api\",handler=~\"$endpoint\"}[1h])) by (handler)",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "handler": "Endpoint",
+              "Value": "Requests (1h)"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Requests (1h)",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "displayMode": "auto"
+          },
+          "links": [
+            {
+              "title": "View Logs for ${__data.fields.Endpoint}",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcontainer_name%3D%5C%22cirrostrats-backend%5C%22%7D%20%7C%20json%20%7C%20http_path%3D%5C%22${__data.fields.Endpoint}%5C%22%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Requests (1h)" },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "gradient-gauge"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 100,
+      "title": "🔍 Recent Logs (Click trace_id to see trace) - Filtered by selections above",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 28 },
+      "datasource": { "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{container_name=\"cirrostrats-backend\"} | json | http_path=~\"$endpoint\" | status_code=~\"$status_code\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "links": [
+            {
+              "title": "View Trace ${__value.raw}",
+              "url": "/explore?left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22query%22:%22${__value.raw}%22,%22queryType%22:%22traceql%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "📉 Error Trend",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 40 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",status=~\"5..\",handler=~\"$endpoint\"}[1m])) by (handler)",
+          "legendFormat": "{{handler}} (5xx)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{service=\"cirrostrats-backend-api\",status=~\"4..\",handler=~\"$endpoint\"}[1m])) by (handler)",
+          "legendFormat": "{{handler}} (4xx)",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }
+      }
+    },
+    {
+      "title": "🎯 Top 10 Trace IDs (Click to view trace)",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 40 },
+      "datasource": { "uid": "loki" },
+      "targets": [
+        {
+          "expr": "topk(10, count_over_time({container_name=\"cirrostrats-backend\"} | json | http_path=~\"$endpoint\" [1h])) by (trace_id)",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "trace_id": "Trace ID",
+              "Value": "Log Count"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Trace ID" },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View Trace in Tempo",
+                    "url": "/explore?left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22query%22:%22${__value.raw}%22,%22queryType%22:%22traceId%22%7D%5D%7D",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "refresh": "10s",
+  "uid": "cirrostrats-enhanced",
+  "version": 2
+}
