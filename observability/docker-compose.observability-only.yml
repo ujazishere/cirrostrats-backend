@@ -1,14 +1,10 @@
-# Production-ready Docker Compose with complete observability stack
-# Includes: Backend, Loki, Tempo, Prometheus, OTel Collector, Grafana
-
-version: '3.8'
+# Observability Stack Only (without backend)
+# Use this when running backend locally for development
 
 networks:
-  # observability:
-  #   driver: bridge
-  base-network:
+  # Shared network with main app stack
+  cirrostrats-network:
     external: true
-    # driver: bridge
 
 volumes:
   loki-data:
@@ -29,7 +25,7 @@ services:
     hostname: loki
     command: ["-config.file=/etc/loki/loki-config.yml"]
     networks:
-      - base-network
+      - cirrostrats-network
     ports:
       - "3100:3100"
     volumes:
@@ -57,7 +53,7 @@ services:
     hostname: promtail
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     networks:
-      - base-network
+      - cirrostrats-network
     volumes:
       - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro
       - promtail-positions:/tmp
@@ -82,7 +78,7 @@ services:
     hostname: tempo
     command: ["-config.file=/etc/tempo/tempo-config.yml"]
     networks:
-      - base-network
+      - cirrostrats-network
     ports:
       - "3200:3200"   # Tempo HTTP
       - "4317"        # OTLP gRPC (internal only)
@@ -112,9 +108,9 @@ services:
     hostname: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     networks:
-      - base-network
+      - cirrostrats-network
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
+      - "4317:4317"   # OTLP gRPC receiver (for local backend)
       - "4318:4318"   # OTLP HTTP receiver
       - "8889:8889"   # Prometheus metrics exporter
       - "13133:13133" # Health check endpoint
@@ -153,11 +149,11 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
-      - base-network
+      - cirrostrats-network
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-config-shared-network.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     depends_on:
       - otel-collector
@@ -182,7 +178,7 @@ services:
     container_name: grafana
     hostname: grafana
     networks:
-      - base-network
+      - cirrostrats-network
     ports:
       - "3000:3000"
     environment:
