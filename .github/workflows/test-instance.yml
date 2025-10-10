@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS
 
 on:
   push:
-    branches: [ "Release" ]
+    branches: [ "dev" ]
 
 jobs:
   deploy:
@@ -14,8 +14,8 @@ jobs:
 
     - name: Configure AWS credentials
       env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        HOST: ${{ secrets.EC2_HOST }}
+        PRIVATE_KEY: ${{ secrets.TEST_SSH_PRIVATE_KEY }}
+        HOST: ${{ secrets.TEST_HOST }}
         USER: ${{ secrets.EC2_USER }}
       run: |
         echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
@@ -25,7 +25,7 @@ jobs:
           cd base/cirrostrats-backend &&
           
           # Pull latest changes
-          git pull origin Release &&
+          git pull origin dev &&
           
           # Cleanup <none> type danging images, unused volues and builder cache
           docker image prune -af &&
