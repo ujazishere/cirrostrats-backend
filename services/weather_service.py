@@ -1,12 +1,11 @@
-from typing import Dict, Optional, Union
+import bson
 from bson import ObjectId
-from core.weather_fetch import Singular_weather_fetch, Weather_processor
-from schema.schemas import serialize_document_list
+from core.weather_fetch import Singular_weather_fetch
 from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
-import bson
+from typing import Optional
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports, collection_weather, collection_weather_uj
+    from config.database import collection_airports, collection_weather_uj
     # from config.database import collection_flights, db_UJ         # uj collections
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)

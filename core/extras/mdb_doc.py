@@ -54,7 +54,6 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 """ *** This file serves as a document and guide only ***"""
 
 from config.database import collection_airports, collection_weather
-from schema.schemas import serialize_document, serialize_document_list, individual_airport_input_data, serialize_airport_input_data
 from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
 from bson import ObjectId
 import requests

@@ -1,6 +1,7 @@
-win_local.bat
-trial.py
 celerybeat-schedule
+dcub.bat
+trial.py
+win_local.bat
 /venv
 .vscode
 .env

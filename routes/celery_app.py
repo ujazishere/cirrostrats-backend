@@ -5,6 +5,7 @@ from celery.schedules import crontab
 import datetime as dt
 import json
 import redis
+from core.tests.broad_test import Broad_test
 from utils.tele import Tele_bot
 from core.api.nas import NASExtracts
 from core.weather_fetch import Bulk_weather_fetch  # Used for periodic scheduling
@@ -122,6 +123,25 @@ def nasFetch():
     else:
         return "NAS: no change"
 
+async def run_fs_test():
+    bt = Broad_test()
+    await bt.fs_test()            # This will be tricky since its an async function - take inspiration from earlier async functions task
+    
+@celery_app.task
+def generic_testing():
+    """ Generic testing function that runs all the tests in core/tests/broad_test.py"""
+
+    bt = Broad_test()
+    bt.jms_test()
+    bt.weather_test()
+    asyncio.run(run_fs_test())      # fs_test is an async function and this is a celery bypass mechanism to run it.
+    
+    # TODO test: Remaining logic
+    # bt.flight_aware_test()        
+    # bt.nas_test()
+    # bt.gate_test()
+    return 'Generic testing completed'
+
 
 celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
 
@@ -139,9 +159,9 @@ celery_app.conf.beat_schedule = {
             #  spin up an instance to run these tasks if the celery task fails? but that may not be necessary.
                 #  Only attend to it when critical failure occurs?
 
-    'run-datisfetch-every-53-mins-past-hour': {
+    'run-datisfetch-every-10-mins': {
         'task': 'routes.celery_app.DatisFetch',      # The task function that needs to be scheduled
-        'schedule': crontab(minute=53),  # frequency of the task. In this case every 53 mins past the hour.
+        'schedule': crontab(minute='5-55/10'),          # frequency of the task. In this case every 10 mins starting from 5 to 55 minutes past the hour
         # 'args': (16, 16)          # Arguments to pass to the task function
     },
     'run-metarfetch-every-53-mins-past-hour': {
@@ -177,6 +197,11 @@ celery_app.conf.beat_schedule = {
         'task': 'routes.celery_app.nasFetch',
         # 'schedule': crontab(minute='*'),  # Test run every minute
         'schedule': crontab(minute='*'),  # Runs every minute
+    },
+
+    'generic-testing': {
+        'task': 'routes.celery_app.generic_testing',
+        'schedule': crontab(hour='3'),
     },
 
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.
