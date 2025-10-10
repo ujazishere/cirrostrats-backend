@@ -91,23 +91,30 @@ class Bulk_weather_extractor:
             # 20,296 airport ID in list form. eg ['DAB', 'EWR', 'X50', 'AL44']
             # Load airport ID
             
-            # RESTRUCTURING UPDATE: Path corrected during project cleanup (October 2025)
+            # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
             # 
             # WHAT CHANGED:
-            # - Path remains 'core/pkl/airport_identifiers_US.pkl' (no change needed)
+            # - Now uses dynamic path resolution instead of hardcoded path
             # - File stays in core/pkl/ directory as it's core-specific functionality
             # 
-            # WHY NO PATH CHANGE:
+            # WHY NO DIRECTORY CHANGE:
             # - This file contains airport identifiers specifically for core weather processing
             # - It's tightly coupled with weather extraction algorithms in this module
             # - Keeping it in core/pkl/ maintains logical separation from general data files
             # - Core-specific data stays with core functionality, general data moved to data/
             # 
             # PATH LOGIC:
-            # - File location: core/WIPs/WIP_bulk_weather_extractor.py
-            # - Target: core/pkl/airport_identifiers_US.pkl  
-            # - Path works from project root directory when script is executed
-            with open(r'core/pkl/airport_identifiers_US.pkl', 'rb') as f:
+            # - Uses dynamic path resolution from this file's location
+            # - Works regardless of execution context or import method
+            # - Path: {script_location}/../pkl/airport_identifiers_US.pkl
+            
+            import os
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # Dynamic path to airport identifiers file
+            airport_ids_path = os.path.normpath(os.path.join(script_dir, '..', 'pkl', 'airport_identifiers_US.pkl'))
+            
+            with open(airport_ids_path, 'rb') as f:
                 id = pickle.load(f)
                 return id
     

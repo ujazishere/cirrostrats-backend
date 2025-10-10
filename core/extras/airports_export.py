@@ -35,6 +35,7 @@ The restructuring ensures this utility can find airport data regardless of:
 import json
 import pickle
 import re
+import os
 
 """
 Dumps all US airports from a pickle file allegedly. 
@@ -47,12 +48,18 @@ final return is a list of dictionaries with id, name and code
 the label code would be better used as either ICAO or IATA
 """
 
-# RESTRUCTURING UPDATE: Path updated from hardcoded absolute path to relative path
+# RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
 # pointing to the new data/ directory where all general data files were moved
 # during project cleanup (October 2025)
 # Old path: r'C:\Users\ujasv\OneDrive\Desktop\codes\cirrostrats-backend\all_US_airports_dict.pkl'
-# New path: Uses relative path from core/extras/ to data/ directory
-airports = r'../../data/all_US_airports_dict.pkl'
+# New approach: Dynamic path that works regardless of execution context
+
+# Get the directory where this script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# Navigate to project root and into data directory
+data_path = os.path.join(script_dir, '..', '..', 'data', 'all_US_airports_dict.pkl')
+# Normalize the path for cross-platform compatibility
+airports = os.path.normpath(data_path)
 with open(airports, 'rb') as f:
     x = pickle.load(f)
 

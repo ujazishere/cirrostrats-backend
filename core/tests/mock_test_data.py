@@ -30,9 +30,16 @@ async def test_aws_jms():
     """ This wont work because of circular imports. take it out into a jupyter interactive and it shall work
         This ajms data structure is --> latest(redis) and mongo. Then gets processed according to the route function which parses the data.
     """
-    # RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+    # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
     # File moved from root to data/ directory during project cleanup
-    with open('../../data/mock_ajms_data.pkl','rb') as f:
+    import os
+    
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Dynamic path to mock data file
+    data_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'mock_ajms_data.pkl'))
+    
+    with open(data_path,'rb') as f:
         data = pickle.load(f)
        # Process each flight
     results = []

@@ -22,7 +22,7 @@ class QueryClassifier:
 
     """
     
-    def __init__(self, icao_file_path: Optional[str] = "data/unique_icao.pkl"):
+    def __init__(self, icao_file_path: Optional[str] = None):
         """
         Initialize the classifier with ICAO airline codes and regex pattern
         Args:
@@ -31,9 +31,15 @@ class QueryClassifier:
         self.classified_suggestions = {}
         self.icao_codes_separated = "UA|AA|DL|G7|GJS|UCA|UAX"  # Default common codes
 
-        # Load ICAO codes if provided
+        # Load ICAO codes - use dynamic path if none provided
         if icao_file_path:
             self.load_icao_codes(icao_file_path)
+        else:
+            # Use dynamic path resolution for default ICAO file
+            import os
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            default_icao_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'unique_icao.pkl'))
+            self.load_icao_codes(default_icao_path)
 
         # Compile regex patterns for better performance
         self.airport_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
@@ -246,17 +252,27 @@ class QC_base_popularity_hits(QueryClassifier):
         """
         import pickle
         
-        # RESTRUCTURING UPDATE: Paths updated to point to data/ directory (October 2025)
+        # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
         # Files moved from root to data/ directory during project cleanup
-        with open('../../data/publicuj_searches_unique_sorts.pkl', 'rb') as f:
+        import os
+        
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Dynamic paths to data files
+        suggestions_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'publicuj_searches_unique_sorts.pkl'))
+        formdb_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'forMDB.pkl'))  # Fixed filename case
+        icao_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'unique_icao.pkl'))
+        
+        with open(suggestions_path, 'rb') as f:
             suggestions = pickle.load(f)
-        with open('../../data/forMDB.pkl', 'rb') as f:  # Fixed filename case: ForMDB.pkl -> forMDB.pkl
+        with open(formdb_path, 'rb') as f:
             z = pickle.load(f)
             base_rating = 2
             base_rating = 2
             flightID_batch = [("GJS"+str(flightID),base_rating) for flightID in z['scheduled_flights']]        # Adding count as 1.
             airports_batch = [(a,b) for a,b in z['popularity_raw'].items()]         # aiport ID with popularity counts.
-        with open('../../data/unique_icao.pkl', 'rb') as f:
+        with open(icao_path, 'rb') as f:
             icao = pickle.load(f)
         icaos = [(icao,count) for icao, count in icao.items()][1:29]
 
@@ -421,10 +437,17 @@ class Trie_structure_WIP:
         fid.sort()
 
         import pickle
+        import os
         """ Get 30 most popular icaos """
-        # RESTRUCTURING UPDATE: Path updated to point to data/ directory (October 2025)
+        # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
         # File moved from root to data/ directory during project cleanup
-        with open('../../data/unique_icao.pkl', 'rb') as f:
+        
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Dynamic path to ICAO data file
+        icao_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'unique_icao.pkl'))
+        
+        with open(icao_path, 'rb') as f:
             icao = pickle.load(f)
         icaos = [icao for icao, count in icao.items()][1:29]
         

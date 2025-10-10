@@ -85,13 +85,12 @@ class Bulk_weather_fetch:
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 
         import os
-        cwd = os.getcwd()
         
-        # RESTRUCTURING UPDATE: Path corrected during project cleanup (October 2025)
+        # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
         #
         # WHAT CHANGED:
         # - Path remains in core/pkl/ directory (no directory change)
-        # - Uses dynamic current working directory for compatibility
+        # - Uses dynamic path resolution instead of current working directory
         # - Removed old hardcoded absolute path
         #
         # WHY NO DIRECTORY CHANGE:
@@ -102,11 +101,16 @@ class Bulk_weather_fetch:
         #   * Core weather functionality data -> core/pkl/ directory
         #
         # PATH LOGIC:
-        # - Uses dynamic cwd (current working directory) for flexibility
-        # - Works whether called from root directory or as module import
-        # - Path: {project_root}/core/pkl/taf_positive_airports.pkl
-        taf_positive_path = fr'{cwd}/core/pkl/taf_positive_airports.pkl'
+        # - Uses dynamic path resolution from this file's location
+        # - Works regardless of execution context or import method
+        # - Path: {script_location}/../pkl/taf_positive_airports.pkl
+        
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Dynamic path to TAF positive airports file
+        taf_positive_path = os.path.normpath(os.path.join(script_dir, 'pkl', 'taf_positive_airports.pkl'))
         # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'  # Old hardcoded path
+        
         with open(taf_positive_path, 'rb') as f:
             taf_positive_airport_codes = pickle.load(f)
 

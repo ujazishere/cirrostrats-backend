@@ -51,18 +51,22 @@ import os
     # first one is the link(a string) and other is the list of all airports of that state
 # Example: {'Florida': ['https:link.com', ['ZPH - Zephyrhills Municipal' , 'KDAB - Daytona airport']]}
 
-# RESTRUCTURING UPDATE: Paths updated to reflect new directory structure
+# RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
 # General data files (all_US_airports_dict.pkl) moved to data/ directory
 # Core-specific files (airport_identifiers_US.pkl) remain in core/pkl/ directory
 # Old paths: 'dj_app/root/pkl/' and 'dj/dj_app/root/pkl/'
-# New paths: Use relative paths from current file location
+# New approach: Dynamic paths that work regardless of execution context
 
-# Use following variables depending on the use case;
-django_path = '../../data/all_US_airports_dict.pkl'  # From core/WIPs/ to data/
-external_path = '../../data/all_US_airports_dict.pkl'  # From core/WIPs/ to data/
+# Get the directory where this script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-django_path_id = '../pkl/airport_identifiers_US.pkl'  # From core/WIPs/ to core/pkl/
-external_path_id = '../pkl/airport_identifiers_US.pkl'  # From core/WIPs/ to core/pkl/
+# Dynamic paths for general data files (in data/ directory)
+django_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'all_US_airports_dict.pkl'))
+external_path = os.path.normpath(os.path.join(script_dir, '..', '..', 'data', 'all_US_airports_dict.pkl'))
+
+# Dynamic paths for core-specific files (in core/pkl/ directory)
+django_path_id = os.path.normpath(os.path.join(script_dir, '..', 'pkl', 'airport_identifiers_US.pkl'))
+external_path_id = os.path.normpath(os.path.join(script_dir, '..', 'pkl', 'airport_identifiers_US.pkl'))
 
 # COMMENTED OUT: Django-specific airport data loading
 # This was the original approach for loading all US airports dictionary
