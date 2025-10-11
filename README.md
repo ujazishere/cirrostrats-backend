@@ -1,75 +1,118 @@
 
+# Cirrostrats Backend
 
-# One of two ways to do this:
-**A: Docker container(spools up frontend, backend and nginx using docker:) - Most efficient and Full-Featured:**
+A FastAPI-based backend service for flight tracking and weather data aggregation.
 
-**OR**
+## Project Structure
 
-**B: Without docker(Spool up just the backend) - Python FastAPI**
+```text
+cirrostrats-backend/
+├── core/                   # Core business logic
+│   ├── api/               # External API integrations
+│   ├── search/            # Search functionality
+│   ├── tests/             # Unit tests
+│   └── pkl/               # Pickle data files
+├── routes/                # API route definitions
+├── services/              # Business service layer
+├── models/                # Data models
+├── schema/                # API schemas
+├── utils/                 # Utility functions
+├── data/                  # Data files (JSON, pickle)
+├── docs/                  # Documentation
+├── notebooks/             # Jupyter notebooks (development)
+├── config/                # Configuration files
+├── .github/               # GitHub workflows
+├── main.py               # FastAPI application entry point
+├── requirements.txt      # Python dependencies
+├── Dockerfile.backend    # Docker configuration
+└── .env.example         # Environment variables template
+```
 
+## Setup Options
 
-## A: Docker container(spools up frontend, backend and nginx using docker:) - Most efficient and Full-Featured:
+### Option A: Docker Container (Recommended)
 
-1. **Clone the base repo:f** [https://github.com/Cirrostrats/base](https://github.com/Cirrostrats/base)
+Full-stack deployment with frontend, backend, and nginx:
 
+1. **Clone the base repository:** [https://github.com/Cirrostrats/base](https://github.com/Cirrostrats/base)
 2. **Follow instructions in `base/README.md`**
 
+### Option B: Backend Only (Development)
 
-## B: Without docker(Spool up just the backend - Python FastAPI)
+#### Prerequisites
 
-1. **Clone this cirrostrats-backend repo**
+- Python 3.8+
+- MongoDB Atlas account
+- FlightAware API key (optional)
 
-2. **Running the Backend:**
+#### Installation
 
-   **`.env` contents:**
-   **Create an `.env` file inside of the `cirrostrats-backend` folder :**
-   **paste the following into this `.env` file, replacing the `connection_string` with your MongoDB connection string.**
-   **Check the Mongodb connection string section for guide to creating connection string**
-      
-      ```bash
-      # Use to send email. dev wont send emails
-      env='dev'
-      
-      connection_string='***'
-      # Used for flights and searchTrackIndex
-      connection_string_uj='***'
-      
-      # FlightAware api
-      ujazzzmay0525api='***'
-      # Telegram bot token
-      
-      TELE_MAIN_BOT_TOKEN='***'
-      ```
+1. **Clone this repository**
 
-   a. **Ensure Python Installation:** Make sure Python is installed on your machine.
+   ```bash
+   git clone <repository-url>
+   cd cirrostrats-backend
+   ```
 
+2. **Create environment file**
 
-   b. **Initialize Virtual Environment (venv):** Ensure you are working in `cirrostrats-backend` directory
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your actual configuration values.
+
+3. **Set up Python virtual environment**
 
    ```bash
    python -m venv venv
    ```
 
-   c. **Activate the Virtual Environment:**
+4. **Activate the virtual environment**
 
    ```bash
+   # Windows
+   venv\Scripts\activate
+   
+   # macOS/Linux
    source venv/bin/activate
    ```
 
-   d. **Install Required Packages:**
+5. **Install dependencies**
 
    ```bash
    pip install -r requirements.txt
    ```
 
-   e. **Run the FastAPI Server:**
+6. **Run the FastAPI server**
 
    ```bash
    uvicorn main:app --reload
    ```
 
-   f. **Access the Backend Locally:** The project will be locally running at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+7. **Access the application**
 
-### Mongodb connection string:
-   1. Go on to atlas web account page --> database access - create one and note the username and password
-   2. Go to Clusters --> Connect --> Connecting with MongoDB for VS Code --> copy string insert username and password
+   The backend will be running at [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+## MongoDB Connection Setup
+
+1. Go to MongoDB Atlas web account page → Database Access → Create user and note username/password
+2. Go to Clusters → Connect → Connecting with MongoDB for VS Code → Copy connection string
+3. Insert your username and password into the connection string
+4. Add the connection string to your `.env` file
+
+## API Documentation
+
+Once the server is running, you can access:
+
+- **Interactive API docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc documentation:** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+## Features
+
+- Flight tracking and aggregation
+- Weather data integration
+- Search functionality with fuzzy matching
+- Real-time notifications
+- Gate information processing
+- EDCT (Estimated Departure Clearance Time) lookups

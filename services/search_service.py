@@ -12,7 +12,9 @@ except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
 
-qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+# RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
+# QueryClassifier automatically finds ICAO file using dynamic paths
+qc = QueryClassifier()
 sic_docs = qc.initialize_search_index_collection()
 
 

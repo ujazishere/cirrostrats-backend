@@ -11,7 +11,6 @@ win_local.bat
 **/__pycache__/ 
 /config/database.py
 parseQuery_WIP.ipynb
-mongo.ipynb
 
 # UJ uses this to connect to ssh ec2.
 ec2.bat
