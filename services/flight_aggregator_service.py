@@ -13,7 +13,9 @@ from services.notification_service import send_telegram_notification_service
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
-qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+# RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
+# QueryClassifier automatically finds ICAO file using dynamic paths
+qc = QueryClassifier()
 sic_docs = qc.initialize_search_index_collection()
 
 

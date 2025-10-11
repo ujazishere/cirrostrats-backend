@@ -1,9 +1,23 @@
+"""
+MongoDB Document Serialization Schema
+
+PROJECT CONTEXT (Post-Restructuring October 2025):
+This schema module is part of the organized schema/ directory that handles data serialization
+for MongoDB documents. During the project restructuring, this file's location and purpose
+were preserved as it provides essential functionality for converting MongoDB BSON data
+to JSON-compatible Python dictionaries.
+
+The schema/ directory contains all data transformation and validation logic, following
+FastAPI best practices for clean separation of concerns.
+"""
+
 from typing import Dict, Any, Iterable
 from datetime import datetime, date
 from bson import ObjectId
-# nosql db sends data via json, but is difficult for python to use json data
-# so python needs to serialize the data
-# this is why we use pydantic
+
+# NoSQL DB sends data via JSON, but is difficult for Python to use JSON data directly
+# So Python needs to serialize the data - this is why we use Pydantic and custom serializers
+# This handles MongoDB's BSON types (ObjectId, datetime) -> Python native types
 
 
 def serialize_document(doc: Dict[str, Any]) -> Dict[str, Any]:

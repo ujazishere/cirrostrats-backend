@@ -7,7 +7,9 @@ from core.flight_deets_pre_processor import response_filter
 from core.root_class import Fetching_Mechanism, Source_links_and_api
 from core.search.query_classifier import QueryClassifier
 
-qc = QueryClassifier(icao_file_path="unique_icao.pkl")
+# RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
+# QueryClassifier automatically finds ICAO file using dynamic paths
+qc = QueryClassifier()
 sic_docs = qc.initialize_search_index_collection()
 
 
