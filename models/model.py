@@ -24,6 +24,7 @@ class SearchData(BaseModel):
 
 
 
+
 # Define validator functions OUTSIDE the class
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
 def validate_IATA_airport_code(v: str) -> str:
@@ -108,27 +109,27 @@ class FlightStatsResponse(BaseModel):
 
 
 
-# Old code - not used anymore
-class FlightData(BaseModel):
-    flightID: str
-    origin: str
-    destination: str
-    registration: str
-    scheduled_out: str
-    estimated_out: str
-    scheduled_in: str
-    estimated_in: str
-    terminal_origin: str
-    terminal_destination: str
-    gate_origin: str
-    gate_destination: str
-    terminal_origin: str
-    filed_altitude: str
-    filed_ete: str
-    route: str
-    sv: str
-    gate: str
-    destination: str
+class FlightAware(BaseModel):
+    fa_ident_icao: str
+    fa_origin: str
+    fa_destination: str
+    fa_registration: str
+    fa_date_out: str
+    fa_scheduled_out: str
+    fa_estimated_out: str
+    fa_scheduled_in: str
+    fa_estimated_in: str
+    fa_terminal_origin: str
+    fa_terminal_destination: str
+    fa_gate_origin: str
+    fa_gate_destination: str
+    fa_filed_altitude: str
+    fa_filed_ete: str
+    fa_route: str
+    fa_sv: str
+    
+
+
 
 # Old code - not used anymore
 class Airport (BaseModel):

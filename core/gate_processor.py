@@ -1,6 +1,6 @@
 from .root_class import Root_class
 from .api.newark_departures import Newark_departures_scrape
-from config.database import db_UJ        # UJ mongoDB
+from config.database import db_UJ,gate_rows_collection        # UJ mongoDB
 from datetime import datetime, timedelta
 import logging
 from pymongo import ReplaceOne
@@ -16,7 +16,7 @@ logger = logging.getLogger()
 class Gate_processor(Root_class):
     def __init__(self) -> None:
         super().__init__()
-        self.gates_collection = db_UJ['ewrGates']   # create/get a collection
+        self.gates_collection = gate_rows_collection
 
 
     def mdb_updates(self, incoming_docs: list, update_type=None):

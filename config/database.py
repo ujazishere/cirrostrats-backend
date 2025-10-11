@@ -42,11 +42,15 @@ collection_airports = db['airports']
     # id's associated with the collection_airports are used in search_index collection as well for collection cached airports.
     # collection_airports documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
 
+# deprecated - luis collectoin 
 collection_weather = db['Weather']
 # TODO: I thought we're not using searchtrack from Luis' db and were migrated to UJ mdb?
 collection_searchTrack = db['SearchTrack']
 
-collection_gates = db['US-gates']
+
+collection_gates = db['US-gates']       # NOTE: Must be deprecated.
+
+gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
 collection_flights = db_UJ['flights']
 collection_weather_uj = db_UJ['airport-weather']
 airport_collection_uj = db_UJ['icao_iata']

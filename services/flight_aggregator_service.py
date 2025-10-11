@@ -20,7 +20,7 @@ sic_docs = qc.initialize_search_index_collection()
 
 async def aws_jms_service(flightID, mock=False):
     # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
-            # still needs work to address dict returns and arrival and destinationAirport mismatch.
+            # still needs work to address dict returns and arrival and destinationAirport mismatch within JMS.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
 
     # TODO VHP: Can this not be handled in the frontend in ts or nodejs itself to avoid an extra call?
@@ -28,6 +28,15 @@ async def aws_jms_service(flightID, mock=False):
                 #  So better let backend handle it since its server side(reduces frontend processing?) and secure?
     # qc = QueryClassifier()
     # TODO: This airlinecode parsing is dangerous. Fix it. 
+    
+    """ This section parses the flightID to get the proper airline code and flight number for fetching.
+        Frontend users are used to 2 char IATA airline designator code
+            for e.g - UA, AA, DL, B6, -- United, American, Delta, Jet Blue
+            Their equivalent 3 char ICAO is UAL, AAL, DAL, JBU, -- United, American, Delta, Jet Blue
+
+        So if flightID is UA1234, it will parse to  UAL1234 since
+        data in JMS is saved with 3 char ICAO airline designator
+    """
     if flightID:
         value = qc.parse_query(flightID).get('value')
         ac = value.get('airline_code')
@@ -39,6 +48,14 @@ async def aws_jms_service(flightID, mock=False):
         elif ac == 'AA':
             flightID = "AAL"+fn
 
+
+    """ Once the flightID is cleaned up its sent to the JMS API to get flight data.
+        The returns from this API has a lot of complexity and this section cleans up to return only the essential/appropriate data.
+        JMS saves data into mongoDB as well - collection_flights 
+        Only reason JMS is used instead of collection_flights is because
+        Redis data in JMS is realtime vs jms->collection is saved every few minutes so data in JMS is more current compared to collection.
+
+    """
     returns = {}
     try:
         if mock:
@@ -46,6 +63,8 @@ async def aws_jms_service(flightID, mock=False):
             print('test data', data)
         else:
             data = requests.get(f'http://3.146.107.112:8000/flights/{flightID}?days_threshold=1')
+            # This could be used to fetch data from collection_flights insteas of the jms API but it wont be as current.
+            # data = collection_flights.find_one({'flightID':flightID})
             data = json.loads(data.text)
         mongo,latest = data.get('mongo'),data.get('latest')
         # This is throughly sought! if mongo and latest both not availbale just return. if either is available just fix them!

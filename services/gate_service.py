@@ -1,12 +1,11 @@
 try:        # This is in order to keep going when collections are not available
-    from config.database import db_UJ
+    from config.database import gate_rows_collection
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
     
 
 async def gate_returns_service(gate):
     """ Nidhi: Returns gate from ewrGates """
-    gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
     
     return_crit = {'_id':0}
     find_crit = {'Gate':{'$regex':gate}}

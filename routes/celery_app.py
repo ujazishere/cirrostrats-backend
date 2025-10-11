@@ -201,7 +201,7 @@ celery_app.conf.beat_schedule = {
 
     'generic-testing': {
         'task': 'routes.celery_app.generic_testing',
-        'schedule': crontab(hour='3'),
+        'schedule': crontab(minute='59', hour='*/3')
     },
 
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.

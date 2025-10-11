@@ -116,8 +116,8 @@ class Mock_data:
     def flightAware_data_init(self):
         self.flightAware = {
                 'fa_ident_icao': 'GJS4558',
-                'fa_origin': 'KEWR',
-                'fa_destination': 'KIAH',
+                'fa_origin': 'KEWR',            # necessary field
+                'fa_destination': 'KIAH',       # necessary field
                 'fa_registration': 'N551GJ',
                 'fa_date_out': '20250606',
                 'fa_scheduled_out': '1530Z',
@@ -130,8 +130,8 @@ class Mock_data:
                 'fa_gate_destination': None,
                 'fa_filed_altitude': 'FL350',
                 'fa_filed_ete': 4200,
-                'fa_route': 'QUAK8 SBV CREWE QUART PHLBO4',
-                'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',
+                'fa_route': 'QUAK8 SBV CREWE QUART PHLBO4',         # necessary field
+                'fa_sv': 'https://skyvector.com/?fpl=%20KGSO%20QUAK8%20SBV%20CREWE%20QUART%20PHLBO4%20KEWR',         # necessary field.
             }
 
     def edct_init(self):
