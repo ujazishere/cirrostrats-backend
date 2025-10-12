@@ -1,5 +1,4 @@
 celerybeat-schedule
-dcub.bat
 trial.py
 win_local.bat
 /venv
@@ -12,5 +11,6 @@ win_local.bat
 /config/database.py
 parseQuery_WIP.ipynb
 
-# UJ uses this to connect to ssh ec2.
+# for uj local
 ec2.bat
+dcub.bat

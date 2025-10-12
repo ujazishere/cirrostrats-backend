@@ -77,7 +77,7 @@ class Weather_test(Time_converter):
         issues = []
         # Check METAR time
         metar = weather_data.get('metar', '')
-        metar_match = re.search(r'METAR [A-Z]{4} (\d{2})(\d{4})Z', metar)
+        metar_match = re.search(r'(METAR|SPECI) [A-Z]{4} (\d{2})(\d{4})Z', metar)
         if metar_match:
             day = int(metar_match.group(1))
             hhmm = metar_match.group(2)
