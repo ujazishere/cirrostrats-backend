@@ -1,5 +1,4 @@
 from .root_class import Root_class
-from .flight_aware_data_pull import flight_aware_data_pull
 from core.api.flightStats import FlightStatsScraper
 
 '''
@@ -14,6 +13,7 @@ class Pull_flight_info(Root_class):
 
 
     def flightstats_dep_arr_timezone_pull(self,airline_code="UA", flt_num_query=None, departure_date:str=None, return_bs4=False):
+        # TODO Refactor: This function can be refactored to FlightStatsScraper class in core/api
         
         fss = FlightStatsScraper()
         fs_data = fss.scrape(airline_code=airline_code, flt_num=flt_num_query, return_bs4=return_bs4)
@@ -47,19 +47,6 @@ class Pull_flight_info(Root_class):
                             'flightStatsActualArrivalTime': arrival.get('ActualTime'),              # Actual arrival time
                                             }
         return bulk_flight_deet
-
-
-    def fa_data_pull(self, airline_code=None,flt_num=None,pre_process=None):
-        # """
-        # This is just for testing
-        # fa_test_path = r"C:\Users\ujasv\OneDrive\Desktop\codes\Cirrostrats\dj\fa_test.pkl"
-        # with open(fa_test_path, 'rb') as f:
-            # resp = pickle.load(f)
-            # fa_resp = json.loads(resp)
-        # resp_dict.update({'https://aeroapi.flightaware.com/aeroapi/flights/UAL4433':fa_resp})
-        # """
-        fa_returns = flight_aware_data_pull(airline_code=airline_code, flt_num=flt_num, pre_process=pre_process)
-        return fa_returns
 
 
     def aviation_stack_pull(self,):

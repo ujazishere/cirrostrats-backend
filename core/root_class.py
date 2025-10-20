@@ -9,7 +9,6 @@ import pytz
 import requests
 import smtplib
 
-from utils.tele import Tele_bot
 
 class Root_class():
     
@@ -214,11 +213,27 @@ class Source_links_and_api:
 
 
     def flight_aware_w_auth(self,flight_number):
+        """ Returns flight aware link with auth header
+        link: https://aeroapi.flightaware.com/aeroapi/flights/UAL4433 """
+
         fa_apiKey = config("ujazzzmay0525api")      # apple login 
         fa_auth_header = {'x-apikey':fa_apiKey}
         fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
         fa_url = fa_base_apiUrl + f"flights/{flight_number}"
         fa_url_w_auth = {fa_url:fa_auth_header}
+        # TODO LP: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
+            # Try searching here use /route for specific routes maybe to reduce pull
+            # https://www.flightaware.com/aeroapi/portal/documentation#get-/flights/-id-/map
+        """
+            airport = 'KSFO'
+            payload = {'max_pages': 2}
+            auth_header = {'x-apikey':apiKey}
+            response = requests.get(apiUrl + f"airports/{airport}/flights",
+                params=payload, headers=auth_header)
+
+            # fa_flight_id = ""
+            # response = requests.get(apiUrl + f"flights/{fa_flight_id}/route", headers=auth_header)
+        """
         return fa_url_w_auth
 
 
@@ -328,13 +343,13 @@ class Fetching_Mechanism(Root_class):
 
 
     async def async_pull(self, list_of_links:list):
-        # print('***** async_pull in progress...')
+        """ Asynchronous data fetching of multiple links."""
         async def get_tasks(session):
             tasks = []
             for url in list_of_links:
                 # TODO: Aviation stack maybe possible here through the auth_headers. Previously auth headers were passed with api might have caused it to not work.
                             # Separate the auth and pass as a dict. 
-                if type(url)==dict:         # This is probs for flight aware
+                if isinstance(url, dict):         # This is probs for flight aware
                     url,auth_headers = list(url.keys())[0], list(url.values())[0]
                     tasks.append(asyncio.create_task(session.get(url, headers=auth_headers)))
                 else:

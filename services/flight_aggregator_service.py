@@ -2,6 +2,7 @@ import json
 import logging
 from core.EDCT_Lookup import EDCT_LookUp
 import requests
+from core.flight_aware_data_pull import Flight_aware_pull
 from core.tests.mock_test_data import Mock_data
 from core.dep_des import Pull_flight_info
 from core.flight_deets_pre_processor import response_filter
@@ -176,20 +177,24 @@ async def flight_aware_w_auth_service(flight_number, mock=False):
         md.flight_data_init()
         print('mock flight aware data', md.flightAware)
         return md.flightAware
-    
-    # sl.flight_stats_url(flight_number_query)
-    fm = Fetching_Mechanism(flt_num=flight_number)
+
     sl = Source_links_and_api()
-    flt_info = Pull_flight_info()
-
     link = sl.flight_aware_w_auth(flight_number)
-    resp_dict: dict = await fm.async_pull([link])
-    # return resp_dict
-    resp = response_filter(resp_dict, "json",)
-    fa_return = resp['flights']
-    flight_aware_data = flt_info.fa_data_pull(pre_process=fa_return)
 
-    # Accounted for gate through flight aware. gives terminal and gate as separate key value pairs.
+    fm = Fetching_Mechanism(flt_num=flight_number)
+    resp_dict: dict = await fm.async_pull([link])
+    
+    resp = response_filter(resp_dict, "json")
+    fa_flights = resp.get('flights')
+    
+    if not fa_flights:         # Return early if no flightdata found.
+        # TODO flightAware: consider logging error here instead?
+        logger.info('UNSUCCESSFUL!! flight_aware_data_pull.pull FLIGHT_AWARE_DATA, no `flights` available')
+        return
+
+    fap = Flight_aware_pull()
+    flight_aware_data = fap.extract_flight_aware_data(flights=fa_flights)
+
     return flight_aware_data
 
 
