@@ -165,7 +165,6 @@ async def aviation_stack_service(flight_number):
     sl = Source_links_and_api()
 
     link = sl.aviation_stack(flight_number)
-    link = sl.flight_aware_w_auth(flight_number)
     resp_dict: dict = await fm.async_pull([link])
     # TODO: This data returns need to handpicked for aviation stack. similar to flt_info.fa_data_pull(pre_process=fa_return)
     return list(resp_dict.values())[0]['data'] 
@@ -179,7 +178,7 @@ async def flight_aware_w_auth_service(flight_number, mock=False):
         return md.flightAware
 
     sl = Source_links_and_api()
-    link = sl.flight_aware_w_auth(flight_number)
+    link = sl.flight_aware_w_auth_url(flight_number)
 
     fm = Fetching_Mechanism(flt_num=flight_number)
     resp_dict: dict = await fm.async_pull([link])

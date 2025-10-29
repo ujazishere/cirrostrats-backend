@@ -1,11 +1,7 @@
 """ This is a class for parsing individual DATIS, METAR and TAF data."""
 
 import re
-import pickle
-from bs4 import BeautifulSoup as bs4
-import requests
-import json
-from .root_class import Root_class,Fetching_Mechanism
+from .root_class import Root_class
 from datetime import datetime
 
 

@@ -212,7 +212,7 @@ class Source_links_and_api:
         return {url: {}}    # Is  the value supposed to serve as auth header?
 
 
-    def flight_aware_w_auth(self,flight_number):
+    def flight_aware_w_auth_url(self,flight_number):
         """ Returns flight aware link with auth header
         link: https://aeroapi.flightaware.com/aeroapi/flights/UAL4433 """
 
@@ -278,6 +278,16 @@ class Fetching_Mechanism(Root_class):
                  dep_airport_id=None,dest_airport_id=None):
         super().__init__()
         
+        # Simplified header that seems to work for most requests for weather
+        # self.headers = {
+        #     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        # }
+        # headers for weather api that seems to work
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/plain,*/*',
+        }
+
         # TODO VHP: need to get rid of this. Search should find the appropriate flight number, w airline code, of all the flight numbers for that day
         if not airline_code:
             airline_code = 'UAL'
@@ -353,7 +363,10 @@ class Fetching_Mechanism(Root_class):
                     url,auth_headers = list(url.keys())[0], list(url.values())[0]
                     tasks.append(asyncio.create_task(session.get(url, headers=auth_headers)))
                 else:
-                    tasks.append(asyncio.create_task(session.get(url)))
+                    # This is where the header is needed - since without it weather api fails with 403 Status code.
+                    tasks.append(asyncio.create_task(session.get(url, headers=self.headers)))
+                    # Prior to header this was:
+                    # tasks.append(asyncio.create_task(session.get(url)))
             return tasks
         
         async def main():
