@@ -24,7 +24,7 @@ async def aviation_stack(flight_number):
 
 @router.get("/flightAware/{flight_number}")
 async def flight_aware_w_auth(flight_number, mock=False):
-    return await flight_aware_w_auth_service(flight_number, mock)
+    return await flight_aware_w_auth_service(ICAO_flight_number=flight_number, mock=mock)
 
 @router.get("/EDCTLookup/{flightID}")
 async def get_edct_info(flightID: str, origin: str, destination: str):
