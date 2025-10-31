@@ -12,10 +12,10 @@ except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
 
-# RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
-# QueryClassifier automatically finds ICAO file using dynamic paths
 qc = QueryClassifier()
 sic_docs = qc.initialize_search_index_collection()
+print('Search Index Collection initialized with documents:', len(sic_docs))
+
 
 
 async def get_search_suggestions_service(email: str, query: str, limit=500):  # Default page and page size
@@ -24,20 +24,25 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
         Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
 
-        The interface is designed such that it has pre existing values in search-index
+        The interface is designed such that it has pre existing values from search index collection
         these dont currently update with new raw submits. also older submits may be intensive on processing during /st route on frontend lookup
         """
 
-    ff = SearchInterface()
     # TODO VHP:
     """ 
-        So essentially raw submit should ***query the collection*** first based on parseQuery and use that to do 2 things:
-            save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+        The suggestions dont show(need it) canadian airports.
+        Primarily and necessicity:
+            The frontend data structure that processes collections across flights, airports, gates, sic is flawed and inconsistent
+            You need this to properly implement track search in its entirity-> match and track raw submits, integrate popularity hits,  
+            caching and morphing search index collection.
+
+        Additionally:
+        data flow - use raw submit to *___ query the collection ___*  based on parseQuery:
+        save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+            ***___ Minimize the ability for user to have raw searches- match all raw searches to appropriate item in collections ___***
 
             Current issue with search interface:
             Raw query submits cause and effect:
-                The suggestions dont show(need it) canadian airports and NAS fails because of 4 char since no prepended `K` for it.
-                Raw submit accounting for dl, aa and other cariers plus just raw flight numbers.
 
             Solution: - This possibly is already account for in the frontend - but need same for backend in case top5 suggestions are exhausted/unavailable.
                 if raw submit matches flight number to its entirity then select the dropdown to send 
@@ -45,16 +50,18 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
                     Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
                 if raw submit partially matches flight number then do not send the first drop select
     """
-    # TODO VHP: This maybe it! just flip do fuzzfind first then do the formatting.
-    search_suggestions_frontend_format = ff.search_suggestion_frontned_format(c_docs=sic_docs)
+    sint = SearchInterface()
+    # TODO VHP: This maybe it! just flip - do fuzzfind first then do the formatting?
+    search_suggestions_frontend_format = sint.search_suggestion_frontned_format(c_docs=sic_docs)
     suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
     if not suggestions_match and len(query)>=3:        # Exhaustion criteria
+        print('suggestions running out', len(suggestions_match))
         # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         parsed_query = qc.parse_query(query=query)
         print('Exhausted sic docs, parsed query',parsed_query)
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
-        query_field,query_val,query_type = ff.query_type_frontend_conversion(doc=parsed_query)
+        query_field,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
         if query_type == 'flight':
             # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
             if query_val[:2] == 'DL':       # temporary fix for delta flights
@@ -106,10 +113,13 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             return search_index
 
     else:
+        print('Suggestions found in sic docs', len(suggestions_match))
         return suggestions_match
 
 async def track_search_service(data: SearchData):
-    """ Save searches to the DB for tracking and analytics. saves to search index collection"""
+    """ Save searches to the DB for tracking and analytics. saves to search index collection
+    for preset serarches and rst collection for raw search term"""
+
     # TODO: Current bug: not tracking searches outside of the sic collection. need to account for all searches.
         # Need to save raw items properly to the sic with proper format and also account for duplicated if it already exists.
     # NOTE: It this good at all to save to search index collection since were using it for suggestions?

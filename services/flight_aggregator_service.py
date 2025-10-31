@@ -14,12 +14,7 @@ from services.notification_service import send_telegram_notification_service
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
-# RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
-# QueryClassifier automatically finds ICAO file using dynamic paths
 qc = QueryClassifier()
-sic_docs = qc.initialize_search_index_collection()
-
-
 
 async def aws_jms_service(flightID, mock=False):
     # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
@@ -29,7 +24,6 @@ async def aws_jms_service(flightID, mock=False):
     # TODO VHP: Can this not be handled in the frontend in ts or nodejs itself to avoid an extra call?
                 # parse_query possibly can be written in ts/node but regardlesss this func would have to be called the same amount?
                 #  So better let backend handle it since its server side(reduces frontend processing?) and secure?
-    # qc = QueryClassifier()
     # TODO: This airlinecode parsing is dangerous. Fix it. 
     
     """ This section parses the flightID to get the proper airline code and flight number for fetching.

@@ -6,9 +6,6 @@ router = APIRouter()
 
 # RESTRUCTURING UPDATE: Now uses dynamic path resolution (October 2025)
 # QueryClassifier automatically finds ICAO file using dynamic paths
-qc = QueryClassifier()
-sic_docs = qc.initialize_search_index_collection()
-
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):

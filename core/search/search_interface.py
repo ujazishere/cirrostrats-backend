@@ -44,18 +44,48 @@ class SearchInterface(QueryClassifier):
         return formatted_data
 
 
+    def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):
+
+        query_field = query_val = query_type = None
+        if parsed_query_cat_field == 'Airports':
+            query_field, query_val, query_type = 'airport', pq_val, 'airport'
+        elif parsed_query_cat_field == 'Flights':
+            if isinstance(pq_val,dict):
+                fid_st = pq_val.get('airline_code') + pq_val.get('flight_number')
+                query_field, query_val, query_type = 'flightID', fid_st, 'flight'
+            else:
+                self.temporary_n_number_parse_query(query=pq_val)
+                query_field, query_val, query_type = 'nnumber', pq_val, 'flight'
+        
+        elif parsed_query_cat_field == 'Digits':
+            # Digits are usually flight numbers,
+            query_field, query_val, query_type = 'flightID', pq_val, 'flight'
+
+        elif parsed_query_cat_field == 'Others':
+            # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
+            # account for N numbers here! this is dangerous but can act as a bandaid for now. 
+            # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
+                # If found return that, if not found request on flightAware - e.g N917PG
+            if pq_val.isalpha():
+                query_field, query_val, query_type = 'airport', pq_val, 'airport'
+            else:
+                print('pq_val', pq_val, 'is not alpha, assuming flightID')
+                query_field, query_val, query_type = 'others', pq_val, 'others'
+
+        return query_field, query_val, query_type
+
+
     def query_type_frontend_conversion(self,doc):
         """
-        Typically 3 types of queries - airport, flight or gate
-        searchcc
+        # TODO sic: data structure --> this func takes in 
         format inconsistencies from backend/mongoDB collection data to frontend are handled here.
         for example: search_index_collection `airport_st` is convertd to airport, `fid_st` to flight, etc.
+        Typically 3 types of queries - airport, flight or gate
+        
         """
+
         # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
             # If found return that, if not found request on flightAware - e.g N917PG
-
-        #  TODO VHP: It is adament you establish some cross-platform consistency across all platforms with regards to formatting data and using it
-        # For e.g someplace type is `Flight` while others is `flight` and other even `flightNumbers` or `flightID` for `flightId`
 
         terminanl_gate_st = doc.get('Terminal/Gate')
         airport_st = doc.get('airport_st')
@@ -72,31 +102,7 @@ class SearchInterface(QueryClassifier):
             query_field,query_val,query_type = 'flightID', fid_st, 'flight'
         # QueryClassifier's parse_query format handeling.
         elif parsed_query_cat_field:
-            if parsed_query_cat_field == 'Airports':
-                query_field, query_val, query_type = 'airport', pq_val, 'airport'
-            elif parsed_query_cat_field == 'Flights':
-                if isinstance(pq_val,dict):
-                    fid_st = pq_val.get('airline_code') + pq_val.get('flight_number')
-                    query_field, query_val, query_type = 'flightID', fid_st, 'flight'
-                else:
-                    self.temporary_n_number_parse_query(query=pq_val)
-                    query_field, query_val, query_type = 'nnumber', pq_val, 'flight'
-            
-            elif parsed_query_cat_field == 'Digits':
-                # Digits are usually flight numbers,
-                query_field, query_val, query_type = 'flightID', pq_val, 'flight'
-
-            elif parsed_query_cat_field == 'Others':
-                # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
-                # account for N numbers here! this is dangerous but can act as a bandaid for now. 
-                # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
-                    # If found return that, if not found request on flightAware - e.g N917PG
-                if pq_val.isalpha():
-                    query_field, query_val, query_type = 'airport', pq_val, 'airport'
-                else:
-                    print('pq_val', pq_val, 'is not alpha, assuming flightID')
-                    query_field, query_val, query_type = 'others', pq_val, 'others'
-
+            query_field, query_val, query_type = self.qc_frontend_conversion(parsed_query_cat_field,pq_val)
         return query_field, query_val, query_type
 
 
@@ -104,7 +110,11 @@ class SearchInterface(QueryClassifier):
         """ Suggestions formatter for frontend compatibility. Takes in sic docs as is,
             It first goes to the fuzzfind then to frontend which is processed again.
             There's quite a bit of unnecessary formatting and processing during this three way process
-            TODO: reduce this clutter to improve efficiency.
+            TODO sic: data structure overhaul
+                    reduce this clutter to improve efficiency.
+            
+            Arguments:
+                c_docs: search index collection documents from mongoDB
         """
 
         # create unified search index
