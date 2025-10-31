@@ -38,9 +38,9 @@ class Weather_processor:
                 datis = json.loads(resp)     # Apparently this is being returned within a list is being fed as is. Accounted for.
         return metar,taf,datis
 
-    def raw_resp_weather_processing(self, resp_dict, airport_id, html_injection=False):
+    def raw_resp_weather_processing(self, resp_dict, ICAO_airport_code, html_injection=False):
         # TODO Datis: Why is this here?
-        metar,taf,datis = self.resp_splitter(airport_id, resp_dict)
+        metar,taf,datis = self.resp_splitter(ICAO_airport_code, resp_dict)
         raw_weather_returns = {"datis":datis,"metar":metar,"taf":taf}
         # dep_weather = wp.html_injected_weather(weather_raw=dep_weather)
         
@@ -129,7 +129,7 @@ class Bulk_weather_fetch:
         if type_of_weather == 'metar':
             prepend = "K"
         
-        return [self.rsl.weather(weather_type=type_of_weather,airport_id=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
+        return [self.rsl.weather(weather_type=type_of_weather,airport_code=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
 
     def bulk_datis_processing(self, resp_dict:dict):
         # TODO Test: a similar function exists in -- weather_parse().datis_processing().
@@ -189,7 +189,7 @@ class Bulk_weather_fetch:
             'datis':''
         }
         for each_d in collection_weather_uj.find():
-            airport_id = each_d.get('ICAO')
+            airport_code = each_d.get('ICAO')
         
             collection_weather_uj.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
@@ -241,20 +241,20 @@ class Singular_weather_fetch:
     def __init__(self) -> None:
         pass
 
-    def link_returns(self, weather_type, airport_id):
+    def link_returns(self, weather_type, ICAO_airport_code):
         # TODO datis: This Requires refactoring at source in Root_source_links.weather since weather doesnt have self arg.
         rsl = Root_source_links
-        wl = rsl.weather(weather_type,airport_id)
+        wl = rsl.weather(weather_type,ICAO_airport_code)
         return wl
 
     async def async_weather_dict(self, ICAO_code_to_fetch):
 
         fm = Fetching_Mechanism()
-        wl_dict = {weather_type:self.link_returns(weather_type,ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
+        wl_dict = {weather_type:self.link_returns(weather_type,ICAO_airport_code=ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
         resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
 
         wp = Weather_processor()
-        weather_dict = wp.raw_resp_weather_processing(resp_dict=resp_dict, airport_id=ICAO_code_to_fetch, html_injection=False)
+        weather_dict = wp.raw_resp_weather_processing(resp_dict=resp_dict, ICAO_airport_code=ICAO_code_to_fetch, html_injection=False)
 
         return weather_dict
 

@@ -73,9 +73,9 @@ class Broad_test:
             weather_doc = collection_weather_uj.find_one({'code': code})
             if not weather_doc:
                 message = "Weather Test: No weather document found"
-                print(message)
-                # send_telegram_notification_service(message=message)
-                # logger.error(message)
+                send_telegram_notification_service(message=message)
+                # TODO memory optimize - this logger can probably use rotation or counter so that it doesn't blow up the size.
+                logger.error(message)
                 return
         
             # Extract nested weather data

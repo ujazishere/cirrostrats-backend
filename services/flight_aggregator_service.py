@@ -164,7 +164,7 @@ async def aviation_stack_service(flight_number):
     return list(resp_dict.values())[0]['data'] 
 
 
-async def flight_aware_w_auth_service(flight_number, mock=False):
+async def flight_aware_w_auth_service(ICAO_flight_number, mock=False):
     if mock:
         md = Mock_data()
         md.flight_data_init()
@@ -172,9 +172,9 @@ async def flight_aware_w_auth_service(flight_number, mock=False):
         return md.flightAware
 
     sl = Source_links_and_api()
-    link = sl.flight_aware_w_auth_url(flight_number)
+    link = sl.flight_aware_w_auth_url(ICAO_flight_number)
 
-    fm = Fetching_Mechanism(flt_num=flight_number)
+    fm = Fetching_Mechanism(flt_num=ICAO_flight_number)
     resp_dict: dict = await fm.async_pull([link])
     
     resp = response_filter(resp_dict, "json")

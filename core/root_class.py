@@ -132,30 +132,29 @@ class AirportValidation:
         self.airport_collection = db_UJ['icao_iata']
 
 
-    def validate_airport_id(self, airport_id, iata_return=None, icao_return=None, supplied_param_type=None):
+    def validate_airport_code(self, airport_code, iata_return=None, icao_return=None, supplied_param_type=None):
         """ This function validates the airport ID and returns the corresponding IATA or ICAO code.
             Accounting for formats within flightStats derived 3-letter codes, NAS returns, weather input compliance, etc.
             returns:
                 iata, icao, airport
         """
         # TODO VHP: Subsequent UNV search from frontend is feeding KUNV. initial search is UNV.
-        # print('airportID', airport_id, )
-        if isinstance(airport_id, str):
+        if isinstance(airport_code, str):
             # TODO VHP: Temporary badaid for UNV IATA issues in collection airport/weather.
-            if 'UNV' in airport_id or 'KUNV' in airport_id:
+            if 'UNV' in airport_code or 'KUNV' in airport_code:
                 return {"iata": 'SCE', "icao": 'KUNV'}
             iata_code = icao_code = None
-            if len(airport_id) == 3 and iata_return:            # This is for IATA codes returned as is for NAS - prevents unnecessary mdb processing
-                return {'iata': airport_id}         # Return the 3-letter IATA code as is
-            elif len(airport_id) == 3 and icao_return:
-                iata_code = airport_id
+            if len(airport_code) == 3 and iata_return:            # This is for IATA codes returned as is for NAS - prevents unnecessary mdb processing
+                return {'iata': airport_code}         # Return the 3-letter IATA code as is
+            elif len(airport_code) == 3 and icao_return:
+                iata_code = airport_code
                 find_crit = {"iata": iata_code}  # Example query to find an airport by IATA code to return its associated ICAO
-            elif len(airport_id) == 4 and iata_return:
-                icao_code = airport_id
+            elif len(airport_code) == 4 and iata_return:
+                icao_code = airport_code
                 find_crit = {"icao": icao_code}
-            elif len(airport_id) == 4 and icao_return:
-                return {'icao': airport_id}         # Return the 4-letter ICAO code as is
-            elif len(airport_id) != 3 and len(airport_id) != 4:
+            elif len(airport_code) == 4 and icao_return:
+                return {'icao': airport_code}         # Return the 4-letter ICAO code as is
+            elif len(airport_code) != 3 and len(airport_code) != 4:
                 raise ValueError(f"Invalid {supplied_param_type} airport code: must be 4 or 3 characters")
             else:
                 raise ValueError("Supply type of return - iata or icao")
@@ -171,11 +170,11 @@ class Root_source_links:
     def __init__(self) -> None:
         pass
 
-    def weather(weather_type,airport_id):
+    def weather(weather_type,airport_code):
         urls = {
-            "metar": f"https://aviationweather.gov/api/data/metar?ids={airport_id}",
-            "taf": f"https://aviationweather.gov/api/data/taf?ids={airport_id}",
-            "datis": f"https://datis.clowd.io/api/{airport_id}",
+            "metar": f"https://aviationweather.gov/api/data/metar?ids={airport_code}",
+            "taf": f"https://aviationweather.gov/api/data/taf?ids={airport_code}",
+            "datis": f"https://datis.clowd.io/api/{airport_code}",
         }
         return urls.get(weather_type)
 
@@ -205,25 +204,40 @@ class Source_links_and_api:
     def aviation_stack(self,flightID):
         # Aviation Stack api call. 3000 requests per month
         base_url = "http://api.aviationstack.com/v1/flights"
-        access_key = "65dfac89c99477374011de39d27e290a"
-        
+        access_key = config("AVIATION_STACK_API_KEY")
         url = f"{base_url}?access_key={access_key}&flight_icao={flightID}"
+
+
+        """ 
+        # TODO: Fix airline code issue. This is not used yet. Find use case.
+        # Aviation Stack api call. 3000 requests per month
+        aviation_stack_url = 'http://api.aviationstack.com/v1/flights'
+        aviation_stack_params = {
+                            'access_key': '65dfac89c99477374011de39d27e290a',
+                            'flight_icao': f"{airline_code}{flt_num}"}
+        # aviationstack just like flight_aware
+        self.av_stack_url_w_auth = {aviation_stack_url:aviation_stack_params}
+        # Old requests code: api_result = requests.get(aviation_stack_url, self.aviation_stack_params)
+        """
+
         
         return {url: {}}    # Is  the value supposed to serve as auth header?
 
 
-    def flight_aware_w_auth_url(self,flight_number):
+    def flight_aware_w_auth_url(self,ICAO_flight_number):
         """ Returns flight aware link with auth header
-        link: https://aeroapi.flightaware.com/aeroapi/flights/UAL4433 """
+        e.g link: https://aeroapi.flightaware.com/aeroapi/flights/UAL4433 """
 
-        fa_apiKey = config("ujazzzmay0525api")      # apple login 
-        fa_auth_header = {'x-apikey':fa_apiKey}
         fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
-        fa_url = fa_base_apiUrl + f"flights/{flight_number}"
+        fa_apiKey = config("ujazzzmay0525api")      # apple login 
+        fa_apiKey = config('FLIGHT_AWARE_API_KEY_ISMAIL')
+        fa_auth_header = {'x-apikey':fa_apiKey}
+        fa_url = fa_base_apiUrl + f"flights/{ICAO_flight_number}"
         fa_url_w_auth = {fa_url:fa_auth_header}
         # TODO LP: Instead of getting all data make specific data requests.(optimize queries). Cache updates.
             # Try searching here use /route for specific routes maybe to reduce pull
             # https://www.flightaware.com/aeroapi/portal/documentation#get-/flights/-id-/map
+
         """
             airport = 'KSFO'
             payload = {'max_pages': 2}
@@ -237,45 +251,19 @@ class Source_links_and_api:
         return fa_url_w_auth
 
 
-    def nas(self,):
-        return  "https://nasstatus.faa.gov/api/airport-status-information"
-
-
-    def flight_view_gate_info(self,flight_number:str ,departure_airport_id:str):
+    def flight_view_gate_info(self,flight_number:str ,departure_airport_code:str):
+        """ Deprecated """
         date = Root_class().date_time(raw=True)
         base_url = "https://www.flightview.com/flight-tracker/"
-        return f"{base_url}UA/{flight_number}?date={date}&depapt={departure_airport_id[1:]}"
-
-
-    def weather_links(self, dep_airport_id, dest_airport_id, ):
-        # This is used for convinience. Consider separating it all out.
-        # the functions awc_weather and datis within here is an attempt to reduce code duplication.
-        # But that will potentially increate the amount of functions used in views.py/main.py
-        # Consider all posibilites.
-        
-        return {
-        "dep_awc_metar_api": f"https://aviationweather.gov/api/data/metar?ids={dep_airport_id}",
-        "dep_awc_taf_api": f"https://aviationweather.gov/api/data/taf?ids={dep_airport_id}",
-        "dep_datis_api":  f"https://datis.clowd.io/api/{dep_airport_id}",
-        "dest_awc_metar_api": f"https://aviationweather.gov/api/data/metar?ids={dest_airport_id}",
-        "dest_awc_taf_api": f"https://aviationweather.gov/api/data/taf?ids={dest_airport_id}",
-        "dest_datis_api":  f"https://datis.clowd.io/api/{dest_airport_id}",
-        }
-
-
-    def awc_weather(self,metar_or_taf,airport_id):
-        # Metar or taf takes in either "metar" or "taf" as required for fetching
-        return f"https://aviationweather.gov/api/data/{metar_or_taf}?ids={airport_id}"
-
-
-    def datis(self, airport_id):
-        return f"https://datis.clowd.io/api/{airport_id}"
+        return f"{base_url}UA/{flight_number}?date={date}&depapt={departure_airport_code[1:]}"
 
 
 class Fetching_Mechanism(Root_class):
-    # TODO VHP:first rest should account for airline code and flight number, next init of this class needs dep_id
+    # TODO Refactor: rename this Fetching_Mechanism to Async_fetch
+
     def __init__(self,airline_code=None,flt_num=None,
                  dep_airport_id=None,dest_airport_id=None):
+        # TODO refactor: clean up these unused variables
         super().__init__()
         
         # Simplified header that seems to work for most requests for weather
@@ -289,67 +277,6 @@ class Fetching_Mechanism(Root_class):
         }
 
         # TODO VHP: need to get rid of this. Search should find the appropriate flight number, w airline code, of all the flight numbers for that day
-        if not airline_code:
-            airline_code = 'UAL'
-
-        # Flight Aware
-        fa_apiKey = "G43B7Izssvrs8RYeLozyJj2uQyyH4lbU"         # New Key from Ismail
-        fa_auth_header = {'x-apikey':fa_apiKey}
-        fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
-        fa_url = fa_base_apiUrl + f"flights/{airline_code}{flt_num}"
-        self.fa_url_w_auth = {fa_url:fa_auth_header}
-        # Old requests code: response = requests.get(url, headers=fa_auth_header) 
-
-        # TODO: Fix airline code issue. This is not used yet. Find use case.
-        # Aviation Stack api call. 3000 requests per month
-        aviation_stack_url = 'http://api.aviationstack.com/v1/flights'
-        aviation_stack_params = {
-                            'access_key': '65dfac89c99477374011de39d27e290a',
-                            'flight_icao': f"{airline_code}{flt_num}"}
-        # aviationstack just like flight_aware
-        self.av_stack_url_w_auth = {aviation_stack_url:aviation_stack_params}
-        # Old requests code: api_result = requests.get(aviation_stack_url, self.aviation_stack_params)
-
-
-    def jupyter_interactive_code(self,):
-
-        """
-        flight_number_query = 4595
-        airline_code = 'UA'
-
-        r = Root_class()
-        fm = Fetching_Mechanism(flight_number_query)
-        sl = Source_links_and_api()
-
-        all_links = [
-        sl.ua_dep_dest_flight_status(flight_number_query),
-        sl.flight_stats_url(flight_number_query),
-        sl.aviation_stack(airline_code, flight_number_query),
-        # LIMIT THE USE FOR THIS FLIGHTAWARE DATA API. YOURE ONLY ALLOWED 1000 REQUESTS A MONTH
-        # sl.flight_aware_w_auth(airline_code,flight_number_query),
-
-        ]
-        
-        resp_dict:dict = await fm.async_pull(all_links)
-        resp_initial = resp_initial_returns(resp_dict=resp_dict,airline_code='UA',flight_number_query=flight_number_query)
-        fa_data = resp_initial[2]
-        gate_returns = Pull_flight_info().flight_view_gate_info(flt_num=flight_number_query,airport=fa_data['origin'])
-
-
-        
-        
-        task = asyncio.ensure_future(fm.async_pull(all_links))
-        asyncio.gather(task)
-        resp = await task       # This is the responsein jupyter that works 
-
-        print(resp)
-
-        # all_items = []
-        # for url in all_links:
-            # all_items.append(r.request(url))
-
-        """
-        pass
 
 
     async def async_pull(self, list_of_links:list):

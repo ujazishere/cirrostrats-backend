@@ -108,7 +108,7 @@ all_mdb_airport_codes = [i['code'] for i in collection_airports.find({})]
 # resp_dict: dict = await fm.async_pull(list(weather_links))
 
 def list_of_weather_links(type_of_weather,list_of_airport_codes):
-    return [rsl.weather(weather_type=type_of_weather,airport_id="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
+    return [rsl.weather(weather_type=type_of_weather,airport_code="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
 
 test_list_of_airport_codes = all_mdb_airport_codes[:5]       
 test_weather_links = list_of_weather_links('datis',test_list_of_airport_codes)

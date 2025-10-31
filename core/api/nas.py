@@ -123,15 +123,15 @@ class NAS:
         # Validate airport IDs
         av= AirportValidation()
         if is_single_airport:
-            airport_data = av.validate_airport_id(airport_id=airport_id, iata_return=True, supplied_param_type='NAS IATA airport')
+            airport_data = av.validate_airport_code(airport_code=airport_id, iata_return=True, supplied_param_type='NAS IATA airport')
             departure_iata_code = airport_data.get('iata')      # Naming singular airport as departure since it feeds through without complications
             destination_iata_code = None
         else:
-            airport_data = av.validate_airport_id(departure_id, iata_return=True, supplied_param_type='NAS IATA departure')
+            airport_data = av.validate_airport_code(departure_id, iata_return=True, supplied_param_type='NAS IATA departure')
             departure_iata_code = airport_data.get('iata')
             destination_iata_code = None
             if destination_id:
-                airport_data = av.validate_airport_id(destination_id, iata_return=True, supplied_param_type= 'NAS IATA destination')
+                airport_data = av.validate_airport_code(destination_id, iata_return=True, supplied_param_type= 'NAS IATA destination')
                 destination_iata_code = airport_data.get('iata')
         
         # Get NAS data

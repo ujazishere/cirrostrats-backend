@@ -11,6 +11,7 @@ try:        # This is in order to keep going when collections are not available
     from config.database import collection_airports, collection_weather_uj
     # from config.database import collection_flights, db_UJ         # uj collections
 except Exception as e:
+
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 # from core.root_class import Fetching_Mechanism, Root_source_links
 
@@ -19,46 +20,48 @@ async def store_live_weather_service(
     mdbId: Optional[str] = None,
     rawCode: Optional[str] = None,
 ):
-    """ This function fetches lives weather and stores it in mdbairport code/mdbId provided from frontend.
+    """ This function fetches live weather and stores it in mdbairport code/mdbId provided from frontend.
         The mdbID is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports' _id.
         that is used retrieve airport 'code' (IATA) from the collection_airports.
         That airport code is in used to fetch the latest weather from the weather collection .
         This function is called at frontend request to update old data in mongo if it exists.
         """
 
-    # TODO: This whole 3 way to using mdbid to get airport code from collection_airports then getting associated airport code
+    # TODO weather: This whole 3 way to using mdbid to get airport code from collection_airports then getting associated airport code
         # to get collection_weather_uj seems a bit redundant.
-    ICAO_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
+    print('mdbId received in store_live_weather_service:', mdbId)
+    ICAO_airport_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbId:
         find_crit = {"_id": ObjectId(mdbId)}
-        print(find_crit)
         # used collection_airports to get IATA code 
         mdb_weather_data = collection_airports.find_one(find_crit, {"code": 1})
         if mdb_weather_data:
             av = AirportValidation()
-            iata_code = mdb_weather_data.get('code')
-            ICAO_code_to_fetch = av.validate_airport_id(airport_id=iata_code, icao_return=True).get('icao')
+            IATA_airport_code = mdb_weather_data.get('code')
+            ICAO_airport_code_to_fetch = av.validate_airport_code(airport_code=IATA_airport_code, icao_return=True).get('icao')
         else:
             # Throw a python error if the mdbId is not found
-            print("Error: Airport ID not found in the weather collection.")
+            print("Error: airport_code not found in the weather collection.")
     elif rawCode:
         return
         # TODO weather: when rawCode is provided, use the rawCode to fetch the ICAO code
-            # If saved in the db, it will interfere with celery task since it uses 3 char airport code.
+            # If saved in the db, it will interfere with celery task since it uses 3 char IATA airport code.
             # This will probably require either a separate collection or meticulous manipulating legacy code(interferers with celery task)
             # Better with a separate collection. Since airport collection will be primary containing popular US airports.
-        airport_code_data = av.validate_airport_id(airport_id=rawCode, icao_return=True)
-        ICAO_code_to_fetch = airport_code_data.get('icao')
-        iata_code = airport_code_data.get('iata')
+        airport_code_data = av.validate_airport_code(airport_code=rawCode, icao_return=True)
+        ICAO_airport_code_to_fetch = airport_code_data.get('icao')
+        IATA_airport_code = airport_code_data.get('iata')
         # Now all you will have to do is get latest weather to upsert the data in the weather collection based on iata code povided
 
     swf  = Singular_weather_fetch()
-    weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch)
+    weather_dict = await swf.async_weather_dict(ICAO_airport_code_to_fetch)
 
     find_crit = {'code': mdb_weather_data.get('code')}
     return_crit = {'airport_id':1,'_id':0}
     cwaid = collection_weather_uj.find_one(find_crit, return_crit)
+    print('cwaid:', cwaid)
 
+    # This is checking if the mdbid provided from frontend is the same as airport_id from weather collection, if so, it updates the new weather.
     if cwaid and cwaid.get('airport_id'):
         if str(cwaid.get('airport_id')) == mdbId:
             print('Already in the database, updating it')
@@ -75,7 +78,7 @@ async def get_airport_data_service(airport_id):
     Retrieve airport weather data using a flexible airport identifier.
 
     Args:
-        airport_id (str): The identifier for the airport. This can be:
+        airport_code (str): The identifier for the airport. This can be:
             - A 4-letter ICAO code
             - A 3-letter IATA code
             - A MongoDB BSON ObjectId (as a string)
@@ -97,20 +100,20 @@ async def get_airport_data_service(airport_id):
         # TODO Weather: Refactor weather collection docs `code` field to reflect if its icao or iata
             # Check the usage and see if the IATA is used at all. if not then convert all to keys as icao instead of 'code' and appropriate value.
             # Seems a lot more appropriate to do that and might just reduce unnecessary processing for
-            # validating the airport from root_class.validate_airport_id as that takes another collection to validate the airport code.
+            # validating the airport from root_class.validate_airport_code as that takes another collection to validate the airport code.
         av = AirportValidation()
-        # Since mdb takes iata code as airport_id, we need to validate the airport_id and return the iata code.
-        airport_data = av.validate_airport_id(airport_id, iata_return=True, supplied_param_type='mdbAirportWeather Route')
+        # Since mdb takes iata code as airport_code, we need to validate the airport_code and return the iata code.
+        airport_data = av.validate_airport_code(airport_id, iata_return=True, supplied_param_type='mdbAirportWeather Route')
         find_crit = {"code": airport_data.get('iata')}
     else:
         # If not icao or iata code, assume its bson id here.
         # TODO test: error handling here if its not an ObjectId either. It is sommething else - an impossible return.
         try:
-            # find_criteria = {"airport_id": ObjectId(airport_id)}
+            # find_criteria = {"airport_code": ObjectId(airport_code)}
             find_crit = {"airport_id": ObjectId(airport_id)}
         except bson.errors.InvalidId:
-            send_telegram_notification_service(message=f'airport_id {airport_id} is not a valid ObjectId in get_airport_data_service')
-            # Handle the case where airport_id is not a valid ObjectId
+            send_telegram_notification_service(message=f'airport_code {airport_id} is not a valid ObjectId in get_airport_data_service')
+            # Handle the case where airport_code is not a valid ObjectId
             raise ValueError("Invalid airport ID")
 
     return_crit = {'weather':1,'code':1,'_id':0}
