@@ -311,6 +311,7 @@ class Mock_data:
 
         """ Search Index Collection: a collection that servers dropdown suggestions to the frontend, keeps track of popularity hits and submits.
             Fields:
+                _id:  Also used as `stId` in frontend to locate a particular doc from the search index collection.
                 r_id: is the reference ID of the associated collection for associated data retrival.
                 type: type of search term(st) -- associated with a particular type of collection - airport, fid(flightID), terminal/gate
                 ph: Popularity hit - a form of ranking score that is prorcessed through QueryClassifier's normalization function. 
@@ -329,7 +330,7 @@ class Mock_data:
 
                 # flight search index collection doc
                 {'_id': ObjectId('6821b9805795b7ff557e3161'),
-                'r_id': ObjectId('67e4ca4228d60c5468f315c2'),
+                'r_id': ObjectId('67e4ca4228d60c5468f315c2'),           # Looks like this is not being used at all.
                 'fid_st': 'GJS4416',
                 'ph': 1.3010847436299786,
                 'submits': [
@@ -338,7 +339,7 @@ class Mock_data:
 
                 # terminal search index collection doc
                 {'_id': ObjectId('6821b9805795b7ff557e3154'),
-                'r_id': ObjectId('66eb8aa5122bd9fc2f88896a'),
+                #  Does not have r_id because terminal/gate uses regex to find associated data.
                 'Terminal/Gate': 'Terminal C - C71X',
                 'ph': 2.3975190568219413,
                 'submits': [
@@ -346,6 +347,19 @@ class Mock_data:
 
             },
         ]
+
+        self.new_search_index_structure = {
+            "id": "unique_id",
+            "type": "airport|flight|gate",  # Standardized types
+            "display": "User-friendly display text",
+            "search_text": "Text used for fuzzy matching",
+            "reference_id": "ID for fetching detailed data",
+            "popularity_score": 0.0,  # Normalized popularity
+            "metadata": {
+                "code": "airport_code_or_flight_id",
+                "name": "full_name_if_applicable"
+            }
+        }
 
         self.collection_airport = [
             {'_id': ObjectId('66176711170d1d57a24df6a5'),
@@ -358,13 +372,14 @@ class Mock_data:
             'airport_id': ObjectId('66176711170d1d57a24dfc58'),
             'code': 'PHL',
             'weather': {'datis': {
-                                    'combined': 'N/A',
-                                    'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
-                                    'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
-                                    },
+                            'combined': 'N/A',
+                            'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
+                            'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
+                        },
                         'metar': 'METAR KPHL 282054Z VRB05KT 10SM FEW042 FEW270 29/15 A3006 RMK AO2 SLP177 T02940150 55004 $',
                         'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'},
-                        'ICAO': 'KPHL'}
+                        'ICAO': 'KPHL'
+            }
         ]
 
         self.gate_collection = [
