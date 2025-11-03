@@ -2,6 +2,9 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup as bs4
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from bson import ObjectId
+from config.database import collection_airports_cache
 from config.database import db_UJ        # UJ mongoDB
 import datetime as dt
 from decouple import config
@@ -129,7 +132,30 @@ class AirportValidation:
         icao to iata and vice versa airport code validation will return both iata and icao code.
         others will return singular
         """
-        self.airport_collection = db_UJ['icao_iata']
+        self.airport_bulk_collection_uj = db_UJ['icao_iata']
+
+    def icao_iata_airport_code_validation(self,mdbAirportReferenceId):
+        """ 
+        Given a MongoDB Airport Reference ID, fetch the corresponding IATA from collection airports and and ICAO using validate airport_code.
+        which in turn uses the airport collection to validate the code.
+        """
+        # TODO VHP - Airports collection
+        find_crit = {'_id': ObjectId(mdbAirportReferenceId)}
+        return_crit = {'code': 1}
+        
+        IATA_airport_code = ICAO_airport_code_to_fetch = None
+        
+        # used collection_airports_cache to get IATA code 
+        IATA_airport_code_collection = collection_airports_cache.find_one(find_crit, return_crit)
+        if IATA_airport_code_collection:            # if associated airport in collection_airports_cache found then get its ICAO code
+            av = AirportValidation()
+            
+            IATA_airport_code = IATA_airport_code_collection.get('code')
+            ICAO_airport_code_to_fetch = av.validate_airport_code(airport_code=IATA_airport_code, icao_return=True).get('icao')
+        else:           # This is probably an imposible return
+            # Throw a python error if the mdbAirportReferenceId is not found
+            print('Error: airport_code not found in the weather collection.')
+        return IATA_airport_code, ICAO_airport_code_to_fetch
 
 
     def validate_airport_code(self, airport_code, iata_return=None, icao_return=None, supplied_param_type=None):
@@ -161,16 +187,33 @@ class AirportValidation:
             
             return_crit = {"_id": 0, "iata": 1, "icao": 1, "airport": 1}  # Fields to return
 
-            result = self.airport_collection.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
+            result = self.airport_bulk_collection_uj.find_one(find_crit,return_crit)  # Example query to find an airport by ICAO code
             return result
 
 
-class Root_source_links:
-    # TODO Datis - This needs fixing- weather needs self arg. and all over this class is ussed as is and not as Root_source_links().
-    def __init__(self) -> None:
+class Source_links_and_api:
+    def __init__(self,):
         pass
+        # TODO LP: use this to get status about flights, gate, times and delay status.
+        # "https://flyrichmond.com/"
+    
 
-    def weather(weather_type,airport_code):
+    def datis_stations(self) -> str:
+        """ Returns datis stations. """
+        return 'https://datis.clowd.io/api/stations'
+        
+    def airport_info(self, ICAO_airport_code) -> str:
+        # TODO weather: This needs to be integrated with cache. mind uppercase for airportName.
+        """ gives ICAO, IATA, airportName, lat,long, elevation, state, country, runways
+        e.g - https://aviationweather.gov/api/data/airport?ids=KEWR
+        """
+        return f"https://aviationweather.gov/api/data/airport?ids={ICAO_airport_code}"
+
+    def weather(self, weather_type,airport_code) -> dict:
+        """ given type of weather returns the link for fetching.
+        Args:
+            - weather_type : metar, taf, datis
+        """
         urls = {
             "metar": f"https://aviationweather.gov/api/data/metar?ids={airport_code}",
             "taf": f"https://aviationweather.gov/api/data/taf?ids={airport_code}",
@@ -178,12 +221,7 @@ class Root_source_links:
         }
         return urls.get(weather_type)
 
-        
-class Source_links_and_api:
-    def __init__(self,):
-        pass
-        # TODO LP: use this to get status about flights, gate, times and delay status.
-        # "https://flyrichmond.com/"
+
     def ua_dep_dest_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.
@@ -193,6 +231,7 @@ class Source_links_and_api:
         return "https://www.flightstats.com/airport/USKN/Newark"
 
     def flight_stats_url(self,flight_number):
+        # TODO refactor: FlightStats URL for pulling flight status. Use this function
         # local time zones. just needs flight number and date as input
         
         date = Root_class().date_time(raw=True)
@@ -229,8 +268,8 @@ class Source_links_and_api:
         e.g link: https://aeroapi.flightaware.com/aeroapi/flights/UAL4433 """
 
         fa_base_apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
+        # fa_apiKey = config('FLIGHT_AWARE_API_KEY_ISMAIL')         # Doesn't work - tried in Oct 2025
         fa_apiKey = config("ujazzzmay0525api")      # apple login 
-        fa_apiKey = config('FLIGHT_AWARE_API_KEY_ISMAIL')
         fa_auth_header = {'x-apikey':fa_apiKey}
         fa_url = fa_base_apiUrl + f"flights/{ICAO_flight_number}"
         fa_url_w_auth = {fa_url:fa_auth_header}

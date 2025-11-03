@@ -33,27 +33,24 @@ Collections contains documents and this is the first root branch of the collecti
 The key value pairs within the documents are called fields. They maybe nested fields and those are called sub-documents. 
 """
 
-# Collection names
-collection_airports = db['airports']
 
-# TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
+# TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
     # 'code' key is used in search_index collection as well.
     # Changing icao would mean changing the search_index collection as well.
-    # id's associated with the collection_airports are used in search_index collection as well for collection cached airports.
-    # collection_airports documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
-
-# deprecated - luis collectoin 
-collection_weather = db['Weather']
-# TODO: I thought we're not using searchtrack from Luis' db and were migrated to UJ mdb?
-collection_searchTrack = db['SearchTrack']
+    # id's associated with the collection_airports_cache are used in search_index collection as well for collection cached airports.
+    # collection_airports_cache documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
 
 
-collection_gates = db['US-gates']       # NOTE: Must be deprecated.
+# TODO: migrate away from luis's db
+collection_airports_cache = db['airports']
+# TODO: SearchTrack is user account based key stroke/ submits - This you may want to migrate too.
+collection_searchTrackUsers = db['SearchTrack']
 
+# UJ collections
 gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
 collection_flights = db_UJ['flights']
-collection_weather_uj = db_UJ['airport-weather']
-airport_collection_uj = db_UJ['icao_iata']
+collection_weather_cache = db_UJ['airport-weather']
+airport_bulk_collection_uj = db_UJ['icao_iata']
 
 # From here on its all custom code for database crud operation.
 
@@ -61,11 +58,13 @@ airport_collection_uj = db_UJ['icao_iata']
     # Python rather than having to manually create items on the mongoDB server through browser.
 
 # This is data type validation. saying create_airport args should have name and code and their restricted type
+# TOOD test VHP: this validation sholuld be done at source for collections.
+
 class Airport(BaseModel):
     name: str
     code: str
 def create_airport(airport: Airport):
-    result = collection_airports.insert_one({})
+    result = collection_airports_cache.insert_one({})
     return {'id': str(result.inserted_id)}
 
 # This will add info based on object id and refer to it.

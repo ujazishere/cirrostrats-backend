@@ -79,8 +79,8 @@ class Weather_test(Time_converter):
         metar = weather_data.get('metar', '')
         metar_match = re.search(r'(METAR|SPECI) [A-Z]{4} (\d{2})(\d{4})Z', metar)
         if metar_match:
-            day = int(metar_match.group(1))
-            hhmm = metar_match.group(2)
+            day = int(metar_match.group(2))
+            hhmm = metar_match.group(3)
             metar_time =  self.parse_metar_time(day, hhmm, current_utc)
             if metar_time and metar_time < two_hours_ago:
                 issues.append(f"OLD METAR DETECTED: Time now {current_utc.strftime('%H:%M')}Z --  {metar}")

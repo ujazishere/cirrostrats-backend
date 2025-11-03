@@ -1,7 +1,7 @@
 """
 # This is the jupyter code to initialize  collections
 from config.database import collection, collection_weather
-from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from bson import ObjectId
 import requests
 import datetime as dt
@@ -12,15 +12,14 @@ from pymongo import UpdateOne
 all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 with open(all_datis_airports_path, 'rb') as f:
     all_datis_airports = pickle.load(f)
-
-rsl = Root_source_links
+sl = Source_links_and_api()
 fm = Fetching_Mechanism()
 all_airport_codes = [i['code'] for i in collection.find({})]
-# weather_links = [rsl.weather(weather_type="metar",airport_id="K"+each_airport_code) for each_airport_code in all_airport_codes]
+# weather_links = [sl.weather(weather_type="metar",airport_id="K"+each_airport_code) for each_airport_code in all_airport_codes]
 # resp_dict: dict = await fm.async_pull(list(weather_links))
 
 def list_of_weather_links(type_of_weather,list_of_airport_codes):
-    return [rsl.weather(weather_type=type_of_weather,airport_id="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
+    return [sl.weather(weather_type=type_of_weather,airport_id="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
 
 test_list_of_airport_codes = all_airport_codes[:10]       
 test_weather_links = list_of_weather_links('metar',test_list_of_airport_codes)
@@ -53,8 +52,8 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 
 """ *** This file serves as a document and guide only ***"""
 
-from config.database import collection_airports, collection_weather
-from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from config.database import collection_airports_cache, collection_weather
+from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from bson import ObjectId
 import requests
 import datetime as dt
@@ -72,7 +71,6 @@ from core.weather_parse import Weather_parse
 
 rc = Root_class()
 sl = Source_links_and_api()
-rsl = Root_source_links
 fm = Fetching_Mechanism()
 
 def mdb_unset(field_to_unset:str):
@@ -85,7 +83,7 @@ def mdb_unset(field_to_unset:str):
 
 def later_use():
 
-    test_mdb = [i for i in collection_airports.find({})][:3]
+    test_mdb = [i for i in collection_airports_cache.find({})][:3]
 
     utc_now = dt.datetime.now(dt.UTC)
     yyyymmddhhmm = utc_now.strftime("%Y%m%d%H%M")
@@ -101,14 +99,14 @@ with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 
     taf_positive_airport_codes = pickle.load(f)
 
 #  All airport codes from mongo db
-all_mdb_airport_codes = [i['code'] for i in collection_airports.find({})]
+all_mdb_airport_codes = [i['code'] for i in collection_airports_cache.find({})]
 
 # These two are using async fetch. And its a complete set of returns for the weather.
-# weather_links = [rsl.weather("metar",airport_id=each_airport_code) for each_airport_code in all_airport_codes]
+# weather_links = [sl.weather("metar",airport_id=each_airport_code) for each_airport_code in all_airport_codes]
 # resp_dict: dict = await fm.async_pull(list(weather_links))
 
 def list_of_weather_links(type_of_weather,list_of_airport_codes):
-    return [rsl.weather(weather_type=type_of_weather,airport_code="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
+    return [sl.weather(weather_type=type_of_weather,airport_code="K"+each_airport_code) for each_airport_code in list_of_airport_codes]
 
 test_list_of_airport_codes = all_mdb_airport_codes[:5]       
 test_weather_links = list_of_weather_links('datis',test_list_of_airport_codes)
@@ -212,15 +210,15 @@ def x():
     # Basics:
 
     # This returns mongo cursor object. Using for loop you can loop through documents which are essentially python dictionaries.
-    collection_airports.find({})    
+    collection_airports_cache.find({})    
 
     # all database
-    x = [i for i in collection_airports.find()]
+    x = [i for i in collection_airports_cache.find()]
     # return the first one
     print(x[0])
 
     # Either/or to return the content example of the collection. In this case just the first one. Loop breaaks right after.
-    for each_document in collection_airports.find({}):
+    for each_document in collection_airports_cache.find({}):
         def dict_input(doc_dict:dict):
             for a,b in doc_dict.items():
                 print(a,b)
@@ -231,17 +229,17 @@ def x():
         break
 
     # Insert one:
-    collection_airports.insert_one({'name':'Chicago','code':'ORD', 'weather':'Some_weather'})
+    collection_airports_cache.insert_one({'name':'Chicago','code':'ORD', 'weather':'Some_weather'})
     # Find one: Elaborted below see `More on find mdb`
-    collection_airports.find_one({'code':'OZR'})     # Returns the whole document - inefficient.
-    doc_id = collection_airports.find_one({'code':'OZR'},{'_id':1})       # Returns a specific field from within the document. In this case the '_id' field of the document only. 1 is equivalent to True.
+    collection_airports_cache.find_one({'code':'OZR'})     # Returns the whole document - inefficient.
+    doc_id = collection_airports_cache.find_one({'code':'OZR'},{'_id':1})       # Returns a specific field from within the document. In this case the '_id' field of the document only. 1 is equivalent to True.
     # Delete a document:
-    collection_airports.delete_one({'_id':ObjectId(doc_id)})
+    collection_airports_cache.delete_one({'_id':ObjectId(doc_id)})
     # delete all documents:
-    collection_airports.delete_many({})
+    collection_airports_cache.delete_many({})
 
     # Count documents that match certain crit.
-    collection_airports.count_documents({'weather.datis':{}}, )
+    collection_airports_cache.count_documents({'weather.datis':{}}, )
 
     # This only returns the docs that have subfield datis of a sub document.
     [i for i in collection_weather.find({'weather.datis':{'$exists':True}}, )]
@@ -254,12 +252,12 @@ def x():
     # This will request the id item only of the requested document. It is more efficient than [i['_id'] for i in collection.find({'code':'OZR'})]
     # Check the second argument passed in find method. It basically asks to return just the _id field. 1 is equivalelent to true.
     # Check if theere exists a find_many.
-    collection_airports.find({'code':'OZR'},{'_id':1})
+    collection_airports_cache.find({'code':'OZR'},{'_id':1})
     # This s inefficient list comprehension since it is fetch intensive on db:
-    [i['_id'] for i in collection_airports.find({'code':'OZR'},{'_id':1})]
+    [i['_id'] for i in collection_airports_cache.find({'code':'OZR'},{'_id':1})]
 
 
-    for document in collection_airports.find({}):
+    for document in collection_airports_cache.find({}):
         airport_code = document['code']
         # Looking up the airport from collection into the weather_collection and inserting metar,taf on the base layer of the document.
         collection_weather.insert_one({'airport':ObjectId(document['_id']),
@@ -364,7 +362,7 @@ def powerful_aggregatae_way(resp_dict:dict):
     
 
 # legacy: This code was used to init the weather collection documents.
-for each_airport in collection_airports.find({}):
+for each_airport in collection_airports_cache.find({}):
     collection_weather.insert_one({'airport_id': each_airport['_id'],
         'code': each_airport['code'],
         'weather': {},

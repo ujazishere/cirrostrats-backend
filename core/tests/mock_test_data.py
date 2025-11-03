@@ -348,16 +348,21 @@ class Mock_data:
             },
         ]
 
+        # New structure for search index collection after project restructuring (wip October 2025):
         self.new_search_index_structure = {
-            "id": "unique_id",
-            "type": "airport|flight|gate",  # Standardized types
-            "display": "User-friendly display text",
-            "search_text": "Text used for fuzzy matching",
-            "reference_id": "ID for fetching detailed data",
-            "popularity_score": 0.0,  # Normalized popularity
-            "metadata": {
-                "code": "airport_code_or_flight_id",
-                "name": "full_name_if_applicable"
+            'id': 'unique_id',
+            'type': 'str - airport|flight|gate',  # Standardized types
+            'reference_id': 'bson id - associated collection id to fetch detailed assocaited type data i.e airport, flight, gate',
+            'display': 'str - User-friendly display text',
+            'search_text': "str|array - Text used for fuzzy matching",  # can be an array for multiple search terms
+            'popularity_score': 0.0,  # Normalized popularity
+            'submit_timestamps': [
+                datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
+                datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)
+            ],
+            'metadata': {
+                'code': 'airport_code_or_flight_id',
+                'name': 'full_name_if_applicable'
             }
         }
 

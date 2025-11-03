@@ -1,25 +1,11 @@
-"""
-For use in jupyter
-
-test datis returns:
-from core.weather_fetch import Bulk_weather_fetch
-bwf = Bulk_weather_fetch()
-
-bwf.bulk_fetch_and_store_by_type(weather_type='datis')
-datis = bwf.datis_returns
-
-bwf.bulk_fetch_and_store_by_type(weather_type='metar')
-bwf.bulk_fetch_and_store_by_type(weather_type='taf')
-
-"""
 import json
 import pickle
 from pymongo import UpdateOne
 import requests
 
-from config.database import collection_weather_uj,collection_airports
+from config.database import collection_weather_cache,collection_airports_cache
 from core.weather_parse import Weather_parse
-from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api, Root_source_links
+from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from services.notification_service import send_telegram_notification_service
 
 class Weather_processor:
@@ -65,71 +51,72 @@ class Bulk_weather_fetch:
         self.rc = Root_class()
         self.sl = Source_links_and_api()
         self.fm = Fetching_Mechanism()
-        self.rsl = Root_source_links
         self.weather_returns = {}
         self.weather_links_dict = self.bulk_weather_link_returns()
-
+    
     def bulk_weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
 
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
-        all_mdb_airport_codes = [i['code'] for i in collection_airports.find({},{'code':1})]
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
+        all_mdb_airport_codes = [i['code'] for i in collection_airports_cache.find({},{'code':1})]
 
-        url = 'https://datis.clowd.io/api/stations'
-        response = requests.get(url)
-        all_datis_airport_codes = response.json()
-        if not all_datis_airport_codes or  not isinstance(all_datis_airport_codes,list):        # Check if response is valid list of airport codes
-            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_airport_codes}')
-            print('Error: Datis airport codes fetch failed. Returns:', all_datis_airport_codes)
-            all_datis_airport_codes = []
+        sla = Source_links_and_api()
+        response = requests.get(sla.datis_stations())
+
+        all_datis_ICAO_airport_codes = response.json()
+        if not all_datis_ICAO_airport_codes or  not isinstance(all_datis_ICAO_airport_codes,list):        # Check if response is valid list of airport codes
+            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_ICAO_airport_codes}')
+            print('Error: Datis airport codes fetch failed. Returns:', all_datis_ICAO_airport_codes)
+            all_datis_ICAO_airport_codes = []
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 
         import os
         
-        # RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
-        #
-        # WHAT CHANGED:
-        # - Path remains in core/pkl/ directory (no directory change)
-        # - Uses dynamic path resolution instead of current working directory
-        # - Removed old hardcoded absolute path
-        #
-        # WHY NO DIRECTORY CHANGE:
-        # - taf_positive_airports.pkl contains weather-specific airport codes
-        # - This data is tightly coupled with weather processing functionality
-        # - Keeping it in core/pkl/ maintains logical separation:
-        #   * General data files -> data/ directory
-        #   * Core weather functionality data -> core/pkl/ directory
-        #
-        # PATH LOGIC:
-        # - Uses dynamic path resolution from this file's location
-        # - Works regardless of execution context or import method
-        # - Path: {script_location}/../pkl/taf_positive_airports.pkl
+        """
+        RESTRUCTURING UPDATE: Dynamic path resolution for maximum compatibility
+        
+        WHAT CHANGED:
+        - Path remains in core/pkl/ directory (no directory change)
+        - Uses dynamic path resolution instead of current working directory
+        - Removed old hardcoded absolute path
+        
+        WHY NO DIRECTORY CHANGE:
+        - taf_positive_airports.pkl contains weather-specific airport codes
+        - This data is tightly coupled with weather processing functionality
+        - Keeping it in core/pkl/ maintains logical separation:
+          * General data files -> data/ directory
+          * Core weather functionality data -> core/pkl/ directory
+        
+        PATH LOGIC:
+        - Uses dynamic path resolution from this file's location
+        - Works regardless of execution context or import method
+        - Path: {script_location}/../pkl/taf_positive_airports.pkl
+        """
         
         # Get the directory where this script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
         # Dynamic path to TAF positive airports file
-        taf_positive_path = os.path.normpath(os.path.join(script_dir, 'pkl', 'taf_positive_airports.pkl'))
-        # taf_positive_path  = r'C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl'  # Old hardcoded path
+        taf_positive_ICAO_airportS_path = os.path.normpath(os.path.join(script_dir, 'pkl', 'taf_positive_airports.pkl'))
         
-        with open(taf_positive_path, 'rb') as f:
+        with open(taf_positive_ICAO_airportS_path, 'rb') as f:
             taf_positive_airport_codes = pickle.load(f)
 
         #  All airport codes from mongo db and pickle
         return {
-            "datis": self.bulk_list_of_weather_links('datis',all_datis_airport_codes),
+            "datis": self.bulk_list_of_weather_links('datis',all_datis_ICAO_airport_codes),
             "metar": self.bulk_list_of_weather_links('metar',all_mdb_airport_codes),
             "taf": self.bulk_list_of_weather_links('taf',taf_positive_airport_codes),
         }
 
     def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
-        # TODO: collection_airports code issue fix
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
+        # TODO: collection_airports_cache code issue fix
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
         
-        return [self.rsl.weather(weather_type=type_of_weather,airport_code=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
+        return [self.sl.weather(weather_type=type_of_weather,airport_code=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
 
     def bulk_datis_processing(self, resp_dict:dict):
         # TODO Test: a similar function exists in -- weather_parse().datis_processing().
@@ -188,10 +175,10 @@ class Bulk_weather_fetch:
             'taf':'',
             'datis':''
         }
-        for each_d in collection_weather_uj.find():
+        for each_d in collection_weather_cache.find():
             airport_code = each_d.get('ICAO')
         
-            collection_weather_uj.update_one(
+            collection_weather_cache.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
                 
                 {'$unset': {'weather':weather}},
@@ -208,7 +195,7 @@ class Bulk_weather_fetch:
 
         for url, weather in resp_dict.items():
             # TODO VHP: Dangerous! fix magic number and 3 vs 4 char airport code issue.
-            # TODO: collection_airports code issue fix -- thinking about getting rid of the 3 char altogether.
+            # TODO: collection_airports_cache code issue fix -- thinking about getting rid of the 3 char altogether.
                 # This wont fix the issue of needing 3 char airport codes for suggestion mix.
                     # To fix this would need to supply 3 char if its not the same as the 4 char airport code[1:].
             airport_code_trailing = str(url)[-4:]
@@ -225,7 +212,7 @@ class Bulk_weather_fetch:
                     #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     
             )
         
-        result = collection_weather_uj.bulk_write(update_operations)
+        result = collection_weather_cache.bulk_write(update_operations)
         # print(result)
 
 
@@ -242,9 +229,8 @@ class Singular_weather_fetch:
         pass
 
     def link_returns(self, weather_type, ICAO_airport_code):
-        # TODO datis: This Requires refactoring at source in Root_source_links.weather since weather doesnt have self arg.
-        rsl = Root_source_links
-        wl = rsl.weather(weather_type,ICAO_airport_code)
+        sla = Source_links_and_api()
+        wl = sla.weather(weather_type,ICAO_airport_code)
         return wl
 
     async def async_weather_dict(self, ICAO_code_to_fetch):
@@ -280,25 +266,19 @@ class Singular_weather_fetch:
         return weather
 
 
-# Only for use on fastapi if celery doesn't work.
-# import datetime as dt
-# import threading
-# class Weather_fetch_thread(threading.Thread):
-#     def __init__(self):
-#         super().__init__()
-#         self.bwf = Bulk_weather_fetch()
 
-#     # run method is inherited through .Thread; It gets called as
-#     def run(self):
-        
-#         while True:
-#             print('Weather fetch in progress...')
 
-#             self.bwf.bulk_fetch_and_store_datis()
-#             yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
-#             utc_now = yyyymmddhhmm
-#             print('Weather fetched at:', utc_now)
-            
-            
-#             dt.time.sleep(1800)        
-#     # flights = Gate_checker('').ewr_UA_gate()
+"""
+For use in jupyter
+
+test datis returns:
+from core.weather_fetch import Bulk_weather_fetch
+bwf = Bulk_weather_fetch()
+
+bwf.bulk_fetch_and_store_by_type(weather_type='datis')
+datis = bwf.datis_returns
+
+bwf.bulk_fetch_and_store_by_type(weather_type='metar')
+bwf.bulk_fetch_and_store_by_type(weather_type='taf')
+
+"""

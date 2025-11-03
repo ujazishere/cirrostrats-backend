@@ -37,10 +37,11 @@ import asyncio
 import aiohttp
 import datetime as dt
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import pickle
-from bs4 import BeautifulSoup as bs4
 import requests
+
+from core.root_class import Source_links_and_api
+from services.notification_service import send_telegram_notification_service
 
 # TODO LP: TAF is still remianing
 # Extracts METARs and TAFs. Heavy pull with 2000+ airport ID and each airport pulls big chunk of data
@@ -52,11 +53,15 @@ import requests
 class Bulk_weather_extractor:
     def __init__(self, ) -> None:
         # list all files
-        self.pickles_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles"
+        self.pickles_path = r"/Users/uj/Downloads/base/cirrostrats-backend/pickles"
+        self.all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
         self.all_pickle_files = os.listdir(self.pickles_path)            # get all file names in pickles folder
+        self.no_mets_path = r"/no_mets.pkl"
+        self.taf_positive_airports = r"/taf_positive_airports.pkl"
+        # TODO: take this away to maybe home server links and upload it there?
+        self.export_path = self.pickles_path
+
         self.example_bulk_met_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles\BULK_METAR_JAN_END_2024.pkl" 
-        self.no_mets_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles\no_mets.pkl"
-        self.export_path = r"C:\Users\ujasv\OneDrive\Desktop\pickles"
 
 
     def loader(self,example_bulk_met_load=None, big_met_bulk_load=None,
@@ -78,12 +83,13 @@ class Bulk_weather_extractor:
             print(f'total metar files: {len(self.metar_pickle_files)}', f'total metars: {len(all_metar_bulk)}')
         
         elif no_met_airports_load:
-            with open(self.no_mets_path,'rb') as f:
+            with open(self.pickles_path+self.no_mets_path,'rb') as f:
                 no_mets = pickle.load(f)
                 return no_mets
         
         elif taf_positive_airports:
-            with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
+            with open(self.pickles_path+self.taf_positive_airports,'rb') as f:
+            # with open(r"C:\Users\ujasv\OneDrive\Desktop\pickles\taf_positive_airports.pkl", 'rb') as f:
                 id = pickle.load(f)
                 return id
 
@@ -310,11 +316,11 @@ class Bulk_weather_extractor:
             
     def hard_write_dumper(self,file_name, bulky_weather):
         import datetime as dt
-        currently = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
+        current_date_time = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
 
         # currently = datetime.utcnow().strftime("%Y%m%d%H%M")      # This is old and depricated
-        # Double slash here because it causes syntax error regardless of r string above since `\` is used as escape char 
-        file_name = self.export_path + "\\" + file_name + currently + ".pkl"
+        # file_name = self.export_path + "/" + file_name + current_date_time + ".pkl"
+        file_name = os.path.join(self.export_path, f"{file_name}{current_date_time}.pkl")
         with open(file_name, 'wb') as f:
             pickle.dump(bulky_weather, f)
         print('exported as:', file_name)
@@ -322,15 +328,19 @@ class Bulk_weather_extractor:
 
     async def datis_extractor(self, jupyter):
         print('Initiating DATIS extractor')
-        all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
-        self.all_76_datis = None
-        with open(all_datis_airports_path, 'rb') as f:
-            all_datis_airports = pickle.load(f)
+        sla = Source_links_and_api()
+        response = requests.get(sla.datis_stations())
+
+        all_datis_ICAO_airport_codes = response.json()
+        if not all_datis_ICAO_airport_codes or  not isinstance(all_datis_ICAO_airport_codes,list):        # Check if response is valid list of airport codes
+            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_ICAO_airport_codes}')
+            print('Error: Datis airport codes fetch failed. Returns:', all_datis_ICAO_airport_codes)
+            all_datis_ICAO_airport_codes = []
         
         # Read this for async chat https://chat.openai.com/share/24a00dc6-1293-4263-9c11-0c2b188c0f7a
         async def get_tasks(session):
             tasks = []
-            for airport_id in all_datis_airports:
+            for airport_id in all_datis_ICAO_airport_codes:
                 url = f"https://datis.clowd.io/api/{airport_id}"
                 tasks.append(asyncio.create_task(session.get(url)))
             return tasks
@@ -346,7 +356,7 @@ class Bulk_weather_extractor:
                     resp = await resp           # Necessary operation. Have to await it to get results.
                     jj = await resp.json()
                     datis_raw = 'n/a'
-                    if type(jj) == list and 'datis' in jj[0].keys():
+                    if isinstance(jj,list) and 'datis' in jj[0].keys():
                         datis_raw = jj[0]['datis']
                     datis_resp.append(datis_raw)
                 return datis_resp
@@ -363,14 +373,15 @@ class Bulk_weather_extractor:
         
         # extract datis with dates in the filename
         yyyymmddhhmm = dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M")
-        path = rf'c:\users\ujasv\onedrive\desktop\pickles\datis_info_stack_{yyyymmddhhmm}.pkl'
+        # path = rf'c:\users\ujasv\onedrive\desktop\pickles\datis_info_stack_{yyyymmddhhmm}.pkl'
+        file_name = os.path.join(self.export_path, f"datis_info_stack{yyyymmddhhmm}.pkl")
         print('Total extracted:', len(all_76_datis),)
-        print('Saved:', path,)
+        print('Saved:', file_name,)
         print('Example at index 0:', all_76_datis[0])
         
         # **********CAUTION!!! HARD WRITE***************
-        with open(path, 'wb') as f:
-            pickle.dump(all_76_datis,f)
+        with open(file_name, 'wb') as f:
+            pickle.dump(all_76_datis, f)
         
         # return all_76_datis
         
