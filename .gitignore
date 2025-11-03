@@ -11,6 +11,9 @@ win_local.bat
 **/__pycache__/ 
 parseQuery_WIP.ipynb
 
+# saved weather extractions stuff here
+/pickles
+
 # for uj local
 ec2.bat
 dcub.bat

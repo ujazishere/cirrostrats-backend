@@ -1,9 +1,10 @@
 from datetime import datetime, timezone, timedelta
 import logging
+import re
 from core.tests.weather_test import Weather_test
 from routes.flight_aggregator_routes import flight_stats_url
 from services.notification_service import send_telegram_notification_service
-from config.database import collection_weather_uj
+from config.database import collection_weather_cache
 from config.database import collection_flights
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')  # noqa: F821
@@ -67,20 +68,27 @@ class Broad_test:
         current_utc = datetime.now(timezone.utc)
         two_hours_ago = current_utc - timedelta(hours=3)
 
-        test_codes = ['EWR', 'PHL', 'ORD', 'STL', 'RIC']
-        
+        test_codes = ['EWR', 'PHL', 'ORD', 'STL', 'MCO']
+
+
         for code in test_codes:
-            weather_doc = collection_weather_uj.find_one({'code': code})
+            weather_doc = collection_weather_cache.find_one({'code': code})
             if not weather_doc:
-                message = "Weather Test: No weather document found"
+                message = f"Weather Test: No weather document found for {code}"
                 send_telegram_notification_service(message=message)
                 # TODO memory optimize - this logger can probably use rotation or counter so that it doesn't blow up the size.
                 logger.error(message)
-                return
+                continue  # Use continue instead of return to check all codes
         
             # Extract nested weather data
             weather_data = weather_doc.get('weather', {})
-            
+
+            """
+            # TODO test: Regular expressions for METAR, TAF, and DATIS to be used for validation later
+            metar_regex = re.compile(rf"^(?:METAR\s+|SPECI\s+)?{code}\s+\d{{6}}Z")
+            taf_regex = re.compile(rf"^TAF\s+{code}\s+\d{{6}}Z")
+            datis_regex = re.compile(rf"^{code}\s+ATIS\s+INFO\s+[A-Z]\s+\d{{4}}Z(?:\s+SPECIAL)?")
+            """
             wt = Weather_test()
             issues = wt.metar_time_test(weather_data, current_utc, two_hours_ago)
             

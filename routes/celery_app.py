@@ -133,7 +133,7 @@ def generic_testing():
 
     bt = Broad_test()
     bt.jms_test()
-    bt.weather_test()
+    bt.weather_test()     # TODO test: weather test is throwing error currently within celery - needs fixing and re-enabling check onprim celery logs with grep "metar"
     asyncio.run(run_fs_test())      # fs_test is an async function and this is a celery bypass mechanism to run it.
     
     # TODO test: Remaining logic
@@ -201,7 +201,7 @@ celery_app.conf.beat_schedule = {
 
     'generic-testing': {
         'task': 'routes.celery_app.generic_testing',
-        'schedule': crontab(minute='59', hour='*/3')
+        'schedule': crontab(minute='59', hour='*/3')        # Run every 3 hours at 59 minutes past the hour
     },
 
     # uncomment the following if you need a function to run every x seconds. Change the task to its desired function.

@@ -1,13 +1,12 @@
 # Claude parse query
 from collections import defaultdict
-from decouple import config
 import math
 import re
 import pickle
 from typing import Dict, List, Union, Optional, Tuple
 
 from pymongo import UpdateOne
-from config.database import collection_airports, collection_flights, db_UJ
+from config.database import collection_airports_cache, collection_flights, db_UJ
 # from config.database import collection_weather
 from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
@@ -371,12 +370,12 @@ class QC_base_popularity_hits(QueryClassifier):
         
         processed_airport_codes = [i[1:] for i in list(airports_p_hits.keys()) if i[0] == 'K']      # removing leading `K`
         # Fetch all matching airports in a single query by supplying a list of items to be matched
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
-        cacodes = list(collection_airports.find({'code': {'$in': processed_airport_codes}}, {'count':0}))         # collection airport codes
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
+        cacodes = list(collection_airports_cache.find({'code': {'$in': processed_airport_codes}}, {'count':0}))         # collection airport codes
         
         airports_to_upload = []
         for doc in cacodes:
-            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports documents gotta be migrated to uj collection with appropriate IATA/ICAO
+            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
             ph= airports_p_hits.get("K"+doc['code'])
             if doc.get('name'):
                 airports_to_upload.append({'r_id':doc['_id'],'airport_st':f"{doc['code']} - {doc['name']}", 'ph':ph})

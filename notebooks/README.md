@@ -46,7 +46,7 @@ To run these notebooks:
 **Old imports (when notebooks were in root):**
 
 ```python
-from config.database import db_UJ, client, collection_airports
+from config.database import db_UJ, client, collection_airports_cache
 from routes.root.root_class import Root_class
 from routes.root.search.search_interface import SearchInterface
 from routes.route import get_search_suggestions
@@ -55,7 +55,7 @@ from routes.route import get_search_suggestions
 **New imports (from notebooks/ directory):**
 
 ```python
-from ..config.database import db_UJ, client, collection_airports
+from ..config.database import db_UJ, client, collection_airports_cache
 from ..routes.root.root_class import Root_class
 from ..routes.root.search.search_interface import SearchInterface
 from ..routes.route import get_search_suggestions
