@@ -3,7 +3,7 @@ import pickle
 from pymongo import UpdateOne
 import requests
 
-from config.database import collection_weather_cache,collection_airports_cache
+from config.database import collection_weather_cache,collection_airports_cache_legacy
 from core.weather_parse import Weather_parse
 from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from services.notification_service import send_telegram_notification_service
@@ -57,8 +57,8 @@ class Bulk_weather_fetch:
     def bulk_weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
 
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
-        all_mdb_airport_codes = [i['code'] for i in collection_airports_cache.find({},{'code':1})]
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
+        all_mdb_airport_codes = [i['code'] for i in collection_airports_cache_legacy.find({},{'code':1})]
 
         sla = Source_links_and_api()
         response = requests.get(sla.datis_stations())
@@ -110,13 +110,13 @@ class Bulk_weather_fetch:
 
     def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
-        # TODO: collection_airports_cache code issue fix
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
+        # TODO: collection_airports_cache_legacy code issue fix
+        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
         
-        return [self.sl.weather(weather_type=type_of_weather,airport_code=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
+        return [self.sl.weather(weather_type=type_of_weather,ICAO_airport_code=prepend+each_airport_code) for each_airport_code in list_of_airport_codes]
 
     def bulk_datis_processing(self, resp_dict:dict):
         # TODO Test: a similar function exists in -- weather_parse().datis_processing().
@@ -195,7 +195,7 @@ class Bulk_weather_fetch:
 
         for url, weather in resp_dict.items():
             # TODO VHP: Dangerous! fix magic number and 3 vs 4 char airport code issue.
-            # TODO: collection_airports_cache code issue fix -- thinking about getting rid of the 3 char altogether.
+            # TODO: collection_airports_cache_legacy code issue fix -- thinking about getting rid of the 3 char altogether.
                 # This wont fix the issue of needing 3 char airport codes for suggestion mix.
                     # To fix this would need to supply 3 char if its not the same as the 4 char airport code[1:].
             airport_code_trailing = str(url)[-4:]
@@ -236,7 +236,7 @@ class Singular_weather_fetch:
     async def async_weather_dict(self, ICAO_code_to_fetch):
 
         fm = Fetching_Mechanism()
-        wl_dict = {weather_type:self.link_returns(weather_type,ICAO_airport_code=ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
+        wl_dict = {weather_type:self.link_returns(weather_type,ICAO_code_to_fetch) for weather_type in ('metar', 'taf','datis')}
         resp_dict: dict = await fm.async_pull(list(wl_dict.values()))
 
         wp = Weather_processor()
@@ -245,9 +245,9 @@ class Singular_weather_fetch:
         return weather_dict
 
     def synchronous_weather_fetch(self, airport_code):    # Deprecated
-        """ This is deprecated. Use raw_resp_weather_processing instead.
-            This was older synchronous code that did not employe async.
-            Only use I see for this is when async is not working and you need a reliable synchronous code to return weather
+        """ 
+        deprecated! use async weather fetch instead. 
+        Only use this when async is not working and you need a reliable synchronous code to return weather
         """
         
         wl_dict = {weather_type:self.link_returns(weather_type,airport_code) for weather_type in ('metar', 'taf','datis')}

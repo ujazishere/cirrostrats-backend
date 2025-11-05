@@ -1,4 +1,4 @@
-from config.database import collection_flights, collection_airports_cache, db_UJ
+from config.database import collection_flights, collection_airports_cache_legacy, db_UJ
 from core.search.fuzz_find import fuzz_find
 from core.search.search_interface import SearchInterface
 from core.search.query_classifier import QueryClassifier
@@ -6,7 +6,7 @@ from models.model import SearchData
 from bson import ObjectId
 from schema.schemas import serialize_document_list
 try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports_cache, collection_searchTrackUsers
+    from config.database import collection_airports_cache_legacy, collection_searchTrackUsers
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
@@ -86,11 +86,11 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
             # Plus its ugly -- abstract this away since flight ID is using the same logic.
             # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
-            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
+            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
             return_crit = {'name': 1, 'code':1}
             case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
             
-            airport_docs = list(collection_airports_cache.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
+            airport_docs = list(collection_airports_cache_legacy.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
             search_index = []
             for i in airport_docs:
                 x = {
@@ -101,7 +101,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
                 }
                 search_index.append(x)
             if len(search_index) < 2:
-                airport_docs = list(collection_airports_cache.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
+                airport_docs = list(collection_airports_cache_legacy.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
                 for i in airport_docs:
                     x = {
                         'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
@@ -191,7 +191,7 @@ async def get_search_timeline_service():
 
 async def get_all_searches_service():
     
-    sic = db_UJ['test_st']   # create/get a collection
+    sic = db_UJ['search_index']   # create/get a collection
     crts = db_UJ['test_rst']   # create/get a collection
 
     sic_docs = list(sic.find({'submits': {'$exists': True}},{"_id":0,"ph":0,"r_id":0}))

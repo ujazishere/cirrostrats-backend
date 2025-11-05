@@ -1,8 +1,12 @@
 from logging import Logger
+import logging
 import xml.etree.ElementTree as ET
 from pymongo import ReplaceOne, UpdateOne
 import requests
 from core.root_class import AirportValidation
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
 
 class NASExtracts:
 
@@ -119,11 +123,15 @@ class NAS:
         else:
             raise ValueError("Must provide either 'airport' or 'departure' argument")
         
-
         # Validate airport IDs
         av= AirportValidation()
         if is_single_airport:
+            # TODO weather: Why are you requesting iata code for a iata request? to validate if the code exists?
             airport_data = av.validate_airport_code(airport_code=airport_id, iata_return=True, supplied_param_type='NAS IATA airport')
+            if not airport_data:
+                logger.info(f'Could not validate airport code to return IATA code for nas fetching supplied code: {airport_id}')
+                return
+            print('could ', airport_data)
             departure_iata_code = airport_data.get('iata')      # Naming singular airport as departure since it feeds through without complications
             destination_iata_code = None
         else:
@@ -209,6 +217,7 @@ class NAS:
             return airport_data
 
         # Process based on usage pattern
+        # TODO weather: abstract this away for multiple airports. it should be airport instead of dep/des. and for dep and dest use separate function to reuse this logic.
         if is_single_airport:
             # Single airport query
             airport_data = get_airport_delays(departure_iata_code)

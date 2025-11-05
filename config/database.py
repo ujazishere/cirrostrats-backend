@@ -34,15 +34,15 @@ The key value pairs within the documents are called fields. They maybe nested fi
 """
 
 
-# TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache documents gotta be migrated to uj collection with appropriate IATA/ICAO
+# TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
     # 'code' key is used in search_index collection as well.
     # Changing icao would mean changing the search_index collection as well.
-    # id's associated with the collection_airports_cache are used in search_index collection as well for collection cached airports.
-    # collection_airports_cache documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
+    # id's associated with the collection_airports_cache_legacy are used in search_index collection as well for collection cached airports.
+    # collection_airports_cache_legacy documents has the IATA codes labeled as 'code' who's id's are referenced in the search_index collection.
 
 
 # TODO: migrate away from luis's db
-collection_airports_cache = db['airports']
+collection_airports_cache_legacy = db['airports']
 # TODO: SearchTrack is user account based key stroke/ submits - This you may want to migrate too.
 collection_searchTrackUsers = db['SearchTrack']
 
@@ -64,7 +64,7 @@ class Airport(BaseModel):
     name: str
     code: str
 def create_airport(airport: Airport):
-    result = collection_airports_cache.insert_one({})
+    result = collection_airports_cache_legacy.insert_one({})
     return {'id': str(result.inserted_id)}
 
 # This will add info based on object id and refer to it.

@@ -27,10 +27,19 @@ class SearchData(BaseModel):
 
 # Define validator functions OUTSIDE the class
 # NOTE: These validator functions need to be at module level - they can't be defined inside the class when using Annotated types
+def validate_ICAO_airport_code(v: str) -> str:
+    if not v.isalpha() or len(v) != 4 or not v.isupper():
+        # TODO airport code: is this supposed to be alphanumeric?
+        message = f'ICAO Airport code must be 4 char, uppercase .isalpha letters. Rather this was supplied {v}'
+        send_telegram_notification_service(message=message)
+        logger.warning(message)
+        # raise ValueError(message)
+    return v
+
 def validate_IATA_airport_code(v: str) -> str:
     if not v.isalpha() or len(v) != 3 or not v.isupper():
         # TODO airport code: is this supposed to be alphanumeric?
-        message = f'Airport code must be 3 uppercase .isalpha letters. Rather this was supplied {v}'
+        message = f'Airport code must be 3 char uppercase .isalpha letters. Rather this was supplied {v}'
         send_telegram_notification_service(message=message)
         logger.warning(message)
         # raise ValueError(message)
@@ -86,7 +95,8 @@ def validate_fs_date_format(v: str) -> str:
     return v
 
 # Create custom types
-AirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
+ICAOAirportCode = Annotated[str, AfterValidator(validate_ICAO_airport_code)]
+IATAAirportCode = Annotated[str, AfterValidator(validate_IATA_airport_code)]
 DelayStatus = Annotated[str, AfterValidator(validate_fs_delay_status)]
 TimeFormat = Annotated[str, AfterValidator(validate_fs_time_format)]
 DateFormat = Annotated[str, AfterValidator(validate_fs_date_format)]
@@ -94,13 +104,17 @@ DateFormat = Annotated[str, AfterValidator(validate_fs_date_format)]
 class FlightStatsResponse(BaseModel):
     flightStatsFlightID: str
     flightStatsDelayStatus: Optional[DelayStatus] = None
-    flightStatsOrigin: AirportCode          # Origin - A necessary field
-    flightStatsDestination: AirportCode     # Destination - A necessary field
+
+    flightStatsOrigin: IATAAirportCode          # Origin - A necessary field
+    flightStatsDestination: IATAAirportCode     # Destination - A necessary field
+
     flightStatsOriginGate: Optional[str] = None
     flightStatsDestinationGate: Optional[str] = None
+
     # departure date and time
     flightStatsScheduledDepartureDate: DateFormat      # Date - A necessary field
     flightStatsScheduledDepartureTime: TimeFormat      # Scheduled Time - A necessary field
+
     flightStatsEstimatedDepartureTime: Optional[TimeFormat] = None      # Estimated Time
     flightStatsActualDepartureTime: Optional[TimeFormat] = None         # Actual Time
     # arrival times
@@ -132,7 +146,11 @@ class FlightAware(BaseModel):
 
 
 # Old code - not used anymore
-class Airport (BaseModel):
-    id: str
-    name: str
-    code: str
+class AirportCache (BaseModel):
+    # id: str
+    IATA: Optional[IATAAirportCode] = None  # Make it Optional
+    ICAO: ICAOAirportCode
+    airportName: str
+    regionName: str
+    countryCode: str
+    weather: dict
