@@ -134,11 +134,17 @@ async def liveAirportWeather_service(airportCode):
     """ Airport code can be either icao or iata. If its iata it will be converted to icao.
         Fetches live weather from source using icao airport code and returns it."""
 
+    av = AirportValidation()
+    # Since mdb takes iata code as airport_id, we need to validate the airport_id and return the iata code.
+    airport_data = av.validate_airport_id(airportCode, icao_return=True, supplied_param_type='mdbAirportWeather Route')
+    ICAO_airport_code = airport_data.get('icao')
+
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
     swf  = Singular_weather_fetch()
-    weather_dict = await swf.async_weather_dict(airportCode)
+    weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch=ICAO_airport_code)
 
     wp = Weather_parse()
     weather_dict = wp.html_injected_weather(weather_raw=weather_dict)
 
+    print('weather_doc', weather_dict)
     return weather_dict
