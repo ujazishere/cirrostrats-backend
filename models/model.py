@@ -154,3 +154,4 @@ class AirportCache (BaseModel):
     regionName: str
     countryCode: str
     weather: dict
+    # TODO feature: Add runways, lat longs, 

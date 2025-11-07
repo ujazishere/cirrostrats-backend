@@ -9,7 +9,7 @@ Search Index Collection → SearchInterface formatting → FuzzFind processing �
 Each layer adds unnecessary complexity and potential for bugs.
 
 ### 2. **Inconsistent Data Structures**
-- Different field names: `airport_st`, `fid_st`, `Terminal/Gate`
+- Different field names: `airportDisplayTerm`, `fid_st`, `Terminal/Gate`
 - Multiple type standards: `Flight`, `flight`, `flightNumbers`, `flightId`
 - Inconsistent reference IDs: `r_id`, `stId`, `_id`
 

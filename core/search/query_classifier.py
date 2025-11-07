@@ -11,7 +11,8 @@ from config.database import collection_airports_cache_legacy, collection_flights
 from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""
-search_index_collection = db_UJ['search_index']
+# search_index_collection = db_UJ['search_index']           # OG one
+search_index_collection = db_UJ['search_index_test']         # New tester
 
 class QueryClassifier:
     """

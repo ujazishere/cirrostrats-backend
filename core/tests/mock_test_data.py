@@ -321,8 +321,8 @@ class Mock_data:
             {
                 # airport search index collection doc
                 '_id': ObjectId('6821b9805795b7ff557e3153'),
-                'r_id': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airports_cache_legacy
-                'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
+                'airportCacheReferenceId': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airports_cache_legacy
+                'airportDisplayTerm': 'DCA - Ronald Reagan Washington Ntl Airport',
                 'ph': 2.4973989440488236,           # Popularity hit - ranking score
                 'submits': [
                     datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
@@ -354,9 +354,9 @@ class Mock_data:
             'type': 'str - airport|flight|gate',  # Standardized types
             'reference_id': 'bson id - associated collection id to fetch detailed assocaited type data i.e airport, flight, gate',
             'display': 'str - User-friendly display text',
-            'search_text': "str|array - Text used for fuzzy matching",  # can be an array for multiple search terms
-            'popularity_score': 0.0,  # Normalized popularity
-            'submit_timestamps': [
+            'displayText': "str|array - Text used for fuzzy matching",  # can be an array for multiple search terms
+            'popularityScore': 0.0,  # Normalized popularity
+            'submitTimestamps': [
                 datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
                 datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)
             ],
@@ -372,7 +372,7 @@ class Mock_data:
             'code': 'TOI'}
         ] 
 
-        self.collection_weather = {
+        self.collection_weather_legacy = {
             '_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
             'airport_id': ObjectId('66176711170d1d57a24dfc58'),
             'code': 'PHL',

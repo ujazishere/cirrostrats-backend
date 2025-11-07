@@ -127,6 +127,7 @@ class NAS:
         av= AirportValidation()
         if is_single_airport:
             # TODO weather: Why are you requesting iata code for a iata request? to validate if the code exists?
+            print('NAS', airport_id)
             airport_data = av.validate_airport_code(airport_code=airport_id, iata_return=True, supplied_param_type='NAS IATA airport')
             if not airport_data:
                 logger.info(f'Could not validate airport code to return IATA code for nas fetching supplied code: {airport_id}')

@@ -199,7 +199,7 @@ async def get_all_searches_service():
     all_results = sic_docs + crts_call_results
 
     # transformed converts `all_results` which is a list of dicts. Conversions are such:
-    # [{'fid_st': 1, 'submits': 2}, {'airport_st': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
+    # [{'fid_st': 1, 'submits': 2}, {'airportDisplayTerm': 3, 'submits': 4}] --- > [{1: 2}, {3: 4}]
     transformed = [{v1: v2} for d in all_results for v1, v2 in zip(d.values(), list(d.values())[1:])]
     return serialize_document_list(transformed)
 
