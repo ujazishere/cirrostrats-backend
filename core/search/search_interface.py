@@ -79,7 +79,7 @@ class SearchInterface(QueryClassifier):
         """
         # TODO sic: data structure --> this func takes in 
         format inconsistencies from backend/mongoDB collection data to frontend are handled here.
-        for example: search_index_collection `airport_st` is convertd to airport, `fid_st` to flight, etc.
+        for example: search_index_collection `airportDisplayTerm` is convertd to airport, `fid_st` to flight, etc.
         Typically 3 types of queries - airport, flight or gate
         
         """
@@ -88,7 +88,7 @@ class SearchInterface(QueryClassifier):
             # If found return that, if not found request on flightAware - e.g N917PG
 
         terminanl_gate_st = doc.get('Terminal/Gate')
-        airport_st = doc.get('airport_st')
+        airportDisplayTerm = doc.get('airportDisplayTerm')
         fid_st = doc.get('fid_st')
         parsed_query_cat_field = doc.get('category')
         pq_val = doc.get('value')
@@ -96,8 +96,8 @@ class SearchInterface(QueryClassifier):
         # logic to separaate out flightID from airport and terminal/gates.
         if terminanl_gate_st:
             query_field,query_val,query_type = 'Terminal/Gate', "EWR - " + terminanl_gate_st + " Departures", 'Terminal/Gate'
-        elif airport_st:
-            query_field,query_val,query_type = 'airport', airport_st, 'airport'
+        elif airportDisplayTerm:
+            query_field,query_val,query_type = 'airport', airportDisplayTerm, 'airport'
         elif fid_st:
             query_field,query_val,query_type = 'flightID', fid_st, 'flight'
         # QueryClassifier's parse_query format handeling.
@@ -138,11 +138,11 @@ class SearchInterface(QueryClassifier):
                 }
 
 
-            # *** r_id meaning reference id - only available in search index collection.
-            if doc.get('r_id'):
-                passed_data.update({'r_id': str(doc['r_id'])})
+            # *** airportCacheReferenceId meaning reference id - only available in search index collection.
+            if doc.get('airportCacheReferenceId'):
+                passed_data.update({'airportCacheReferenceId': str(doc['airportCacheReferenceId'])})
 
-            # terminal/gate doesn't use r_id, it uses regex for finding associated data.
+            # terminal/gate doesn't use airportCacheReferenceId, it uses regex for finding associated data.
             gate = doc.get('Terminal/Gate')
             if doc.get('Terminal/Gate'):
                 passed_data.update({'gate': gate})
