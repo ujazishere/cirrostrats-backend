@@ -5,7 +5,7 @@ from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
 from typing import Optional
 
-from config.database import collection_airports_cache, collection_weather_cache
+from config.database import collection_airports_cache_legacy, collection_weather_cache
 from services.notification_service import send_telegram_notification_service
 
 
@@ -14,16 +14,16 @@ async def store_live_weather_service(
     rawCode: Optional[str] = None,
 ):
     """ 
-    The flow is search_index_collection's referenceID (r_Id) -> collection_airports_cache' _id -> collection_airports_cache' code (IATA) -> collection_weather_cache's code (IATA)
+    The flow is search_index_collection's referenceID (r_Id) -> collection_airports_cache_legacy' _id -> collection_airports_cache_legacy' code (IATA) -> collection_weather_cache's code (IATA)
 
     This function fetches live weather and stores it in mdbairport code/mdbAirportReferenceId provided from frontend.
-        The mdbAirportReferenceId is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports_cache' _id.
-        that is used retrieve airport 'code' (IATA) from the collection_airports_cache.
+        The mdbAirportReferenceId is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports_cache_legacy' _id.
+        that is used retrieve airport 'code' (IATA) from the collection_airports_cache_legacy.
         That airport code is in used to fetch the latest weather from the weather collection .
         This function is called at frontend request to update old data in mongo if it exists.
         """
 
-    # TODO weather: This whole 3 way to using mdbAirportReferenceId to get airport code from collection_airports_cache then getting associated airport code
+    # TODO weather: This whole 3 way to using mdbAirportReferenceId to get airport code from collection_airports_cache_legacy then getting associated airport code
         # to get collection_weather_cache seems a bit redundant.
     print('r_id, as mdbAirportReferenceId, received in store_live_weather_service:', mdbAirportReferenceId )
     ICAO_airport_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
@@ -32,17 +32,17 @@ async def store_live_weather_service(
         av = AirportValidation()
         # TODO VHP: multiple airports collection - one for cache and one with all airports 
             # Big problem here is that the airport codes for IATA and ICAO are fetched from two separate collections
-                # collection_airports_cache = db['airports'] and airport_bulk_collection_uj = db_UJ['icao_iata']
+                # collection_airports_cache_legacy = db['airports'] and airport_bulk_collection_uj = db_UJ['icao_iata']
         # This section uses both collections to get the ICAO code using mdbAirportReferenceId
-            # mdbAirportReferenceId -> collection_airports_cache -> IATA code -> validate code using -> airport_bulk_collection_uj -> ICAO code
+            # mdbAirportReferenceId -> collection_airports_cache_legacy -> IATA code -> validate code using -> airport_bulk_collection_uj -> ICAO code
         IATA_airport_code, ICAO_airport_code_to_fetch = av.icao_iata_airport_code_validation(mdbAirportReferenceId)
         # Old code that is currently being abstracted away to AirportValidation()
         """
             # find_crit = {'_id': ObjectId(mdbAirportReferenceId)}
             # return_crit = {'code': 1}
-            # # used collection_airports_cache to get IATA code 
-            # IATA_airport_code_collection = collection_airports_cache.find_one(find_crit, return_crit)
-            # if IATA_airport_code_collection:            # if associated airport in collection_airports_cache found then get its ICAO code
+            # # used collection_airports_cache_legacy to get IATA code 
+            # IATA_airport_code_collection = collection_airports_cache_legacy.find_one(find_crit, return_crit)
+            # if IATA_airport_code_collection:            # if associated airport in collection_airports_cache_legacy found then get its ICAO code
             #     av = AirportValidation()
             #     IATA_airport_code = IATA_airport_code_collection.get('code')
             #     ICAO_airport_code_to_fetch = av.validate_airport_code(airport_code=IATA_airport_code, icao_return=True).get('icao')
@@ -104,10 +104,10 @@ async def get_airport_data_service(airport_id):
         - Raises ValueError if the id is invalid.
     """
 
-    # Airport code/bson id validation for find criteria
+    # Determining find criteria for mongo collection- Airport code/bson id validation for find criteria
     if len(airport_id)<=4:   # ICAO or IATA code
-        # validate iata/icao code here and use it as find criteris
-        # TODO Weather: Refactor weather collection docs `code` field to reflect if its icao or iata
+        # validate iata/icao code here and use it as find criteria
+        # TODO Weather: Refactor
             # Check the usage and see if the IATA is used at all. if not then convert all to keys as icao instead of 'code' and appropriate value.
             # Seems a lot more appropriate to do that and might just reduce unnecessary processing for
             # validating the airport from root_class.validate_airport_code as that takes another collection to validate the airport code.
@@ -148,13 +148,14 @@ async def get_airport_data_service(airport_id):
     else:
         return {}
     
-async def liveAirportWeather_service(airportCode):
+async def liveAirportWeather_service(ICAO_code_to_fetch):
     """ Airport code can be either icao or iata. If its iata it will be converted to icao.
         Fetches live weather from source using icao airport code and returns it."""
 
     av = AirportValidation()
+    # NOTE: The integrity of the function is not verified. This may be an IATA code. check and test pending.
     # Since mdb takes iata code as airport_id, we need to validate the airport_id and return the iata code.
-    airport_data = av.validate_airport_id(airportCode, icao_return=True, supplied_param_type='mdbAirportWeather Route')
+    airport_data = av.validate_airport_id(ICAO_code_to_fetch, icao_return=True, supplied_param_type='mdbAirportWeather Route')
     ICAO_airport_code = airport_data.get('icao')
 
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 

@@ -12,8 +12,9 @@ async def store_live_weather(mdbAirportReferenceId: Optional[str] = None,
 @router.get('/mdbAirportWeather/{airport_id}')
 # TODO Refactor: Check how you can refactor this airport_id to ICAO/IATA airport code
 async def get_airport_data(airport_id):
+    print('airport_id from mdbAirportWeather', airport_id)
     return await get_airport_data_service(airport_id)
 
 @router.get("/liveAirportWeather/{airportCode}")
 async def liveAirportWeather(airportCode):
-    return await liveAirportWeather_service(airportCode)
+    return await liveAirportWeather_service(ICAO_code_to_fetch=airportCode)

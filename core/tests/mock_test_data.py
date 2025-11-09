@@ -321,7 +321,7 @@ class Mock_data:
             {
                 # airport search index collection doc
                 '_id': ObjectId('6821b9805795b7ff557e3153'),
-                'r_id': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airport
+                'r_id': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airports_cache_legacy
                 'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
                 'ph': 2.4973989440488236,           # Popularity hit - ranking score
                 'submits': [
@@ -366,27 +366,28 @@ class Mock_data:
             }
         }
 
-        self.collection_airport = [
+        self.collection_airports_cache_legacy = [
             {'_id': ObjectId('66176711170d1d57a24df6a5'),
             'name': 'Troy Municipal At N Kenneth Campbell Field Airport',
             'code': 'TOI'}
         ] 
 
-        self.collection_weather = [
-            {'_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
+        self.collection_weather = {
+            '_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
             'airport_id': ObjectId('66176711170d1d57a24dfc58'),
             'code': 'PHL',
-            'weather': {'datis': {
-                            'combined': 'N/A',
-                            'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
-                            'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
-                        },
-                        'metar': 'METAR KPHL 282054Z VRB05KT 10SM FEW042 FEW270 29/15 A3006 RMK AO2 SLP177 T02940150 55004 $',
-                        'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'},
-                        'ICAO': 'KPHL'
-            }
-        ]
-
+            'weather': {
+                'datis': {
+                    'combined': 'N/A',
+                    'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
+                    'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
+                },
+                'metar': 'METAR KPHL 282054Z VRB05KT 10SM FEW042 FEW270 29/15 A3006 RMK AO2 SLP177 T02940150 55004 $',
+                'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'
+            },
+            'ICAO': 'KPHL'
+        }
+        
         self.gate_collection = [
             {
                 'Scheduled': 'July 21, 2025 18:00',

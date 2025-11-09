@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup as bs4
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from bson import ObjectId
-from config.database import collection_airports_cache
+from config.database import collection_airports_cache_legacy
 from config.database import db_UJ        # UJ mongoDB
 import datetime as dt
 from decouple import config
@@ -146,8 +146,8 @@ class AirportValidation:
         IATA_airport_code = ICAO_airport_code_to_fetch = None
         
         # used collection_airports_cache to get IATA code 
-        IATA_airport_code_collection = collection_airports_cache.find_one(find_crit, return_crit)
-        if IATA_airport_code_collection:            # if associated airport in collection_airports_cache found then get its ICAO code
+        IATA_airport_code_collection = collection_airports_cache_legacy.find_one(find_crit, return_crit)
+        if IATA_airport_code_collection:            # if associated airport in collection_airports_cache_legacy found then get its ICAO code
             av = AirportValidation()
             
             IATA_airport_code = IATA_airport_code_collection.get('code')
@@ -180,7 +180,7 @@ class AirportValidation:
                 find_crit = {"icao": icao_code}
             elif len(airport_code) == 4 and icao_return:
                 return {'icao': airport_code}         # Return the 4-letter ICAO code as is
-            elif len(airport_code) != 3 and len(airport_code) != 4:
+            elif len(airport_code) != 3 and len(airport_code) != 4:     # This logic does not make sense fr!
                 raise ValueError(f"Invalid {supplied_param_type} airport code: must be 4 or 3 characters")
             else:
                 raise ValueError("Supply type of return - iata or icao")
@@ -209,17 +209,19 @@ class Source_links_and_api:
         """
         return f"https://aviationweather.gov/api/data/airport?ids={ICAO_airport_code}"
 
-    def weather(self, weather_type,airport_code) -> dict:
+    def weather(self, weather_type,ICAO_airport_code) -> dict:
         """ given type of weather returns the link for fetching.
         Args:
             - weather_type : metar, taf, datis
         """
         urls = {
-            "metar": f"https://aviationweather.gov/api/data/metar?ids={airport_code}",
-            "taf": f"https://aviationweather.gov/api/data/taf?ids={airport_code}",
-            "datis": f"https://datis.clowd.io/api/{airport_code}",
+            "metar": f"https://aviationweather.gov/api/data/metar?ids={ICAO_airport_code}",
+            "taf": f"https://aviationweather.gov/api/data/taf?ids={ICAO_airport_code}",
+            "datis": f"https://datis.clowd.io/api/{ICAO_airport_code}",
         }
-        return urls.get(weather_type)
+
+        url = urls.get(weather_type)
+        return url
 
 
     def ua_dep_dest_flight_status(self, flight_number):
