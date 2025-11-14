@@ -3,7 +3,7 @@ import pickle
 from pymongo import UpdateOne
 import requests
 
-from config.database import collection_weather_cache,collection_airports_cache_legacy
+from config.database import collection_weather_cache_legacy,collection_airports_cache_legacy
 from core.weather_parse import Weather_parse
 from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
 from services.notification_service import send_telegram_notification_service
@@ -178,10 +178,10 @@ class Bulk_weather_fetch:
             'taf':'',
             'datis':''
         }
-        for each_d in collection_weather_cache.find():
+        for each_d in collection_weather_cache_legacy.find():
             airport_code = each_d.get('ICAO')
         
-            collection_weather_cache.update_one(
+            collection_weather_cache_legacy.update_one(
                 {'_id':each_d['_id']},            # This is to direct the update method to the apporpriate id to change that particular document
                 
                 {'$unset': {'weather':weather}},
@@ -215,7 +215,7 @@ class Bulk_weather_fetch:
                     #   {'$set': {f'weather.timeStamp': 'timestamp here'}},     
             )
         
-        result = collection_weather_cache.bulk_write(update_operations)
+        result = collection_weather_cache_legacy.bulk_write(update_operations)
         # print(result)
 
 

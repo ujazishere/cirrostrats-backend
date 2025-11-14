@@ -9,7 +9,7 @@ def fuzz_find(query, data, qc, limit=5):
 
         # First find exact prefix matches
         prefix_matches = [item for item in data 
-                         if item['fuzz_find_search_text'].startswith(query.lower())]
+                         if ' '.join(item['displaySimilarity']).startswith(query.lower())]
         # Return prefix matches if we have enough
 
         if len(prefix_matches) >= limit:
@@ -23,13 +23,10 @@ def fuzz_find(query, data, qc, limit=5):
         prefix_matches = []
         search_universe = data
         remaining = limit
-        parsed_query = qc.parse_query(query)           # Attempt to run the parse query when suggestions are exhausted.
-        # TODO: Account for fuzz exhaustion, also understand that fuzz returns atleast 5 items regarless of matching so exhaustion is non-existant.
-                    # Check TOD in get_search_suggestions. 
-        # print('pq', parsed_query)
+        #  NOTE: understand that fuzz returns atleast 5 items regarless of matching so exhaustion is non-existant.
 
     # Get search text from all items
-    choices = [item['fuzz_find_search_text'] for item in search_universe]
+    choices = [' '.join(item['displaySimilarity']) for item in search_universe]
 
     # Get fuzzy matches using fuzzywuzzy
     fuzzy_matches = process.extract(

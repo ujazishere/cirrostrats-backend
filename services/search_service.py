@@ -13,8 +13,8 @@ except Exception as e:
 
 
 qc = QueryClassifier()
-sic_docs = qc.initialize_search_index_collection()
-print('Search Index Collection initialized with documents:', len(sic_docs))
+scc_docs = qc.initialize_suggestions_cache_collection()
+print('Suggestions Cache Collection initialized with documents:', len(scc_docs))
 
 
 
@@ -52,9 +52,9 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
     """
     sint = SearchInterface()
     # TODO VHP: This maybe it! just flip - do fuzzfind first then do the formatting?
-    search_suggestions_frontend_format = sint.search_suggestion_frontned_format(c_docs=sic_docs)
-    suggestions_match = fuzz_find(query=query, data=search_suggestions_frontend_format, qc=qc, limit=limit)
-    if not suggestions_match and len(query)>=3:        # Exhaustion criteria
+    # search_suggestions_frontend_format = sint.search_suggestion_frontned_format(c_docs=scc_docs)
+    suggestions_match = fuzz_find(query=query, data=scc_docs, qc=qc, limit=limit)
+    if not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters.
         print('suggestions running out', len(suggestions_match))
         # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
@@ -114,7 +114,8 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
 
     else:
         print('Suggestions found in sic docs', len(suggestions_match))
-        return suggestions_match
+        serialized_suggestions_match = serialize_document_list(suggestions_match)
+        return serialized_suggestions_match
 
 async def track_search_service(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection

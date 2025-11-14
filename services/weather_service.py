@@ -6,7 +6,7 @@ from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
 from typing import Optional
 
-from config.database import collection_airports_cache_legacy, collection_weather_cache, db_UJ
+from config.database import collection_airports_cache_legacy, collection_weather_cache_legacy, db_UJ
 from services.notification_service import send_telegram_notification_service
 
 
@@ -16,7 +16,7 @@ async def store_live_weather_service(
 ):
     return
     """ 
-    The flow is search_index_collection's referenceID (r_Id) -> collection_airports_cache_legacy' _id -> collection_airports_cache_legacy' code (IATA) -> collection_weather_cache's code (IATA)
+    The flow is search_index_collection's referenceID (r_Id) -> collection_airports_cache_legacy' _id -> collection_airports_cache_legacy' code (IATA) -> collection_weather_cache_legacy's code (IATA)
 
     This function fetches live weather and stores it in mdbairport code/mdbAirportReferenceId provided from frontend.
         The mdbAirportReferenceId is a unique identifier passed from frontend using search_index collection's referenceID which is in the collection_airports_cache_legacy' _id.
@@ -26,7 +26,7 @@ async def store_live_weather_service(
         """
 
     # TODO weather: This whole 3 way to using mdbAirportReferenceId to get airport code from collection_airports_cache_legacy then getting associated airport code
-        # to get collection_weather_cache seems a bit redundant.
+        # to get collection_weather_cache_legacy seems a bit redundant.
     print('r_id, as mdbAirportReferenceId, received in store_live_weather_service:', mdbAirportReferenceId )
     ICAO_airport_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbAirportReferenceId:
@@ -66,23 +66,23 @@ async def store_live_weather_service(
     find_crit = {'code': IATA_airport_code}
     return_crit = {'airport_id':1,'_id':0}
 
-    collection_weather_cache_id = collection_weather_cache.find_one(find_crit, return_crit)
-    print('collection_weather_cache_id:', collection_weather_cache_id)
+    collection_weather_cache_legacy_id = collection_weather_cache_legacy.find_one(find_crit, return_crit)
+    print('collection_weather_cache_legacy_id:', collection_weather_cache_legacy_id)
 
     # This is checking if the mdbAirportReferenceId provided from frontend is the same as airport_id from weather collection, if so, it updates the new weather.
-    airportReferenceId = collection_weather_cache_id.get('airport_id')
-    if collection_weather_cache_id and airportReferenceId:
+    airportReferenceId = collection_weather_cache_legacy_id.get('airport_id')
+    if collection_weather_cache_legacy_id and airportReferenceId:
         if str(airportReferenceId) == mdbAirportReferenceId:
 
             swf  = Singular_weather_fetch()
             weather_dict = await swf.async_weather_dict(ICAO_airport_code_to_fetch)
         
-            collection_weather_cache.update_one(
+            collection_weather_cache_legacy.update_one(
                 {'code': IATA_airport_code},
                 {'$set': {'weather': weather_dict},}
             )
 
-    # result = collection_weather_cache.bulk_write(update_operations)
+    # result = collection_weather_cache_legacy.bulk_write(update_operations)
     return {"status": "success"}
 
 async def get_mdb_airport_data_service(**kwargs):
@@ -107,9 +107,9 @@ async def get_mdb_airport_data_service(**kwargs):
     """
     ICAOAirportCode = kwargs.get('ICAOAirportCode')
     airportCacheReferenceId = kwargs.get('airportCacheReferenceId')
-
     # Determining find criteria for mongo collection- Airport code/bson id validation for find criteria
     if ICAOAirportCode:
+
         # validate iata/icao code here and use it as find criteria
         # TODO Weather: Refactor
             # Check the usage and see if the IATA is used at all. if not then convert all to keys as icao instead of 'code' and appropriate value.
@@ -124,30 +124,30 @@ async def get_mdb_airport_data_service(**kwargs):
         if not ObjectId.is_valid(airportCacheReferenceId):
             send_telegram_notification_service(message=f'airport_code {airportCacheReferenceId} is not a valid ObjectId in get_airport_data_service')
             raise ValueError('Invalid airport ID')
-        find_crit = {'airportCacheReferenceId': ObjectId(airportCacheReferenceId)}
+        find_crit = {'_id': ObjectId(airportCacheReferenceId)}
         # If not icao or iata code, assume its bson id here.
         # TODO test: error handling here if its not an ObjectId either. It is sommething else - an impossible return.
 
     return_crit = {'_id':0}
 
     # mdb weather returns
-    airport_cache_collection = db_UJ['airport-cache-test']
-    airport_cache_doc = airport_cache_collection.find_one(find_crit, return_crit)
-    # weather_cache_doc = collection_weather_cache.find_one(find_crit, return_crit)
+    new_airport_cache_collection = db_UJ['airport-cache-test']
+    new_airport_cache_doc = new_airport_cache_collection.find_one(find_crit, return_crit)
+    # weather_cache_doc = collection_weather_cache_legacy.find_one(find_crit, return_crit)
     # print('res', res)
     
-    if airport_cache_doc:
-        weather = airport_cache_doc.get('weather')
+    if new_airport_cache_doc:
+        weather = new_airport_cache_doc.get('weather')
         # HTML injection to color code the weather data
         wp = Weather_parse()
-        weather = wp.html_injected_weather(weather_raw=airport_cache_doc)
+        weather = wp.html_injected_weather(weather_raw=weather)
 
-        airport_cache_doc.update({'weathe':weather})
+        new_airport_cache_doc.update({'weather':weather})
         # weather.update({'code':code})       # add airport code to the weather dict
         # print('res weather',weather )
 
-        return airport_cache_doc
-    elif not airport_cache_doc and ICAOAirportCode:       # New ICAO provided not found in mdb airport cache? fetch live abd aksi save it in airport cache?
+        return new_airport_cache_doc
+    elif not new_airport_cache_doc and ICAOAirportCode:       # New ICAO provided not found in mdb airport cache? fetch live abd aksi save it in airport cache?
         weather = await liveAirportWeather_service(ICAO_code_to_fetch=ICAOAirportCode)
         if weather:
             return weather

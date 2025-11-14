@@ -7,7 +7,7 @@ router = APIRouter()
 # GET /searches/suggestions/Anonymous?query= HTTP/1.1" 200 OK
 
 @router.get("/searches/suggestions/{email}")
-async def get_search_suggestions(email: str, query: str, limit: int = 100):
+async def get_search_suggestions(email: str, query: str, limit: int = 10):
     return await get_search_suggestions_service(email, query, limit)
 
 

@@ -49,7 +49,7 @@ collection_searchTrackUsers = db['SearchTrack']
 # UJ collections
 gate_rows_collection = db_UJ['ewrGates']   # create/get a collection
 collection_flights = db_UJ['flights']
-collection_weather_cache = db_UJ['airport-weather']
+collection_weather_cache_legacy = db_UJ['airport-weather']
 airport_bulk_collection_uj = db_UJ['icao_iata']
 
 # From here on its all custom code for database crud operation.

@@ -4,7 +4,7 @@ import re
 from core.tests.weather_test import Weather_test
 from routes.flight_aggregator_routes import flight_stats_url
 from services.notification_service import send_telegram_notification_service
-from config.database import collection_weather_cache
+from config.database import collection_weather_cache_legacy
 from config.database import collection_flights
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')  # noqa: F821
@@ -72,7 +72,7 @@ class Broad_test:
 
 
         for code in test_codes:
-            weather_doc = collection_weather_cache.find_one({'code': code})
+            weather_doc = collection_weather_cache_legacy.find_one({'code': code})
             if not weather_doc:
                 message = f"Weather Test: No weather document found for {code}"
                 send_telegram_notification_service(message=message)

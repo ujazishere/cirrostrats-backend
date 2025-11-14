@@ -87,7 +87,10 @@ class SearchInterface(QueryClassifier):
         # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
             # If found return that, if not found request on flightAware - e.g N917PG
 
-        terminanl_gate_st = doc.get('Terminal/Gate')
+        query_type = doc.get('type')
+        if query_type == 'gate':
+            pass
+        terminanl_gate_st = 0
         airportDisplayTerm = doc.get('airportDisplayTerm')
         fid_st = doc.get('fid_st')
         parsed_query_cat_field = doc.get('category')
@@ -95,11 +98,11 @@ class SearchInterface(QueryClassifier):
 
         # logic to separaate out flightID from airport and terminal/gates.
         if terminanl_gate_st:
-            query_field,query_val,query_type = 'Terminal/Gate', "EWR - " + terminanl_gate_st + " Departures", 'Terminal/Gate'
+            query_field,query_val,query_type = 'gate', "EWR - " + terminanl_gate_st + " Departures", 'gate'
         elif airportDisplayTerm:
             query_field,query_val,query_type = 'airport', airportDisplayTerm, 'airport'
         elif fid_st:
-            query_field,query_val,query_type = 'flightID', fid_st, 'flight'
+            query_field,query_val,query_type = 'flight', fid_st, 'flight'
         # QueryClassifier's parse_query format handeling.
         elif parsed_query_cat_field:
             query_field, query_val, query_type = self.qc_frontend_conversion(parsed_query_cat_field,pq_val)

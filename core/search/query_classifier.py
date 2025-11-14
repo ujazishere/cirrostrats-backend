@@ -12,7 +12,7 @@ from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Featur
 
 """ These Collections gets loaded up as soon as the server starts."""
 # search_index_collection = db_UJ['search_index']           # OG one
-search_index_collection = db_UJ['search_index_test']         # New tester
+suggestions_cache_collection = db_UJ['suggestions-cache']         # New tester
 
 class QueryClassifier:
     """
@@ -48,13 +48,13 @@ class QueryClassifier:
         self.flight_pattern = re.compile(rf"^({self.icao_codes_separated})\s?(\d{{1,5}}[A-Z]?$)")
 
 
-    def initialize_search_index_collection(self):
+    def initialize_suggestions_cache_collection(self):
         """ Cache the collections for searchbar dropdown"""
         # search index finds - sorted ph returns from the search index collection.
-        count_crit = {'ph':{"$exists":True}}       # return ones with popularity hits
-        return_crit = {'submits':0}       # We dont need submits since its not used in search interface
-        self.sic_docs = list(search_index_collection.find(count_crit, return_crit).sort('ph',-1))     # Reverse sort
-        return self.sic_docs
+        count_crit = {'popularityScore':{"$exists":True}}       # return ones with popularity hits
+        return_crit = {'submitTimestamps':0}       # We dont need submits since its not used in search interface
+        self.scc_docs = list(suggestions_cache_collection.find(count_crit, return_crit).sort('popularityScore',-1))     # Reverse sort
+        return self.scc_docs
         # print('initialized.', self.sic_docs[:5])
 
 
@@ -423,7 +423,7 @@ class QC_base_popularity_hits(QueryClassifier):
         
         # search_index_collection.find_one({})
         # search_index_collection.delete_many({})
-        search_index_collection.count_documents({})
+        suggestions_cache_collection.count_documents({})
         # list(search_index_collection.find({},{}))
         
         

@@ -317,12 +317,12 @@ class Mock_data:
                 ph: Popularity hit - a form of ranking score that is prorcessed through QueryClassifier's normalization function. 
                 submits: the submits on the frontend.
         """
-        self.search_index_collection = [
+        self.search_index_collection_legacy = [
             {
                 # airport search index collection doc
                 '_id': ObjectId('6821b9805795b7ff557e3153'),
-                'airportCacheReferenceId': ObjectId('66176711170d1d57a24df7ce'),       # this is original _id from collection_airports_cache_legacy
-                'airportDisplayTerm': 'DCA - Ronald Reagan Washington Ntl Airport',
+                'r_id': ObjectId('66176711170d1d57a24df7ce'),
+                'airport_st': 'DCA - Ronald Reagan Washington Ntl Airport',
                 'ph': 2.4973989440488236,           # Popularity hit - ranking score
                 'submits': [
                     datetime.datetime(2025, 5, 23, 15, 57, 51, 796000),
@@ -354,16 +354,12 @@ class Mock_data:
             'type': 'str - airport|flight|gate',  # Standardized types
             'reference_id': 'bson id - associated collection id to fetch detailed assocaited type data i.e airport, flight, gate',
             'display': 'str - User-friendly display text',
-            'displayText': "str|array - Text used for fuzzy matching",  # can be an array for multiple search terms
+            'displaySimilarity': ["str|array - Text used for fuzzy matching"],  # array for multiple search terms
             'popularityScore': 0.0,  # Normalized popularity
             'submitTimestamps': [
                 datetime.datetime(2025, 5, 29, 20, 29, 55, 402000),
                 datetime.datetime(2025, 6, 10, 16, 15, 59, 15000)
             ],
-            'metadata': {
-                'code': 'airport_code_or_flight_id',
-                'name': 'full_name_if_applicable'
-            }
         }
 
         self.collection_airports_cache_legacy = [
@@ -386,6 +382,22 @@ class Mock_data:
                 'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'
             },
             'ICAO': 'KPHL'
+        }
+        self.new_airport_cache_collection = {
+            '_id': ObjectId('690abf879832368ab25c25b5'),
+            'IATA': 'EWR',
+            'ICAO': 'KEWR',
+            'airportName': 'Newark Liberty International Airport',
+            'regionName': 'New Jersey',
+            'countryCode': 'US',
+            'weather': {
+                'datis': {
+                    'combined': 'EWR ATIS INFO Y 0051Z. 25009KT 10SM FEW200 12/M04 A3013 (THREE ZERO ONE THREE). ILS RWY 22L APCH IN USE. DEPARTING RY 22R FROM INT W 10,150 FEET TODA. TWY A BTN R D AND  R E CLSD. USE CAUTION FOR BIRDS AND CRANES IN THE VICINITY OF EWR. READBACK ALL RUNWAY HOLD SHORT INSTRUCTIONS AND ASSIGNED ALT. ...ADVS YOU HAVE INFO Y.',
+                    'arr': None,
+                    'dep': None},
+                'metar': 'METAR KEWR 050051Z 24009KT 10SM FEW200 12/M04 A3013 RMK AO2 SLP201 T01171044 $',
+                'taf': 'TAF KEWR 042040Z 0421/0524 29014G22KT P6SM FEW070 \n  FM042300 28010KT P6SM FEW250 \n  FM050700 29006KT P6SM SKC \n  FM051500 23006KT P6SM SCT250 \n  FM051800 21012G23KT P6SM FEW070 FEW150 SCT250\n'
+            }
         }
         
         self.gate_collection = [
