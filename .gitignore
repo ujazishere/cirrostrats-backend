@@ -4,11 +4,11 @@ win_local.bat
 /venv
 .vscode
 .env
+.DS_Store
 *.py[cod]
 /fast-api/__pycache__
 
 **/__pycache__/ 
-/config/database.py
 parseQuery_WIP.ipynb
 
 # for uj local

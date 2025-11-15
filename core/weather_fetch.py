@@ -34,8 +34,11 @@ class Weather_processor:
                 metar = resp
             elif f"taf?ids={airport_code}" in str(url):
                 taf = resp
-            elif f"clowd.io/api/{airport_code}" in str(url):
+            elif f"atis.info/api/{airport_code}" in str(url):
                 datis = json.loads(resp)     # Apparently this is being returned within a list is being fed as is. Accounted for.
+            else:
+                # TODO temp: remove this after testing and notifications are implemented at source / final delivery point.
+                send_telegram_notification_service(message=f'Error: Weather fetch failed. URL is: {url} and resp is: {resp}')
         return metar,taf,datis
 
     def raw_resp_weather_processing(self, resp_dict, airport_id, html_injection=False):

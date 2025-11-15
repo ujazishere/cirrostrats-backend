@@ -146,5 +146,4 @@ async def liveAirportWeather_service(airportCode):
     wp = Weather_parse()
     weather_dict = wp.html_injected_weather(weather_raw=weather_dict)
 
-    print('weather_doc', weather_dict)
     return weather_dict
