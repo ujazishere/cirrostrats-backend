@@ -63,14 +63,7 @@ class Bulk_weather_fetch:
         # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
         all_mdb_airport_codes = [i['code'] for i in collection_airports_cache_legacy.find({},{'code':1})]
 
-        sla = Source_links_and_api()
-        response = requests.get(sla.datis_stations())
-
-        all_datis_ICAO_airport_codes = response.json()
-        if not all_datis_ICAO_airport_codes or  not isinstance(all_datis_ICAO_airport_codes,list):        # Check if response is valid list of airport codes
-            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_ICAO_airport_codes}')
-            print('Error: Datis airport codes fetch failed. Returns:', all_datis_ICAO_airport_codes)
-            all_datis_ICAO_airport_codes = []
+        all_datis_ICAO_airport_codes = self.all_datis_ICAO_airport_codes_list()
         # all_datis_airports_path = r'c:\users\ujasv\onedrive\desktop\codes\cirrostrats\all_datis_airports.pkl'
 
         import os
@@ -110,6 +103,17 @@ class Bulk_weather_fetch:
             "metar": self.bulk_list_of_weather_links('metar',all_mdb_airport_codes),
             "taf": self.bulk_list_of_weather_links('taf',taf_positive_airport_codes),
         }
+
+    def all_datis_ICAO_airport_codes_list(self):
+        sla = Source_links_and_api()
+        response = requests.get(sla.datis_stations())
+
+        all_datis_ICAO_airport_codes = response.json()
+        if not all_datis_ICAO_airport_codes or  not isinstance(all_datis_ICAO_airport_codes,list):        # Check if response is valid list of airport codes
+            send_telegram_notification_service(message=f'Error: Datis airport codes fetch failed. returns: {all_datis_ICAO_airport_codes}')
+            print('Error: Datis airport codes fetch failed. Returns:', all_datis_ICAO_airport_codes)
+            all_datis_ICAO_airport_codes = []
+        return all_datis_ICAO_airport_codes
 
     def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov

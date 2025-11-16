@@ -10,6 +10,7 @@ win_local.bat
 
 **/__pycache__/ 
 parseQuery_WIP.ipynb
+.DS_Store
 
 # saved weather extractions stuff here
 /pickles
