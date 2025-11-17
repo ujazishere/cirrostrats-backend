@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import aiohttp
 from bs4 import BeautifulSoup as bs4
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -197,6 +199,17 @@ class Source_links_and_api:
         # TODO LP: use this to get status about flights, gate, times and delay status.
         # "https://flyrichmond.com/"
     
+    def popular_ICAO_airline_codes(self):
+        """ Returns 50 most popular ICAO airline codes. """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        default_icao_path = os.path.normpath(os.path.join(script_dir, '..', 'data', 'unique_icao.json'))
+
+        with open(default_icao_path, 'r') as f:
+            icao_pops_all = json.load(f)
+        icao_list = [icao for icao, count in icao_pops_all.items() if len(icao) == 3]
+        ICAO_airline_codes = '|'.join(icao_list[1:50])
+
+        return ICAO_airline_codes
 
     def datis_stations(self) -> str:
         """ Returns datis stations. """

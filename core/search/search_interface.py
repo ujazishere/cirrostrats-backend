@@ -1,5 +1,7 @@
 
+from config.database import airport_bulk_collection_uj
 from core.search.query_classifier import QueryClassifier
+from config.database import new_airport_cache_collection
 
 
 class SearchInterface(QueryClassifier):
@@ -47,9 +49,9 @@ class SearchInterface(QueryClassifier):
     def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):
 
         query_field = query_val = query_type = None
-        if parsed_query_cat_field == 'Airports':
+        if parsed_query_cat_field == 'airport':
             query_field, query_val, query_type = 'airport', pq_val, 'airport'
-        elif parsed_query_cat_field == 'Flights':
+        elif parsed_query_cat_field == 'flight':
             if isinstance(pq_val,dict):
                 fid_st = pq_val.get('airline_code') + pq_val.get('flight_number')
                 query_field, query_val, query_type = 'flightID', fid_st, 'flight'
@@ -57,11 +59,11 @@ class SearchInterface(QueryClassifier):
                 self.temporary_n_number_parse_query(query=pq_val)
                 query_field, query_val, query_type = 'nnumber', pq_val, 'flight'
         
-        elif parsed_query_cat_field == 'Digits':
+        elif parsed_query_cat_field == 'digits':
             # Digits are usually flight numbers,
             query_field, query_val, query_type = 'flightID', pq_val, 'flight'
 
-        elif parsed_query_cat_field == 'Others':
+        elif parsed_query_cat_field == 'others':
             # ** YOU GOTTA FIX PARSE ISSUE AT CORE OR SUFFER -- NOTE FOR FUTURE YOU Discovered on June 4 2025!
             # account for N numbers here! this is dangerous but can act as a bandaid for now. 
             # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
@@ -76,9 +78,17 @@ class SearchInterface(QueryClassifier):
 
 
     def query_type_frontend_conversion(self,doc):
+
+        # TODO serach suggestions:
+            # Parse query in exhaustion uses this function on top section.
+            # raw submit also uses this function
+
+        """ suggestions delivery """
+
+
         """
-        # TODO sic: data structure --> this func takes in 
-        format inconsistencies from backend/mongoDB collection data to frontend are handled here.
+        Legacy:
+        format inconsistencies from backend/mongoDB collection data to frontend were handled here.
         for example: search_index_collection `airportDisplayTerm` is convertd to airport, `fid_st` to flight, etc.
         Typically 3 types of queries - airport, flight or gate
         
@@ -86,36 +96,42 @@ class SearchInterface(QueryClassifier):
 
         # TODO VHP: Account for parsing Tailnumber - send it to collection_flights database with flightID or registration...
             # If found return that, if not found request on flightAware - e.g N917PG
-
         query_type = doc.get('type')
-        if query_type == 'gate':
-            pass
-        terminanl_gate_st = 0
-        airportDisplayTerm = doc.get('airportDisplayTerm')
-        fid_st = doc.get('fid_st')
-        parsed_query_cat_field = doc.get('category')
-        pq_val = doc.get('value')
+        parsed_query_type = doc.get('type')
+        parsed_query_value = doc.get('value')
+
+        if parsed_query_type:
+            query_field, query_val, query_type = self.qc_frontend_conversion(parsed_query_type,parsed_query_value)
+
+        # TODO search suggestions: These need to deliver frontend formatted data for suggestions collection insertion.
+        
+        # gate = doc.get('metadata.gate') if query_type == 'gate' else None
+        # ICAOAirportCode = doc.get('metadata.ICAO') if query_type == 'airport' else None
+        # flightID = doc.get('metadata.flightID') if query_type == 'flight' else None
+        gate = ICAOAirportCode = flightID = None        # temporary diversion to avoid error.
 
         # logic to separaate out flightID from airport and terminal/gates.
-        if terminanl_gate_st:
-            query_field,query_val,query_type = 'gate', "EWR - " + terminanl_gate_st + " Departures", 'gate'
-        elif airportDisplayTerm:
-            query_field,query_val,query_type = 'airport', airportDisplayTerm, 'airport'
-        elif fid_st:
-            query_field,query_val,query_type = 'flight', fid_st, 'flight'
+        if gate:
+            
+            query_field,query_val,query_type = 'gate', "EWR - " + gate + " Departures", 'gate'
+        elif ICAOAirportCode:
+            query_field,query_val,query_type = 'airport', ICAOAirportCode, 'airport'
+        elif flightID:
+            query_field,query_val,query_type = 'flight', flightID, 'flight'
         # QueryClassifier's parse_query format handeling.
-        elif parsed_query_cat_field:
-            query_field, query_val, query_type = self.qc_frontend_conversion(parsed_query_cat_field,pq_val)
         return query_field, query_val, query_type
 
 
-    def search_suggestion_frontned_format(self, c_docs):
-        """ Suggestions formatter for frontend compatibility. Takes in sic docs as is,
+    def search_suggestion_frontned_format(self, c_docs):            # **** DEPRECATED ****
+        """ *****   DEPRECATED ****** """
+        # This function is nolonger used it used to process docs from collections and parsed query and convert data structure for frontend use.
+
+        """ 
+        Legacy:
+        Suggestions formatter for frontend compatibility. Takes in sic docs as is,
             It first goes to the fuzzfind then to frontend which is processed again.
             There's quite a bit of unnecessary formatting and processing during this three way process
-            TODO sic: data structure overhaul
-                    reduce this clutter to improve efficiency.
-            
+
             Arguments:
                 c_docs: search index collection documents from mongoDB
         """
@@ -124,7 +140,8 @@ class SearchInterface(QueryClassifier):
         search_index = []
 
         for doc in c_docs:
-
+            pass
+            """
             # Converting the search index collection format to a suitable format that can be processed in the frontend.
             query_field,query_val,query_type = self.query_type_frontend_conversion(doc=doc)
 
@@ -151,8 +168,97 @@ class SearchInterface(QueryClassifier):
                 passed_data.update({'gate': gate})
             
             search_index.append(passed_data)
-
+            """
         # sort by popularity (count), it obv comes in sorted. this is just an extra precautionary step.
         search_index.sort(key=lambda x: x['ph'], reverse=True)
 
         return search_index
+
+
+class ExhaustionCriteria():
+    def __init__(self) -> None:
+        pass
+
+    def airport_cache_insertion(self, bulk_doc):
+        # TODO search suggestions: This should only work for search submits and not for suggestions.
+        if bulk_doc:
+            ICAO_airport_code = bulk_doc.get('icao')
+            IATA_airport_code = bulk_doc.get('iata')
+            airportName = bulk_doc.get('airport')
+            regionName = bulk_doc.get('region_name')
+            countryCode = bulk_doc.get('country_code')
+        else:
+            print('no bulk doc')
+        
+        new_airport_cache_doc = new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
+        if new_airport_cache_doc:
+            return new_airport_cache_doc
+        else:
+            new_airport_cache_doc = {
+                'IATA': IATA_airport_code,
+                'ICAO': ICAO_airport_code,       
+                'airportName': airportName,
+                'regionName': regionName,
+                'countryCode': countryCode,
+                'weather': {}
+            }
+            # new_airport_cache_collection.insert_one(new_airport_cache_doc)
+            return new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
+        
+        
+    def ICAO_airport_suggestions_format(self, ICAO_airport_code):
+        """ Takes in US/CA ICAO airports parsed through parse_query and formats them for suggestions collection insertion."""
+        
+        # Idea is if you found it insert it in airports cache,
+        doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
+        if not doc:
+            print('No airport doc found in airport bulk collection for ICAO', ICAO_airport_code)
+            return []
+
+        IATA_airport_code = doc.get('iata')
+        airportName = doc.get('airport')
+
+        if doc:
+            return {
+                # 'referenceId': str(ObjectId()),
+                'type': 'airport',
+                'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
+                'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
+                'popularityScore': 1.0,
+                'metadata': {
+                    'ICAO': ICAO_airport_code,
+                }
+            }
+
+    def backend_flight_query(self, query_val, collection_flights):
+        find_crit = {
+            "versions.version_created_at": {"$exists": True},
+            "flightID": {"$regex": "your_regex_pattern"}
+        }
+        return_crit = {'flightID':1,'_id':0}
+        flightIDs = list(collection_flights.find(find_crit, return_crit))
+
+        
+        # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
+        if query_val[:2] == 'DL':       # temporary fix for delta flights
+            query_val = 'DAL'+query_val[2:]
+        elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
+            query_val = 'AAL'+query_val[2:]
+        # N-numbers returns errors on submits.
+        return_crit = {'flightID': 1}
+
+
+        flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
+        search_index = []
+        for i in flight_docs:
+            search_index.append({
+                'type': 'flight',
+                'display': i['flightID'],        # Merge code and name for display
+                'referenceId': str(i['_id']),
+                'metadata': {
+                    'flightID': i['flightID'],
+                }
+            })
+        return search_index
+
+        

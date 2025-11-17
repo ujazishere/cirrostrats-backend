@@ -1,6 +1,7 @@
-from config.database import collection_flights, collection_airports_cache_legacy, db_UJ
+import math
+from config.database import airport_bulk_collection_uj, collection_flights, collection_airports_cache_legacy, db_UJ
 from core.search.fuzz_find import fuzz_find
-from core.search.search_interface import SearchInterface
+from core.search.search_interface import ExhaustionCriteria, SearchInterface
 from core.search.query_classifier import QueryClassifier
 from models.model import SearchData
 from bson import ObjectId
@@ -13,8 +14,8 @@ except Exception as e:
 
 
 qc = QueryClassifier()
-scc_docs = qc.initialize_suggestions_cache_collection()
-print('Suggestions Cache Collection initialized with documents:', len(scc_docs))
+qc.scc_docs = qc.initialize_suggestions_cache_collection()
+print('Suggestions Cache Collection initialized with documents:', len(qc.scc_docs))
 
 
 
@@ -50,72 +51,85 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
                     Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
                 if raw submit partially matches flight number then do not send the first drop select
     """
-    sint = SearchInterface()
-    # TODO VHP: This maybe it! just flip - do fuzzfind first then do the formatting?
-    # search_suggestions_frontend_format = sint.search_suggestion_frontned_format(c_docs=scc_docs)
-    suggestions_match = fuzz_find(query=query, data=scc_docs, qc=qc, limit=limit)
-    if not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters.
-        print('suggestions running out', len(suggestions_match))
-        # TODO: *****CAUTION**** Bad code exists here. this was a quick fix to account for exhaustion of search suggestions.
-        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
-        parsed_query = qc.parse_query(query=query)
-        print('Exhausted sic docs, parsed query',parsed_query)
-        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
-        query_field,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
-        if query_type == 'flight':
-            # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
-            if query_val[:2] == 'DL':       # temporary fix for delta flights
-                query_val = 'DAL'+query_val[2:]
-            elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
-                query_val = 'AAL'+query_val[2:]
-            # N-numbers returns errors on submits.
-            return_crit = {'flightID': 1}
-            flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
-            search_index = []
-            for i in flight_docs:
-                x = {
-                    'id': str(i['_id']),
-                    query_field: i['flightID'],  # Use the field name dynamically
-                    'display': i['flightID'],        # Merge code and name for display
-                    'type': 'flight',
-                }
-                search_index.append(x)
-            return search_index
+    suggestions_match = fuzz_find(query=query, data=qc.scc_docs, qc=qc, limit=limit)
 
-        elif query_type == 'airport':
-            # TODO: This is a temporary fix, need to implement a better way to handle airport search since it wont look up the airport code.
-            # Plus its ugly -- abstract this away since flight ID is using the same logic.
-            # TODO: integrate this with searchindex such that it secures it inthe popular hits and moves the submits up the ladder.
-            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
-            return_crit = {'name': 1, 'code':1}
-            case_insensitive_regex_find = {'$regex':query_val, '$options': 'i'}
-            
-            airport_docs = list(collection_airports_cache_legacy.find({'code': case_insensitive_regex_find}, return_crit).limit(10))
-            search_index = []
-            for i in airport_docs:
-                x = {
-                    'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
-                    query_field: i['code'],     # Use the field name dynamically
-                    'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
-                    'type': 'airport',
-                }
-                search_index.append(x)
-            if len(search_index) < 2:
-                airport_docs = list(collection_airports_cache_legacy.find({'name': case_insensitive_regex_find}, return_crit).limit(10))
-                for i in airport_docs:
-                    x = {
-                        'r_id': str(i['_id']),      # This r_id is used in frontend to access code and weather from mdb
-                        query_field: i['code'],     # Use the field name dynamically
-                        'display': f"{i['code']} - {i['name']}",        # Merge code and name for display
-                        'type': 'airport',
-                    }
-                    search_index.append(x)
-            return search_index
-
-    else:
+    if suggestions_match and len(query)<=3:
         print('Suggestions found in sic docs', len(suggestions_match))
         serialized_suggestions_match = serialize_document_list(suggestions_match)
         return serialized_suggestions_match
+    # Exhaustion criteria:
+    elif not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters.
+        print('suggestions running out with query length of', len(query), 'and is less than or equal to 3', len(suggestions_match))
+        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
+        parsed_query = qc.parse_query(query=query)
+        # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
+        # query_type,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
+
+        exhaust = ExhaustionCriteria()
+        query_type = parsed_query.get('type')
+        query_val = parsed_query.get('value')
+        if parsed_query.get('type') == 'flight' or query_type == 'digits':
+            return exhaust.backend_flight_query(query_val=query_val, collection_flights=collection_flights)
+        elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
+            ICAO_airport_code = parsed_query.get('value')
+            print('ICAO_airport_code', ICAO_airport_code)
+            return exhaust.ICAO_airport_suggestions_format(ICAO_airport_code)
+        elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
+            # TODO search suggestions: need to abstract this to search interface?
+            airport_query = parsed_query.get('value')
+            print('airport_query', airport_query)
+            case_insensitive_regex_find = {'$regex':airport_query, '$options': 'i'}
+            
+            # Looking for the query in airportName, icao, iata from the aiport bulk collection.
+            airport_docs = list(airport_bulk_collection_uj.find({
+                "$or": [
+                    {"airport": case_insensitive_regex_find},
+                    {"icao": case_insensitive_regex_find},
+                    {"iata": case_insensitive_regex_find}
+                ],
+                "country_code": {"$in": ["US", "CA"]}
+            }).limit(10))
+
+            suggestions_cache_doc = []
+            if not airport_docs:
+                print('No airport docs found in airport bulk collection for query',query)
+                return []
+            
+            for i in airport_docs:
+                print('i airport docs',i)
+                IATA_airport_code = i.get('iata')
+                ICAO_airport_code = i.get('icao')
+                airportName = i.get('airport')
+
+                # All these cannot be nan/null/Nonect_code)
+                if not IATA_airport_code or not ICAO_airport_code or not airportName:
+                    print('Skipping airport doc because something is None')
+                    continue
+                    # Note: Some airport values have null/nan/None values and those are discarded. But what if we want to show them? for example iata: OTT has not ICAO code what if we want to show? but why? we cant even get weather for it if theres no ICAO,
+                suggestions_cache_doc.append({
+                    # 'referenceId': str(ObjectId()),
+                    'type': 'airport',
+                    'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
+                    'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
+                    'popularityScore': 1.0,
+                    'metadata': {
+                        'ICAO': ICAO_airport_code,
+                    }
+                })
+            return suggestions_cache_doc
+
+
+            # TODO search:
+            # if parsed_query is airport type then query US region airports from bulk airports?
+            # insert it in suggestions since that will set the unique _id for duplicate issues.
+            # But then theres 3 additional suggestions left --> check if these already exist in the search suggestion?
+            # If not then query the FAA directly with the airport code
+
+            # if found 
+    # else:         # originally this would be to return seriliazed suggestions to frontend.
+    #     print('Suggestions found in sic docs', len(suggestions_match))
+    #     serialized_suggestions_match = serialize_document_list(suggestions_match)
+    #     return serialized_suggestions_match
 
 async def track_search_service(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection

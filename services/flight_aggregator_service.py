@@ -1,5 +1,6 @@
 import json
 import logging
+from config.database import collection_flights
 from core.EDCT_Lookup import EDCT_LookUp
 import requests
 from core.flight_aware_data_pull import Flight_aware_pull
@@ -38,11 +39,16 @@ async def aws_jms_service(flightID, mock=False):
         value = qc.parse_query(flightID).get('value')
         ac = value.get('airline_code')
         fn = value.get('flight_number')
-        if ac =='UA':
+        # TODO VHP: This is error prone such that UA can be GJS, UCA, SKY, RPA and such from flightstats.
+        # One way to present multiple result is through scroll right below the searchbar for multiple digits.
+        if ac =='UA':                # could be (GJS/G7), (UCA/C5), SKY, RPA or mesa(ASH/YV) flights. 
+            # TODO search suggestions: What about part 91 repo flights? those show as UA but use flightStats?
             flightID = "UAL"+fn
-        elif ac == 'DL':
+        elif ac == 'DL':            # could be EDV, RPA or SKW flights.
             flightID = "DAL"+fn
         elif ac == 'AA':
+            # try to look for AAL, ENY, JIA, PDT - for Envoy, PSA and Piedmont flights. Could also be Skywest or republic flights.
+                # if found more than one flightID then let user select the correct one. Also use the base AA for flightStats search.
             flightID = "AAL"+fn
 
 
