@@ -1,150 +1,131 @@
+"""
+Celery Task Definitions
+
+This module defines Celery tasks that wrap the business logic handlers.
+All business logic is separated into routes/task_handlers.py for better
+testability and maintainability.
+
+***CAUTION***
+Celery doesn't work with async directly, so avoid using asyncio directly
+on celery_app.task functions. Instead use asyncio.run(async_function())
+where the async_function() can be any async function you want to schedule.
+"""
 import asyncio
 import logging
 from celery import Celery
 from celery.schedules import crontab
-import datetime as dt
-import json
-import redis
-from core.tests.broad_test import Broad_test
-from utils.tele import Tele_bot
-from core.api.nas import NASExtracts
-from core.weather_fetch import Bulk_weather_fetch  # Used for periodic scheduling
-from core.gate_processor import Gate_processor
 
-'''     ***CAUTION***
-    Celery doesnt work with async directly so avoid using asyncio directly on celery_app.task function.
-    instead use asyncio.run(async_function()) and this async_function() can be any async function you want to schedule. check example below for asyncio.run()
-'''
+from routes.task_handlers import (
+    WeatherTaskHandlers,
+    GateTaskHandlers,
+    NASTaskHandlers,
+    TestingTaskHandlers
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
+# Initialize Celery app
 celery_app = Celery(
     'tasks',
     broker='redis://redis:6379/0',
     backend='redis://redis:6379/0'
 )
 
-# TODO LP: Do I need this since I already have it in the Celery args.
-# celery_app.conf.broker_url = 'redis://redis:6379/0'
+celery_app.conf.timezone = 'UTC'
 
-utc_now = dt.datetime.now(dt.timezone.utc)
-# utc_now = dt.datetime.now(dt.UTC)
-zulutime = utc_now.strftime("%d %H:%M")
+# Initialize task handlers
+_weather_handlers = WeatherTaskHandlers()
+_gate_handlers = GateTaskHandlers()
+_nas_handlers = NASTaskHandlers()
+_testing_handlers = TestingTaskHandlers()
 
 
-# Mind the host name 'redis' instead of typical 'localhost' - 'redis' is the name of the service in docker-compose.yml
-r = redis.Redis(host='redis', port=6379, db=0)        
+# ============================================================================
+# Weather Tasks
+# ============================================================================
 
 @celery_app.task
 def DatisFetch():
-    # Read caution note for explanation on asyncio use here.
-    asyncio.run(run_datis_fetch())           # run_datis_fetch() is an async function. DatisFetch() is a celery task that cannot be an async function.
-
-async def run_datis_fetch():    
-    bwf = Bulk_weather_fetch()
-    await bwf.bulk_fetch_and_store_by_type(weather_type='datis')
-    return f'Celery task completed for fetching datis. timestamp - {zulutime}'
+    """Fetch and store DATIS weather data"""
+    return asyncio.run(_weather_handlers.fetch_datis())
 
 
 @celery_app.task
 def MetarFetch():
-    asyncio.run(run_metar_fetch())          # run_metar_fetch() is an async function. MetarFetch() is a celery task that cannot be an async function.
-
-async def run_metar_fetch():
-    bwf = Bulk_weather_fetch()
-    await bwf.bulk_fetch_and_store_by_type(weather_type='metar')
-    return f'Celery task completed for fetching metar. timestamp - {zulutime}'
+    """Fetch and store METAR weather data"""
+    return asyncio.run(_weather_handlers.fetch_metar())
 
 
 @celery_app.task
 def TAFFetch():
-    asyncio.run(run_TAF_fetch())
+    """Fetch and store TAF weather data"""
+    return asyncio.run(_weather_handlers.fetch_taf())
 
-async def run_TAF_fetch():    
-    bwf = Bulk_weather_fetch()
-    await bwf.bulk_fetch_and_store_by_type(weather_type='taf')
-    return f'Celery task completed for fetching TAF. timestamp - {zulutime}'
 
-# Gate fetchers
+# ============================================================================
+# Gate Tasks
+# ============================================================================
+
 @celery_app.task
 def GateFetch():
-    gp = Gate_processor()
-    gp.scrape_and_store()
-    return f'Celery task completed for fetching gates. timestamp - {zulutime}'
+    """Scrape and store gate information"""
+    return _gate_handlers.fetch_gates()
+
+
 @celery_app.task
 def GateRecurrentUpdater():
-    gp = Gate_processor()
-    gp.recurrent_updater()
-    return f'Celery task completed for recurrent gate update. timestamp - {zulutime}'
+    """Update gate information for flights around current time"""
+    return _gate_handlers.update_gates_recurrent()
+
+
 @celery_app.task
 def GateClear():
-    gp = Gate_processor()
-    gp.mdb_clear_historical(hours=30)
-    return f'Celery task completed for clearing historical gate data older than 30 hours. timestamp - {zulutime}'
+    """Clear historical gate data older than 30 hours"""
+    return _gate_handlers.clear_historical_gates(hours=30)
 
-# # WIP: NAS fetch
+
+# ============================================================================
+# NAS Tasks
+# ============================================================================
+
 @celery_app.task
 def nasFetch():
-    """ NAS fetcher that checks for changes in specific nas data and sends telegram notification on change."""
-    def send_telegram_notification(message,error=False):
-        tb = Tele_bot()
-
-        if error:
-            send_to = [tb.ISMAIL_CHAT_ID, tb.UJ_CHAT_ID]
-            logger.error('Error, sending notification to Ismail and UJ')
-        elif not error:
-            logger.info('Sending to UJ only')
-            send_to = [tb.UJ_CHAT_ID]
-
-        tb.send_message(chat_id=send_to,
-                        MESSAGE=message,token=tb.TELE_MAIN_BOT_TOKEN)
-
-    nas = NASExtracts()
-    nas_data = nas.nas_xml_processor()
-    if not nas_data:
-        send_telegram_notification("Error: NAS", error=True)
-        return "Error: NAS - nas_data empty"
+    """
+    NAS fetcher that checks for changes in specific nas data and sends
+    telegram notification on change.
+    """
+    result = _nas_handlers.fetch_and_monitor_nas(
+        nas_type='ground_stop_packet',
+        redis_key='juice'
+    )
     
-    nas_type = 'ground_stop_packet'      # Change this to the type of nas data you want to monitor.
-    juice = nas_data.get(nas_type)
-    
-    message = f"{nas_type} @ {zulutime} - {juice}"
-    previous_juice = r.get('juice')     # Attempt to retrieve previous data for comparison.
-    if previous_juice and json.loads(previous_juice.decode('utf-8')) != juice:
-        r.set('juice', json.dumps(juice))
-        # Send message for change
-        send_telegram_notification("NAS: data changed, setting new data: "+message)
-        return "MAS: data changed, setting new data", juice
-    elif not previous_juice:       # if there is no previous data then its a fresh start.
-        r.set('juice', json.dumps(juice))
-        send_telegram_notification("NAS: Absolute new message: "+message)
-        return 'NAS: Absolute new message',message
+    # Return format compatible with existing code
+    if result['status'] == 'error':
+        return result['message']
+    elif result['status'] == 'changed':
+        return result['message'], result['data']
+    elif result['status'] == 'new':
+        return result['message'], result['data']
     else:
-        return "NAS: no change"
+        return result['message']
 
-async def run_fs_test():
-    bt = Broad_test()
-    await bt.fs_test()            # This will be tricky since its an async function - take inspiration from earlier async functions task
-    
+
+# ============================================================================
+# Testing Tasks
+# ============================================================================
+
 @celery_app.task
 def generic_testing():
-    """ Generic testing function that runs all the tests in core/tests/broad_test.py"""
-
-    bt = Broad_test()
-    bt.jms_test()
-    bt.weather_test()     # TODO test: weather test is throwing error currently within celery - needs fixing and re-enabling check onprim celery logs with grep "metar"
-    asyncio.run(run_fs_test())      # fs_test is an async function and this is a celery bypass mechanism to run it.
-    
-    # TODO test: Remaining logic
-    # bt.flight_aware_test()        
-    # bt.nas_test()
-    # bt.gate_test()
-    return 'Generic testing completed'
+    """
+    Generic testing function that runs all the tests in core/tests/broad_test.py
+    """
+    return _testing_handlers.run_all_tests()
 
 
-celery_app.conf.timezone = 'UTC'  # Adjust to UTC timezone.
-
+# ============================================================================
+# Periodic Task Scheduling
+# ============================================================================
 
 # Add periodic task scheduling
 celery_app.conf.beat_schedule = {
