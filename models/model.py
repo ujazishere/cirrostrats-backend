@@ -46,20 +46,28 @@ def validate_IATA_airport_code(v: str) -> str:
     return v
 
 def validate_fs_delay_status(v: str) -> str:
+    # 1. Allowed fixed statuses
     allowed_statuses = ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed', 'Cancelled']
 
-    # Regex for: "Delayed by <number> minute(s) ago or just <number>m"
+    # 2. Regex for "Delayed by..." (hours/minutes)
     delayed_pattern = re.compile(r"^Delayed by (?:(?:\d+h\s*)?(?:\d+m)?|\d+ minutes? ago)$")
+
+    # 3. STRICT Regex for "Diverted to [3-Letter Code]"
+    # Matches: "Diverted to BWI", "Diverted to ORD"
+    # Fails: "Diverted to ", "Diverted to Chicago", "Diverted to KBWI" (4 letters)
+    diverted_pattern = re.compile(r"^Diverted to [A-Z]{3}$")
 
     if v in allowed_statuses:
         return v
     elif delayed_pattern.match(v):
         return v
+    elif diverted_pattern.match(v):
+        return v
     else:
         message = (f'FS Delay status must be one of: On time, Scheduled, Delayed. Rather this was supplied {v}')
         send_telegram_notification_service(message=message)
         logger.warning(message)
-        # raise ValueError(message)
+        return v
 
 def validate_fs_time_format(v: str) -> str:
     """ Validate time format e.g "12:00 +01" or "12:00 CST" or "02:00 ChST" """
