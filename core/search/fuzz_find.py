@@ -2,8 +2,9 @@
 # from levenshtein import levenshtein  # type: ignore
 from fuzzywuzzy import fuzz, process
 
-""" Uses the frontend formatted search_index_collection to search and deliver fuzz found results."""
 def fuzz_find(query, data, qc, limit=5):
+    """ Uses the frontend formatted suggestions cache collection to search and deliver fuzz found results """
+
     # For very short queries, prioritize prefix matching
     if len(query) <= 2:
 
@@ -41,5 +42,5 @@ def fuzz_find(query, data, qc, limit=5):
                   if score > 90]  # Minimum similarity threshold
     
     # Combine prefix and fuzzy matches
-    sti_items_match_w_query =  prefix_matches + fuzzy_items
-    return sti_items_match_w_query
+    scc_items_match_w_query =  prefix_matches + fuzzy_items
+    return scc_items_match_w_query

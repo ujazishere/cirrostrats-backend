@@ -5,7 +5,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from config.database import collection_airports_cache_legacy, collection_flights, db_UJ
-from core.root_class import Source_links_and_api
+from core.api.source_links_and_api import Source_links_and_api
 from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
 
 """ These Collections gets loaded up as soon as the server starts."""

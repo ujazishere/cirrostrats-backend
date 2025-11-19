@@ -54,11 +54,15 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
     suggestions_match = fuzz_find(query=query, data=qc.scc_docs, qc=qc, limit=limit)
 
     if suggestions_match and len(query)<=3:
-        print('Suggestions found in sic docs', len(suggestions_match))
         serialized_suggestions_match = serialize_document_list(suggestions_match)
         return serialized_suggestions_match
     # Exhaustion criteria:
     elif not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters.
+        # TODO search suggestions: 
+                # Aggregate all the collections and search them all at once. found items upto 5 items only should be formatted for frontend.
+                # If more than 5 items are found then return the top 5 items only.
+                # But what about the airport code search with ICAO code prepended with K for USA and C for Canada?
+
         print('suggestions running out with query length of', len(query), 'and is less than or equal to 3', len(suggestions_match))
         # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         parsed_query = qc.parse_query(query=query)
@@ -67,9 +71,9 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
 
         exhaust = ExhaustionCriteria()
         query_type = parsed_query.get('type')
-        query_val = parsed_query.get('value')
-        if parsed_query.get('type') == 'flight' or query_type == 'digits':
-            return exhaust.backend_flight_query(query_val=query_val, collection_flights=collection_flights)
+        if query_type in ['flight', 'digits', 'nNumber']:
+            flightID = parsed_query.get('value')
+            return exhaust.backend_flight_query(flightID=flightID)
         elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
             ICAO_airport_code = parsed_query.get('value')
             print('ICAO_airport_code', ICAO_airport_code)
@@ -123,7 +127,8 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             # if parsed_query is airport type then query US region airports from bulk airports?
             # insert it in suggestions since that will set the unique _id for duplicate issues.
             # But then theres 3 additional suggestions left --> check if these already exist in the search suggestion?
-            # If not then query the FAA directly with the airport code
+            # If not then query then query FAA using airport_info_faa directly with the airport code
+                # Source_links_and_api().airport_info_faa(ICAO_airport_code)
 
             # if found 
     # else:         # originally this would be to return seriliazed suggestions to frontend.

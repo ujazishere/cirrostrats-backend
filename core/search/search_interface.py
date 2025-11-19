@@ -1,8 +1,10 @@
-
-from config.database import airport_bulk_collection_uj
+import requests
+from core.weather_fetch import Singular_weather_fetch
+from models.model import AirportCache
+from core.api.source_links_and_api import Source_links_and_api
 from core.search.query_classifier import QueryClassifier
-from config.database import new_airport_cache_collection
 
+from config.database import airport_bulk_collection_uj, collection_flights, new_airport_cache_collection
 
 class SearchInterface(QueryClassifier):
     def __init__(self):
@@ -179,16 +181,99 @@ class ExhaustionCriteria():
     def __init__(self) -> None:
         pass
 
-    def airport_cache_insertion(self, bulk_doc):
+    # Aviation weather response parsing for airport_cache_collection
+    
+    def parse_aviation_weather_airport_info_response(self, api_data):
+        """Parse the text-based API response from aviationweather.gov"""
+        parsed = {}
+        
+        lines = api_data.strip().split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Parse key-value pairs (looking for specific keys)
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                if key == 'IATA':
+                    parsed['IATA'] = value if value != '-' else None
+                elif key == 'ICAO':
+                    parsed['ICAO'] = value
+                elif key == 'Name':
+                    parsed['airportName'] = value
+                elif key == 'State':
+                    parsed['regionName'] = value
+                elif key == 'Country':
+                    parsed['countryCode'] = value
+                # elif key == 'Elevation':
+                #     parsed['elevation'] = value
+                # elif key == 'Latitude':
+                #     parsed['latitude'] = value
+                # elif key == 'Longitude':
+                #     parsed['longitude'] = value
+        
+        parsed['weather']= {}
+        return parsed
+    
+    
+    async def faa_airport_info_fetch(self, ICAO_airport_code):
+        # TODO: This probably doesn't belong here  maybe abstract this and faa fetch to some other file?
+
+        # bulk_doc = airport_bulk_collection_uj.find_one({'icao':ICAO_airport_code})
+        # if not bulk_doc:
+        faa_weather_link = Source_links_and_api().airport_info_faa(ICAO_airport_code)
+        response = requests.get(faa_weather_link)
+        
+        data = response.content.decode('utf-8')
+        if not data:
+            return
+        if isinstance(data,dict) and data.get('status') == 'error':
+            print(data['status'])
+            return
+        if 'error' in data:
+            print('error in faa_airport_info_fetch data', data)
+            return
+        update_doc = self.parse_aviation_weather_airport_info_response(api_data=data)
+    
+            # print(json.loads(response.content))
+        # else:
+        #     update_doc = {
+        #         'IATA': bulk_doc['iata'],
+        #         'ICAO': bulk_doc['icao'],
+        #         'airportName': bulk_doc['airport'],
+        #         'regionName': bulk_doc['region_name'],
+        #         'countryCode': bulk_doc['country_code'],
+        #         'weather': {}
+        #     }
+        AirportCache(**update_doc)
+    
+        swf  = Singular_weather_fetch()
+        weather_dict = await swf.async_weather_dict(update_doc['ICAO'])
+        update_doc['weather'] = weather_dict
+        return update_doc
+    # await faa_weather_fetch('KSMQ')
+    # await faa_weather_fetch('C-29')
+    
+
+    def airport_cache_insertion(self, ICAO_airport_code):
         # TODO search suggestions: This should only work for search submits and not for suggestions.
-        if bulk_doc:
-            ICAO_airport_code = bulk_doc.get('icao')
-            IATA_airport_code = bulk_doc.get('iata')
-            airportName = bulk_doc.get('airport')
-            regionName = bulk_doc.get('region_name')
-            countryCode = bulk_doc.get('country_code')
-        else:
-            print('no bulk doc')
+
+        bulk_doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
+        # What if the doc in this bulk collection is outdated? maybe we can catch each code on airport lookup and validate it?
+
+        if not bulk_doc:
+            print('No bulk doc found in airport bulk collection for ICAO', ICAO_airport_code)
+            # TODO search suggestions: Should this fetch using faa weather api and then insert that into bulk doc??
+            return None
+        
+        IATA_airport_code = bulk_doc.get('iata')
+        airportName = bulk_doc.get('airport')
+        regionName = bulk_doc.get('region_name')
+        countryCode = bulk_doc.get('country_code')
         
         new_airport_cache_doc = new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
         if new_airport_cache_doc:
@@ -230,25 +315,26 @@ class ExhaustionCriteria():
                 }
             }
 
-    def backend_flight_query(self, query_val, collection_flights):
+    def backend_flight_query(self, flightID: str):
         find_crit = {
             "versions.version_created_at": {"$exists": True},
             "flightID": {"$regex": "your_regex_pattern"}
         }
         return_crit = {'flightID':1,'_id':0}
+        
         flightIDs = list(collection_flights.find(find_crit, return_crit))
 
         
         # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
-        if query_val[:2] == 'DL':       # temporary fix for delta flights
-            query_val = 'DAL'+query_val[2:]
-        elif query_val[:2] == 'AA' and query_val[:3]!='AAL':       # temporary fix for american flights
-            query_val = 'AAL'+query_val[2:]
+        if flightID[:2] == 'DL':       # temporary fix for delta flights
+            flightID = 'DAL'+flightID[2:]
+        elif flightID[:2] == 'AA' and flightID[:3]!='AAL':       # temporary fix for american flights
+            flightID = 'AAL'+flightID[2:]
         # N-numbers returns errors on submits.
         return_crit = {'flightID': 1}
 
 
-        flight_docs = collection_flights.find({'flightID': {'$regex':query_val}}, return_crit).limit(10)
+        flight_docs = collection_flights.find({'flightID': {'$regex':flightID}}, return_crit).limit(10)
         search_index = []
         for i in flight_docs:
             search_index.append({

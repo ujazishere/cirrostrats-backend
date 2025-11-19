@@ -7,7 +7,8 @@ from core.flight_aware_data_pull import Flight_aware_pull
 from core.tests.mock_test_data import Mock_data
 from core.dep_des import Pull_flight_info
 from core.flight_deets_pre_processor import response_filter
-from core.root_class import Fetching_Mechanism, Source_links_and_api
+from core.api.source_links_and_api import Source_links_and_api
+from core.root_class import Fetching_Mechanism
 from core.search.query_classifier import QueryClassifier
 from models.model import FlightStatsResponse
 from services.notification_service import send_telegram_notification_service

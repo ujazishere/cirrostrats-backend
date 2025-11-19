@@ -362,28 +362,18 @@ class Mock_data:
             ],
         }
 
-        self.collection_airports_cache_legacy = [
-            {'_id': ObjectId('66176711170d1d57a24df6a5'),
-            'name': 'Troy Municipal At N Kenneth Campbell Field Airport',
-            'code': 'TOI'}
-        ] 
+        self.airport_bulk_collection_uj_mock = {
+            '_id': ObjectId('682b8b09ac81f9a838426fcb'),
+            'country_code': 'US',
+            'region_name': 'New Jersey',
+            'iata': 'EWR',
+            'icao': 'KEWR',
+            'airport': 'Newark Liberty International Airport',
+            'latitude': 40.6925,
+            'longitude': -74.1686
+            }
 
-        self.collection_weather_legacy = {
-            '_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
-            'airport_id': ObjectId('66176711170d1d57a24dfc58'),
-            'code': 'PHL',
-            'weather': {
-                'datis': {
-                    'combined': 'N/A',
-                    'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
-                    'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
-                },
-                'metar': 'METAR KPHL 282054Z VRB05KT 10SM FEW042 FEW270 29/15 A3006 RMK AO2 SLP177 T02940150 55004 $',
-                'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'
-            },
-            'ICAO': 'KPHL'
-        }
-        self.new_airport_cache_collection = {
+        self.new_airport_cache_collection_mock = {
             '_id': ObjectId('690abf879832368ab25c25b5'),
             'IATA': 'EWR',
             'ICAO': 'KEWR',
@@ -413,6 +403,30 @@ class Mock_data:
                 'FlightID': 'UA1733'},
         ]
 
+    # **************************************************************
+
+        # ***** DEPRECATED COLLECTIONS *****
+        self.collection_airports_cache_legacy = [
+            {'_id': ObjectId('66176711170d1d57a24df6a5'),
+            'name': 'Troy Municipal At N Kenneth Campbell Field Airport',
+            'code': 'TOI'}
+        ] 
+
+        self.collection_weather_legacy = {
+            '_id': ObjectId('66b8fb323bb8c0e553b1ce79'),
+            'airport_id': ObjectId('66176711170d1d57a24dfc58'),
+            'code': 'PHL',
+            'weather': {
+                'datis': {
+                    'combined': 'N/A',
+                    'arr': 'PHL ARR INFO K 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). SIMUL APCHS TO INTERSECTING RWYS. ARRIVALS EXPECT ILS APCH RWY 27R, VISUAL APPROACH RWY 35. NOTAMS... ILS RWY 26 OTS, RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. ADZ GATE ASSIGNMENT TO APPROACH CTL ON INITIAL CTC. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO K.',
+                    'dep': 'PHL DEP INFO X 2054Z. VRB05KT 10SM FEW042 FEW270 29/15 A3006 (THREE ZERO ZERO SIX). DEPG 27L, RWY 35. NOTAMS... RY 27L PAPI OTS. TWY P CLSD BTN, TWY, W AND TWY N . .. TWY U CLSD BTN, TWY, P AND TWY S . .. TWY T CLSD, BTN RWY, 27R AND TWY P . TWY E CLSD, BTN RWY, 35 AND TWY B . TWY E1 CLSD, TWY E2 CLSD TWY S4 CLSD . RWY 9 RIGHT HOLD PAD CLSD. TOWER FREQ 118.5 FOR ALL RUNWAYS. PAJA IN PROGRESS 7 NM SE OF SPUDS INT AT CKZ AOB 14500 ALL ACFT USE CAUTION. ...ADVS YOU HAVE INFO X.'
+                },
+                'metar': 'METAR KPHL 282054Z VRB05KT 10SM FEW042 FEW270 29/15 A3006 RMK AO2 SLP177 T02940150 55004 $',
+                'taf': 'TAF KPHL 282116Z 2821/2924 32004KT P6SM FEW250 \n  FM282300 VRB02KT P6SM SKC \n  FM291000 05005KT P6SM SCT250 \n  FM291800 08004KT P6SM BKN250\n'
+            },
+            'ICAO': 'KPHL'
+        }
 
 class MockTestSubmits:
     def __init__(self):

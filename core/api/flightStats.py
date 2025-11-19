@@ -159,6 +159,23 @@ class FlightStatsExtractor:
     # tc(test_soups[0])
 
 
+    def ticket_card_extracts_v2(self, soup_fs):
+        """
+        Extracts flight information from the ticket card using a more robust approach.
+        """
+        extracts = []
+        for i in soup_fs:
+            extracts.append(i.text)
+        if len(extracts) < 13:
+            print('Validation failed: not enough data extracted from the ticket card. Continuation would result in index error.')
+            # Save soup, flight number, datetime, etca  log error. Investigate later.
+            print('flight not found')
+            logger.error('FlightStatsExtractor.tc_extracts: Not enough data extracted from the ticket card. required 13.')
+            logger.error(f"Extracted data: {extracts}")
+            return
+        return extracts    
+
+
 class FlightStatsScraper:
     def __init__(self):
         self.extractor = FlightStatsExtractor()

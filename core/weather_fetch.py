@@ -5,7 +5,8 @@ import requests
 
 from config.database import collection_weather_cache_legacy,collection_airports_cache_legacy
 from core.weather_parse import Weather_parse
-from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
+from core.api.source_links_and_api import Source_links_and_api
+from core.root_class import Root_class, Fetching_Mechanism
 from services.notification_service import send_telegram_notification_service
 
 class Weather_processor:

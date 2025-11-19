@@ -1,7 +1,8 @@
 """
 # This is the jupyter code to initialize  collections
 from config.database import collection, collection_weather
-from routes.root.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
+from core.api.source_links_and_api import Source_links_and_api
+from routes.root.root_class import Root_class, Fetching_Mechanism
 from bson import ObjectId
 import requests
 import datetime as dt
@@ -53,7 +54,8 @@ def mdb_updates(resp_dict: dict, type_of_weather):
 """ *** This file serves as a document and guide only ***"""
 
 from config.database import collection_airports_cache_legacy, collection_weather
-from core.root_class import Root_class, Fetching_Mechanism, Source_links_and_api
+from core.api.source_links_and_api import Source_links_and_api
+from core.root_class import Root_class, Fetching_Mechanism
 from bson import ObjectId
 import requests
 import datetime as dt

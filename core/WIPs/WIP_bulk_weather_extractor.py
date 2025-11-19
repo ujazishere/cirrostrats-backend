@@ -40,7 +40,8 @@ import os
 import pickle
 import requests
 
-from core.root_class import Source_links_and_api
+
+from core.api.source_links_and_api import Source_links_and_api
 from services.notification_service import send_telegram_notification_service
 from core.weather_fetch import Bulk_weather_fetch
 

@@ -3,23 +3,32 @@ import logging
 import xml.etree.ElementTree as ET
 from pymongo import ReplaceOne, UpdateOne
 import requests
-from core.root_class import AirportValidation
 
+from core.root_class import AirportValidation
+from core.api.source_links_and_api import Source_links_and_api
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 class NASExtracts:
 
-    def nas_xml_fetch(self,):
-        nas = "https://nasstatus.faa.gov/api/airport-status-information"
-        response = requests.get(nas)
+    def nas_raw_xml_fetch(self,):
+        nas_url = Source_links_and_api().nas_raw_xml_fetch()
+        response = requests.get(nas_url)
+        if response.status_code != 200:
+            logger.error(f"Failed to fetch NAS raw XML data. Status code: {response.status_code}")
+            return None
+        if response.status_code == 200:
+            pass
+            # logger.info(f"Successfully fetched NAS raw XML data. Status code: {response.status_code}")
+            # TODO test: prometheus: The idea is to compare the amount of request successful vs failed and log it. if ratio is too high, fire a notification.
+
         xml_data = response.content
         return xml_data
 
 
     def nas_xml_processor(self):
 
-        xml_raw_data = self.nas_xml_fetch()
+        xml_raw_data = self.nas_raw_xml_fetch()
 
         root = ET.fromstring(xml_raw_data) 
         update_time = root[0].text
@@ -127,12 +136,10 @@ class NAS:
         av= AirportValidation()
         if is_single_airport:
             # TODO weather: Why are you requesting iata code for a iata request? to validate if the code exists?
-            print('NAS', airport_id)
             airport_data = av.validate_airport_code(airport_code=airport_id, iata_return=True, supplied_param_type='NAS IATA airport')
             if not airport_data:
                 logger.info(f'Could not validate airport code to return IATA code for nas fetching supplied code: {airport_id}')
                 return
-            print('could ', airport_data)
             departure_iata_code = airport_data.get('iata')      # Naming singular airport as departure since it feeds through without complications
             destination_iata_code = None
         else:

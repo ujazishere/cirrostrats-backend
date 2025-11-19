@@ -150,13 +150,14 @@ async def get_mdb_airport_data_service(**kwargs):
     elif not new_airport_cache_doc and ICAOAirportCode:       # New ICAO provided not found in mdb airport cache? fetch live abd aksi save it in airport cache?
         weather = await liveAirportWeather_service(ICAO_code_to_fetch=ICAOAirportCode)
         if weather:
+            # TODO insert into airport cache collection
             return weather
     
     
 async def liveAirportWeather_service(ICAO_code_to_fetch):
     """ Airport code can be either icao or iata. If its iata it will be converted to icao.
         Fetches live weather from source using icao airport code and returns it."""
-    sleep(1)
+    # sleep(3)
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
     swf  = Singular_weather_fetch()
     weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch=ICAO_code_to_fetch)
