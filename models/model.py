@@ -46,10 +46,10 @@ def validate_IATA_airport_code(v: str) -> str:
     return v
 
 def validate_fs_delay_status(v: str) -> str:
-    allowed_statuses = ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed']
+    allowed_statuses = ['On time', 'Scheduled', 'Delayed', 'Estimated', 'Departed', 'Cancelled']
 
     # Regex for: "Delayed by <number> minute(s) ago or just <number>m"
-    delayed_pattern = re.compile(r"^Delayed by (\d+)(?: minutes? ago|m)$")
+    delayed_pattern = re.compile(r"^Delayed by (?:(?:\d+h\s*)?(?:\d+m)?|\d+ minutes? ago)$")
 
     if v in allowed_statuses:
         return v
