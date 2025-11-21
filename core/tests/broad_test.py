@@ -63,7 +63,7 @@ class Broad_test:
         pass
 
     def weather_test(self):
-        """Test that weather data for PHL is fresh (within last 2 hours)"""
+        """Test that weather data for to 5 airports is fresh (within last 2 hours)"""
 
         current_utc = datetime.now(timezone.utc)
         two_hours_ago = current_utc - timedelta(hours=3)
@@ -84,7 +84,7 @@ class Broad_test:
             weather_data = weather_doc.get('weather', {})
 
             """
-            # TODO test: Regular expressions for METAR, TAF, and DATIS to be used for validation later
+            # TODO test: Regular expressions for METAR, TAF, and DATIS to be used for validation later. Learn from the error injection in weather delivery to frontend.
             metar_regex = re.compile(rf"^(?:METAR\s+|SPECI\s+)?{code}\s+\d{{6}}Z")
             taf_regex = re.compile(rf"^TAF\s+{code}\s+\d{{6}}Z")
             datis_regex = re.compile(rf"^{code}\s+ATIS\s+INFO\s+[A-Z]\s+\d{{4}}Z(?:\s+SPECIAL)?")

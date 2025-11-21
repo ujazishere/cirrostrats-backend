@@ -1,4 +1,3 @@
-from core.search.query_classifier import QueryClassifier
 from services.flight_aggregator_service import aws_jms_service,flight_stats_url_service,aviation_stack_service,flight_aware_w_auth_service,get_edct_info_service
 
 from fastapi import APIRouter

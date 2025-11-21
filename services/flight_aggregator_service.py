@@ -19,45 +19,52 @@ logger = logging.getLogger()
 qc = QueryClassifier()
 
 async def aws_jms_service(flightID, mock=False):
-    # TODO HP: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
+    """ 
+    This section parses the flightID to get the proper ICAO airline code and flight number for JMS fetching.
+    Many frontend users are used to 2 char IATA airline designator code
+        for e.g - UA, AA, DL, B6, -- United, American, Delta, Jet Blue
+        Their associated 3 char ICAO is UAL, AAL, DAL, JBU
+
+    So if flightID is UA1234, it will parse to  UAL1234 since
+    data in JMS is saved with 3 char ICAO airline designator
+    """
+    # TODO reliability: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch within JMS.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
 
-    # TODO VHP: Can this not be handled in the frontend in ts or nodejs itself to avoid an extra call?
-                # parse_query possibly can be written in ts/node but regardlesss this func would have to be called the same amount?
-                #  So better let backend handle it since its server side(reduces frontend processing?) and secure?
-    # TODO: This airlinecode parsing is dangerous. Fix it. 
-    
-    """ This section parses the flightID to get the proper airline code and flight number for fetching.
-        Frontend users are used to 2 char IATA airline designator code
-            for e.g - UA, AA, DL, B6, -- United, American, Delta, Jet Blue
-            Their equivalent 3 char ICAO is UAL, AAL, DAL, JBU, -- United, American, Delta, Jet Blue
-
-        So if flightID is UA1234, it will parse to  UAL1234 since
-        data in JMS is saved with 3 char ICAO airline designator
-    """
-    if flightID:
-        value = qc.parse_query(flightID).get('value')
-        ac = value.get('airline_code')
-        fn = value.get('flight_number')
-        # TODO VHP: This is error prone such that UA can be GJS, UCA, SKY, RPA and such from flightstats.
-        # One way to present multiple result is through scroll right below the searchbar for multiple digits.
-        if ac =='UA':                # could be (GJS/G7), (UCA/C5), SKY, RPA or mesa(ASH/YV) flights. 
-            # TODO search suggestions: What about part 91 repo flights? those show as UA but use flightStats?
-            flightID = "UAL"+fn
-        elif ac == 'DL':            # could be EDV, RPA or SKW flights.
-            flightID = "DAL"+fn
-        elif ac == 'AA':
+    # TODO search suggestion:
+        # This functing may be called straight from frontend with IATA code? -- need to verify this
+        # VHP: This is error prone such that UA can be GJS, UCA, SKY, RPA and such from flightstats.
+            # could be (GJS/G7), (UCA/C5), SKY, RPA or mesa(ASH/YV) flights. 
             # try to look for AAL, ENY, JIA, PDT - for Envoy, PSA and Piedmont flights. Could also be Skywest or republic flights.
-                # if found more than one flightID then let user select the correct one. Also use the base AA for flightStats search.
-            flightID = "AAL"+fn
+        # One way to present multiple result is through scroll right below the searchbar for multiple digits.
+            # if found more than one flightID then let user select the correct one from multiple chouse on search submit.
+        # What about part 91 repo flights? those show as UA but use flightStats?
+    if flightID:
+        # Whole point of this condition is to get associated ICAO using IATA
+        parsed_flight_category = qc.parse_flight_query(flightID).get('value')
+        code_type = parsed_flight_category.get('code_type')
+        IATA_airline_code = parsed_flight_category.get('IATA_airline_code')         # Not sure yet how this is appropriate yet but seems like it is - one IATA with multiple regionals ICAO.
+        ICAO_airline_code = parsed_flight_category.get('ICAO_airline_code') 
+        flight_number = parsed_flight_category.get('flight_number') 
+
+        flightID = ICAO_airline_code+flight_number          # This will account for UA, DL and AA along with all others
+        if code_type and code_type == 'ICAO':
+            codes = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
+            if ICAO_airline_code in codes.keys():
+                associated_major_IATA_airline_code = codes.get(ICAO_airline_code)
+                flightID = associated_major_IATA_airline_code + flight_number
+    else:
+        return
+
+
 
 
     """ Once the flightID is cleaned up its sent to the JMS API to get flight data.
-        The returns from this API has a lot of complexity and this section cleans up to return only the essential/appropriate data.
         JMS saves data into mongoDB as well - collection_flights 
-        Only reason JMS is used instead of collection_flights is because
-        Redis data in JMS is realtime vs jms->collection is saved every few minutes so data in JMS is more current compared to collection.
+        NOTE: Only reason JMS is used instead of collection_flights is because
+            Redis data in JMS is realtime vs jms->collection is saved every few minutes so data in JMS is more current compared to collection.
+        The returns from this API has a lot of complexity and this section cleans up to return only the essential/appropriate data.
 
     """
     returns = {}
@@ -142,14 +149,37 @@ async def aws_jms_service(flightID, mock=False):
     return returns
 
 
-async def flight_stats_url_service(flightID):      # time zone pull
+async def flight_stats_url_service(flightID):
+    """
+    Fetches and validates FlightStats data for a given flight ID.
+
+    Args:
+        flightID (str): The flight identifier for e.g UA4433.
+
+    Returns:
+        dict or None: Returns a dictionary of validated FlightStats flight information if available and valid,
+        otherwise returns None. The dictionary includes keys such as 'flightStatsFlightID', 'flightStatsDelayStatus',
+        'flightStatsOrigin', 'flightStatsDestination', 'flightStatsOriginGate', 'flightStatsDestinationGate',
+        'flightStatsScheduledDepartureDate', 'flightStatsScheduledDepartureTime', 
+        'flightStatsEstimatedDepartureTime', 'flightStatsActualDepartureTime', 
+        'flightStatsScheduledArrivalTime', 'flightStatsActualArrivalTime', etc.
+
+    Side Effects:
+        Sends a telegram notification and logs validation errors if required data is missing.
+
+    Notes:
+        - Attempts to match major ICAO to IATA codes for raw submits.
+        - Falls back to error handling/reporting if the necessary data is unavailable.
+    """
     flightID = flightID.upper()
 
     flt_info = Pull_flight_info()
-    airline_code, flightID_digits = qc.prepare_flight_id_for_webscraping(flightID=flightID)
+    # TODO search suggestions: account for this in major icao_to_iata match
+            # For raw submits IATA goes to flightstats first. 
+                # UA4433 search digits related to United and united regionals - SKW, RPA, GJS, mesa or commuteair. compare flightstats airport returns with jms to determine
+                # What is the fallback?
     
-    fs_departure_arr_time_zone = flt_info.flightstats_dep_arr_timezone_pull(
-        airline_code=airline_code,flt_num_query=flightID_digits,)
+    fs_departure_arr_time_zone = flt_info.flightStats_data_frontend_format(flightID)
     if fs_departure_arr_time_zone:
         try : 
             validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)

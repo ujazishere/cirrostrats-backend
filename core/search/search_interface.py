@@ -4,33 +4,19 @@ from models.model import AirportCache
 from core.api.source_links_and_api import Source_links_and_api
 from core.search.query_classifier import QueryClassifier
 
-from config.database import airport_bulk_collection_uj, collection_flights, new_airport_cache_collection
+from config.database import airport_bulk_collection_uj, collection_flights, gate_rows_collection, new_airport_cache_collection
 
 class SearchInterface(QueryClassifier):
+    # TODO search: This class is not used anymore. It is should be deprecated or ExhaustionCriteria should be integrated into this class.
     def __init__(self):
         """ An interface for collection search suggestions and query submission and processing between frontend and backend."""
         super().__init__()
-        pass
-
-
-    def standardize_types(self, val_type):
-        """Ensure consistent type naming across platform"""
-        TYPE_STANDARDS = {
-            'Flight': 'flight',
-            'FLIGHT': 'flight', 
-            'flightNumbers': 'flight',
-            'flightId': 'flight',
-            'Airport': 'airport',
-            'AIRPORT': 'airport',
-            'Terminal/Gate': 'terminal',
-            'gate': 'terminal',
-            'Gate': 'terminal'
-        }
-
-        return TYPE_STANDARDS.get(val_type, val_type.lower())
 
 
     def raw_submit_handler(self, search):
+        # TODO search:
+            # This is remaining - to be integrated thru exhaustionCriteria for formatting instead of handeling formating here.
+
         """ the raw submit is supposed to return frontend formatted reference_id, display and type for
             /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
             contain similar format with display field for display and search within fuzzfind"""
@@ -50,6 +36,8 @@ class SearchInterface(QueryClassifier):
 
     def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):
 
+        # TODO search: used in raw submit, maybe this is not needed try using exhaustionCriteria instead?
+
         query_field = query_val = query_type = None
         if parsed_query_cat_field == 'airport':
             query_field, query_val, query_type = 'airport', pq_val, 'airport'
@@ -58,7 +46,7 @@ class SearchInterface(QueryClassifier):
                 fid_st = pq_val.get('airline_code') + pq_val.get('flight_number')
                 query_field, query_val, query_type = 'flightID', fid_st, 'flight'
             else:
-                self.temporary_n_number_parse_query(query=pq_val)
+                self.temporary_n_number_parse_query(query=pq_val)       # ****** DEPRECATED *****
                 query_field, query_val, query_type = 'nnumber', pq_val, 'flight'
         
         elif parsed_query_cat_field == 'digits':
@@ -80,13 +68,9 @@ class SearchInterface(QueryClassifier):
 
 
     def query_type_frontend_conversion(self,doc):
-
-        # TODO serach suggestions:
-            # Parse query in exhaustion uses this function on top section.
-            # raw submit also uses this function
+        # TODO search: used in raw submit, maybe this is not needed try using exhaustionCriteria instead?
 
         """ suggestions delivery """
-
 
         """
         Legacy:
@@ -181,10 +165,15 @@ class ExhaustionCriteria():
     def __init__(self) -> None:
         pass
 
-    # Aviation weather response parsing for airport_cache_collection
     
     def parse_aviation_weather_airport_info_response(self, api_data):
-        """Parse the text-based API response from aviationweather.gov"""
+        """
+        Parses the text-based API response from aviationweather.gov's airport info endpoint
+        for use in the airport_cache_collection.
+
+        See also: `faa_airport_info_fetch` for fetching FAA airport info directly.
+        """
+
         parsed = {}
         
         lines = api_data.strip().split('\n')
@@ -221,10 +210,13 @@ class ExhaustionCriteria():
     
     
     async def faa_airport_info_fetch(self, ICAO_airport_code):
-        # TODO: This probably doesn't belong here  maybe abstract this and faa fetch to some other file?
+        """ Suggestions cache format for airport search suggestions fetched directly from FAA for both airport info itself and weather """
 
-        # bulk_doc = airport_bulk_collection_uj.find_one({'icao':ICAO_airport_code})
-        # if not bulk_doc:
+        # TODO search: This probably doesn't belong here  maybe abstract this and faa fetch to some other file or maybe within searchInterface?
+            # Idea for it to ack as a fallback for airport cache collection and weather fetch when theres none available in bulk airport collection.
+            # TODO extended: account for variations in lookup - 'airport info {ICAO}` `airport info {IATA}` `airport info {airportName}` `airport info {city, state, country}` etc.
+            # or `DATIS/weather/taf/metar ?(for/info) {ICAO}` `weather/taf/metar ?(for/info) {IATA}` `weather/taf/metar ?(for/info) {airportName}` `weather/taf/metar ?(for/info) {city, state, country}` etc.
+
         faa_weather_link = Source_links_and_api().airport_info_faa(ICAO_airport_code)
         response = requests.get(faa_weather_link)
         
@@ -239,35 +231,26 @@ class ExhaustionCriteria():
             return
         update_doc = self.parse_aviation_weather_airport_info_response(api_data=data)
     
-            # print(json.loads(response.content))
-        # else:
-        #     update_doc = {
-        #         'IATA': bulk_doc['iata'],
-        #         'ICAO': bulk_doc['icao'],
-        #         'airportName': bulk_doc['airport'],
-        #         'regionName': bulk_doc['region_name'],
-        #         'countryCode': bulk_doc['country_code'],
-        #         'weather': {}
-        #     }
         AirportCache(**update_doc)
     
         swf  = Singular_weather_fetch()
         weather_dict = await swf.async_weather_dict(update_doc['ICAO'])
         update_doc['weather'] = weather_dict
         return update_doc
-    # await faa_weather_fetch('KSMQ')
-    # await faa_weather_fetch('C-29')
     
 
     def airport_cache_insertion(self, ICAO_airport_code):
-        # TODO search suggestions: This should only work for search submits and not for suggestions.
+        """ Inserts airport cache format doc into the new_airport_cache_collection
+            currently only queries bulk collection for ICAO code and inserts into new_airport_cache_collection.
+            # TODO search suggestions: This should only work for search submits and not for suggestions.
+                # Should this fetch using faa weather api and then insert that into bulk doc??
+        """
 
         bulk_doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
         # What if the doc in this bulk collection is outdated? maybe we can catch each code on airport lookup and validate it?
 
         if not bulk_doc:
             print('No bulk doc found in airport bulk collection for ICAO', ICAO_airport_code)
-            # TODO search suggestions: Should this fetch using faa weather api and then insert that into bulk doc??
             return None
         
         IATA_airport_code = bulk_doc.get('iata')
@@ -275,6 +258,7 @@ class ExhaustionCriteria():
         regionName = bulk_doc.get('region_name')
         countryCode = bulk_doc.get('country_code')
         
+        # TODO search suggestions: New airport Cache collection is not accounted for in broad_test weather test. Need to change from legacy collection to new collection there.
         new_airport_cache_doc = new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
         if new_airport_cache_doc:
             return new_airport_cache_doc
@@ -291,8 +275,8 @@ class ExhaustionCriteria():
             return new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
         
         
-    def ICAO_airport_suggestions_format(self, ICAO_airport_code):
-        """ Takes in US/CA ICAO airports parsed through parse_query and formats them for suggestions collection insertion."""
+    def extended_ICAO_airport_suggestions(self, ICAO_airport_code):
+        """ Takes in (possibly random) US/CA ICAO airports parsed through parse_query and formats them for suggestions collection insertion."""
         
         # Idea is if you found it insert it in airports cache,
         doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
@@ -315,36 +299,149 @@ class ExhaustionCriteria():
                 }
             }
 
-    def backend_flight_query(self, flightID: str):
+    def extended_flight_suggestions(self, parsed_flight_category: str|dict):
+        """ Extensive and impressive flight suggestions formatter for frontend delivery check comments for more details."""
+        # TODO search suggestion: 
+                # Currently only used for search suggestion
+                # For use in suggestions formating:
+                    # display : ICAO/d (IATA/d) only known carriers - GJS, UCA, EDV, ENY, JIA, PDT
+                        # e.g
+                            # GJS4433 (UA4433) - G7
+                            # UCA4938 (UA4938) - C5
+                            # EDV4628 (DL4628) - 9E
+            # user selects dropdown its ICAO matches straight with JMS
+            # flightstats IATA  for all airlines e.g SKW9887 should go to UA, DL and AA altogether to compare dep and dest with times.
+
+        """ Parsing the flight category into a regex for flightID lookup """
+        if isinstance(parsed_flight_category, str):       # accounts for type as nNumber,digits and internationals codes as fallback - value is string
+            regex_flight_lookup = parsed_flight_category
+        elif isinstance(parsed_flight_category, dict):        # type as flight - value is dicts for US based IATA and ICAO and major associated ICAO handling
+            derived_code_type = parsed_flight_category.get('code_type') 
+            IATA_airline_code = parsed_flight_category.get('IATA_airline_code') 
+            flight_number = parsed_flight_category.get('flight_number') 
+            if derived_code_type == 'IATA' and IATA_airline_code in ['UA','DL','AA']:       # major associated
+                # This section assigns regionals to associated major 
+                major = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
+                major_associated_ICAO_codes = major.get(IATA_airline_code)
+                regex_flight_lookup = f"({'|'.join(major_associated_ICAO_codes)}){flight_number}"
+            elif derived_code_type == 'IATA' or derived_code_type == 'ICAO':        # fallback to all others
+                ICAO_flightID = parsed_flight_category.get('ICAO_airline_code') + parsed_flight_category.get('flight_number')
+                regex_flight_lookup = ICAO_flightID
+            
+
+        """ Querying the collection_flights collection for flightID matches using the previously parsed regex_flight_lookup """
         find_crit = {
             "versions.version_created_at": {"$exists": True},
-            "flightID": {"$regex": "your_regex_pattern"}
+            "flightID": {"$regex": regex_flight_lookup}
         }
         return_crit = {'flightID':1,'_id':0}
-        
-        flightIDs = list(collection_flights.find(find_crit, return_crit))
+            # TODO search suggestions: See here we can add fields with ICAO/IATA airline codes as customary so for commuteair, gojet can do UA and endevor can do DL and so on?
 
-        
-        # TODO: This is a temporary fix, need to implement a better way. this wont work not ICAO prepended lookups maybe?
-        if flightID[:2] == 'DL':       # temporary fix for delta flights
-            flightID = 'DAL'+flightID[2:]
-        elif flightID[:2] == 'AA' and flightID[:3]!='AAL':       # temporary fix for american flights
-            flightID = 'AAL'+flightID[2:]
-        # N-numbers returns errors on submits.
-        return_crit = {'flightID': 1}
+        flight_docs = collection_flights.find(find_crit, return_crit).limit(5)
 
+        suggestions_cache = []
+        for each_flight_doc in flight_docs:
+            fetched_ICAO_flightID = each_flight_doc['flightID']
+            IATA_flightID = associated_major_IATA_airline_code = None
+            display = fetched_ICAO_flightID         # preset it as is first so we can account for all extra ICAO possible returns - nNumbers and internationals
+            # displaySimilarity = []        # TODO search suggestion: account for this for digit matching? low priority for now account major ones
+            # NOTE: Doing this again as this seems more robust than reusing the parse_flight_query since it will only validate ICAO/IATA instead of digits and nNnumbers
+            parsed_flight_category = QueryClassifier().parse_flight_query(flight_query=fetched_ICAO_flightID)
+            if parsed_flight_category:
+                derived_code_type = parsed_flight_category.get('code_type') 
+                IATA_airline_code = parsed_flight_category.get('IATA_airline_code') 
+                ICAO_airline_code = parsed_flight_category.get('ICAO_airline_code') 
+                flight_number = parsed_flight_category.get('flight_number') 
+                major = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
+                if derived_code_type == 'ICAO' and ICAO_airline_code in major.keys():       # major associated ICAO to IATA conversion for display assignment
+                    major_associated_IATA_code = major.get(ICAO_airline_code)
+                    IATA_flightID = major_associated_IATA_code + flight_number
+                    display = f"{fetched_ICAO_flightID} ({IATA_flightID}) - {IATA_airline_code}"
+                else:
+                    IATA_flightID = IATA_airline_code + flight_number
+                    display = f"{fetched_ICAO_flightID} ({IATA_flightID}) - {IATA_airline_code}"
 
-        flight_docs = collection_flights.find({'flightID': {'$regex':flightID}}, return_crit).limit(10)
-        search_index = []
-        for i in flight_docs:
-            search_index.append({
+            suggestions_cache.append({
                 'type': 'flight',
-                'display': i['flightID'],        # Merge code and name for display
-                'referenceId': str(i['_id']),
+                'display': display,        # Merge code and name for display
+                # 'referenceId': str(i['_id']),
                 'metadata': {
-                    'flightID': i['flightID'],
+                    'ICAOFlightID': fetched_ICAO_flightID,
+                    'IATAFlightID': IATA_flightID,
+                    'majorFlightID': associated_major_IATA_airline_code,
                 }
             })
-        return search_index
+
+        return suggestions_cache
 
         
+    def extended_airport_suggestions(self, airport_query):
+        """ Airport suggestions formatter for frontend delivery -
+        Queries airport bulk collection for US and CA airports, matches them using airport name, ICAO and IATA codes """
+
+        case_insensitive_regex_find = {'$regex':airport_query, '$options': 'i'}
+        
+        # Looking for the query in airportName, icao, iata from the aiport bulk collection.
+        airport_docs = list(airport_bulk_collection_uj.find({
+            "$or": [
+                {"airport": case_insensitive_regex_find},
+                {"icao": case_insensitive_regex_find},
+                {"iata": case_insensitive_regex_find}
+            ],
+            "country_code": {"$in": ["US", "CA"]}
+        }).limit(5))
+
+        suggestions_cache = []
+        if not airport_docs:
+            print('No airport docs found in airport bulk collection for query',airport_query)
+            return []
+        
+        for i in airport_docs:
+            print('i airport docs',i)
+            IATA_airport_code = i.get('iata')
+            ICAO_airport_code = i.get('icao')
+            airportName = i.get('airport')
+
+            # All these cannot be nan/null/Nonect_code)
+            if not IATA_airport_code or not ICAO_airport_code or not airportName:
+                print('Skipping airport doc because something is None')
+                continue
+                # Note: Some airport values have null/nan/None values and those are discarded. But what if we want to show them? for example iata: OTT has not ICAO code what if we want to show? but why? we cant even get weather for it if theres no ICAO,
+            suggestions_cache.append({
+                # 'referenceId': str(ObjectId()),
+                'type': 'airport',
+                'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
+                'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
+                'popularityScore': 1.0,
+                'metadata': {
+                    'ICAO': ICAO_airport_code,
+                }
+            })
+        return suggestions_cache
+    
+    def extended_gate_suggestions(self, gate_query):
+        """ Gate suggestions formatter for frontend delivery -
+        Queries gate_rows_collection for gate matches using gate itself for e.g C101 """
+
+        find_crit = {'Gate': {'$regex': gate_query}}
+        gates = gate_rows_collection.distinct('Gate', find_crit)
+        print('within gates', gates)
+        if gates:
+            suggestions_cache = []
+            for gate in gates:
+                display = f"EWR - {gate} Departures"
+                suggestions_cache.append(
+                    {
+                        'type': 'gate',
+                        'display': display,
+                        'displaySimilarity': [],
+                        'popularityScore': 1.0,
+                        'metadata': {
+                            'gate': gate,
+                        }
+
+                    }
+                )
+            return suggestions_cache
+
+

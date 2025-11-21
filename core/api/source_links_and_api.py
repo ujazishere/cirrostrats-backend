@@ -10,24 +10,9 @@ class Source_links_and_api:
         # "https://flyrichmond.com/"
 
     
-    def popular_ICAO_airline_codes(self):
-        """ Returns 50 most popular ICAO airline codes. """
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        print('script_dir', script_dir)
-        default_icao_path = os.path.normpath(os.path.join(script_dir, '..', '..','data', 'unique_icao.json'))
-
-        with open(default_icao_path, 'r') as f:
-            icao_pops_all = json.load(f)
-        icao_list = [icao for icao, count in icao_pops_all.items() if len(icao) == 3]
-        ICAO_airline_codes = '|'.join(icao_list[1:50])
-
-        return ICAO_airline_codes
-
-    
     def datis_stations(self) -> str:
         """ Returns datis stations. Theres about 76 datis stations that publish D-ATIS data typically every hour """
         return 'https://datis.clowd.io/api/stations'
-
 
     def airport_info_faa(self, ICAO_airport_code) -> str:
         # TODO weather: This needs to be integrated with cache. mind uppercase for airportName.
@@ -35,7 +20,6 @@ class Source_links_and_api:
         e.g - https://aviationweather.gov/api/data/airport?ids=KEWR
         """
         return f"https://aviationweather.gov/api/data/airport?ids={ICAO_airport_code}"
-
 
     def weather(self, weather_type,ICAO_airport_code) -> dict:
         """ given type of weather returns the link for fetching.
@@ -51,19 +35,124 @@ class Source_links_and_api:
         url = urls.get(weather_type)
         return url
 
-
     def nas_raw_xml_fetch(self):
         return "https://nasstatus.faa.gov/api/airport-status-information"
+
+
+    def ICAO_to_IATA_airline_code_mapping(self):
+        """ A reverse of this exists as `IATA_to_ICAO...` """
+        return {
+            "UAL": "UA",
+            "GJS": 'G7',
+            "UCA": 'C5',
+            
+            "SKW": "OO",    # Could be United, delta or american.
+            "RPA": "YX",    # Could be American ro United
+            "ASH": "YV",    # Mesa Airlines
+            "AWI": "ZW",    # Air Wisconsin (United Express)
+
+            "DAL": "DL",
+            "EDV": '9E',
+
+            "AAL": "AA",
+            "ENY": 'MQ',
+            "JIA": 'OH',    # PSA Airlines (American Eagle)
+            "PDT": 'PT',    # Piedmont Airlines (American Eagle)
+
+            "SWA": "WN",    # Southwest Airlines
+            "FFT": "F9",    # Frontier Airlines
+            "JBU": "B6",    # JetBlue Airways
+            "AAY": "G4",    # Allegiant Air
+            "NKS": "NK",    # Spirit Airlines
+            "ACA": "AC",    # Air Canada
+            "ASA": "AS",    # Alaska Airlines
+            "GTI": "5Y",    # Atlas Air
+            "VXP": "XP",    # Avelo
+            "MXY": "MX",    # Breeze Airways
+            "SCX": "SY",    # Sun Country Airlines
+            "SIL": "3M",    # Silver Airways
+            "KAP": "9K",    # Cape Air
+
+            "FDX": "FX",    # FedEx Express
+            "UPS": "5X",
+            "CXK": "K4",    # Kalitta Air Cargo
+
+            "AJT": "M6",    # Amerijet International
+
+            "EJA": "1I",    # NetJets (Private)
+            "WJA": "WS",    # WestJet Canada
+            "LXJ": "",    # Flexjet (Private)
+            "QXE": "QX",    # Horizon Air
+        }
+
+    def IATA_to_ICAO_airline_code_mapping(self):
+        """ A reverse of this exists as `ICAO_to_IATA...` """
+        return {
+            'UA': 'UAL',
+            'G7': 'GJS',
+            'C5': 'UCA',
+            'OO': 'SKW',
+            'YX': 'RPA',
+            'YV': 'ASH',
+            'ZW': 'AWI',
+            'DL': 'DAL',
+            '9E': 'EDV',
+            'AA': 'AAL',
+            'MQ': 'ENY',
+            'OH': 'JIA',
+            'PT': 'PDT',
+            'WN': 'SWA',
+            'F9': 'FFT',
+            'B6': 'JBU',
+            'G4': 'AAY',
+            'NK': 'NKS',
+            'AC': 'ACA',
+            'AS': 'ASA',
+            '5Y': 'GTI',
+            'XP': 'VXP',
+            'MX': 'MXY',
+            'SY': 'SCX',
+            '3M': 'SIL',
+            '9K': 'KAP',
+            'FX': 'FDX',
+            '5X': 'UPS',
+            'K4': 'CXK',
+            'M6': 'AJT',
+            '1I': 'EJA',
+            'WS': 'WJA',
+            'QX': 'QXE'
+        }
+
+    def regional_ICAO_to_associated_major_IATA(self):
+        """ associated a major airline to a regional """
+        return {
+            'GJS':'UA',
+            'UCA':'UA',
+            'UAL':'UA',
+
+            'ENY':'AA',
+            'JIA':'AA',
+            'PDT':'AA',
+
+            'EDV':'DL',
+            'DAL':'DL',
+
+            'UA': ['GJS', 'UCA', 'UAL'],
+            'AA': ['ENY', 'JIA', 'PDT'],
+            'DL': ['EDV', 'DAL'],
+
+            # 'UA': ['GJS','UCA','UAL'],
+            # 'AA': ['ENY', 'JIA', 'PDT']
+            # 'DL': ['EDV', 'DAL'],
+        }
 
 
     def ua_dep_dest_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.
 
-
     def newark_airport(self):
         return "https://www.flightstats.com/airport/USKN/Newark"
-
 
     def flight_stats_url(self,flight_number):
         # TODO refactor: FlightStats URL for pulling flight status. Use this function
@@ -73,7 +162,6 @@ class Source_links_and_api:
         
         base_url = "https://www.flightstats.com/v2/flight-tracker/"
         return f"{base_url}UA/{flight_number}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
-
 
     def aviation_stack(self,flightID):
         # Aviation Stack api call. 3000 requests per month
@@ -96,7 +184,6 @@ class Source_links_and_api:
 
         
         return {url: {}}    # Is  the value supposed to serve as auth header?
-
 
     def flight_aware_w_auth_url(self,ICAO_flight_number):
         """ Returns flight aware link with auth header
@@ -125,9 +212,16 @@ class Source_links_and_api:
         return fa_url_w_auth
 
 
-    def flight_view_gate_info(self,flight_number:str ,departure_airport_code:str):
-        """ Deprecated """
-        date = Root_class().date_time(raw=True)
-        base_url = "https://www.flightview.com/flight-tracker/"
-        return f"{base_url}UA/{flight_number}?date={date}&depapt={departure_airport_code[1:]}"
+    def popular_ICAO_airline_codes(self):
+        # **** DEPRECATED *****
+        """ Returns JMS derived 50 most popular ICAO airline codes """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        print('script_dir', script_dir)
+        default_icao_path = os.path.normpath(os.path.join(script_dir, '..', '..','data', 'unique_icao.json'))
 
+        with open(default_icao_path, 'r') as f:
+            icao_pops_all = json.load(f)
+        icao_list = [icao for icao, count in icao_pops_all.items() if len(icao) == 3]
+        ICAO_airline_codes = '|'.join(icao_list[1:50])
+
+        return ICAO_airline_codes

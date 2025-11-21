@@ -1,31 +1,47 @@
 import logging
+from core.api.source_links_and_api import Source_links_and_api
 from core.root_class import Root_class
 from typing import Literal
+
+from core.search.query_classifier import QueryClassifier
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 ScrapeStatus = Literal['On time', 'Scheduled', 'Cancelled']
 
-# TODO Cleanup: Take this extractor out of the api. Api is only for scrapes and api fetches.
 class FlightStatsExtractor:
     def __init__(self):
-        """ Given Soup through `ticket_card` this class extracts airport Code, city, airport name,
-        scheduled time, estimated/actual time and terminal-gate and delay status."""
+        """Extractor for core flight details from a FlightStats `ticket_card`.
+
+        Given a BeautifulSoup document (provided via `ticket_card` / `ticket_card_extracts`),
+        this class is responsible purely for parsing and extracting:
+
+        - **Airport metadata**: code, city, airport name.
+        - **Timing data**: scheduled time, estimated/actual time.
+        - **Facility info**: terminal / gate and combined terminal-gate string.
+        - **Delay status**: high‑level status such as "On time", "Scheduled", "Cancelled".
+        # TODO flightStats: This may not be working checkout models.py for validation of this status
+
+        Network access is handled elsewhere (see `FlightStatsScraper`); this class
+        should remain focused on HTML parsing.
+        """
         # TODO: Jet blue code is B6 on flightstats use it for airline code.
     
     
     def delay_status(self,soup_fs) -> ScrapeStatus:
-        """
-        Extracts flight status (On time, Scheduled, Cancelled) from BeautifulSoup 
-        element with robust error handling.
-        
+        """Extract the high‑level delay / status label from the FlightStats header.
+
+        The status is read from the ticket header section and is expected to be one of
+        ``"On time"``, ``"Scheduled"`` or ``"Cancelled"``. If the HTML structure is
+        not as expected, the method logs the issue and returns ``None``.
+
         Args:
             th_element: BeautifulSoup element containing flight status information
             
         Returns:
-            single string one of three- On time, Scheduled, Cancelled
-            or None if not found
+            A string status (e.g. ``"On time"``, ``"Scheduled"``, ``"Cancelled"``)
+            or ``None`` if the status cannot be found or parsed.
         """
         th = soup_fs.select('[class*="ticket__Header"]')           # returns a list of classes that matches..
         try:
@@ -75,7 +91,21 @@ class FlightStatsExtractor:
     
 
     def ticket_card_extracts(self, tc:list):
-        
+        """Parse the raw ticket‑card info sections into a structured mapping.
+
+        This is the original, position‑based extractor which expects a very specific
+        ordering of text nodes in the FlightStats ticket card and will log an error
+        if fewer than 13 data elements are present.
+
+        Args:
+            tc: List of BeautifulSoup containers that represent the ticket card
+                "InfoSection" blocks (typically for departure or arrival).
+
+        Returns:
+            A dictionary with keys such as ``"Code"``, ``"City"``, ``"AirportName"``,
+            ``"ScheduledDate"``, ``"ScheduledTime"``, and terminal/gate information
+            under ``"TerminalGate"``, or ``None`` if validation fails.
+        """
         extracts = []
         for i in range(len(tc)):
             data = tc[i]
@@ -128,6 +158,21 @@ class FlightStatsExtractor:
 
 
     def ticket_card(self, soup_fs):
+        """Return parsed departure/arrival ticket‑card details and delay status.
+
+        This method locates the two FlightStats ticket cards on the page
+        (departure and arrival), extracts their `InfoSection` blocks and passes them
+        to `ticket_card_extracts`. It also attaches the overall delay status from
+        `delay_status`.
+
+        Args:
+            soup_fs: Root BeautifulSoup document for the FlightStats page.
+
+        Returns:
+            A dictionary of the form:
+                ``{"fsDeparture": {...}, "fsArrival": {...}, "fsDelayStatus": <str|None>}``
+            or ``None`` if the expected ticket card structure is not found.
+        """
 
         delay_status = self.delay_status(soup_fs=soup_fs)
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
@@ -160,8 +205,19 @@ class FlightStatsExtractor:
 
 
     def ticket_card_extracts_v2(self, soup_fs):
-        """
-        Extracts flight information from the ticket card using a more robust approach.
+        """Return a flat list of text values from a ticket card section.
+
+        This is a more generic, order‑preserving extractor that simply collects
+        ``.text`` from each node in the provided sequence, while still enforcing a
+        minimum length to avoid index errors in downstream consumers.
+
+        Args:
+            soup_fs: Iterable of BeautifulSoup elements representing a ticket card
+                section (e.g. the contents of an `InfoSection`).
+
+        Returns:
+            A list of extracted text values, or ``None`` if fewer than 13 elements
+            are present.
         """
         extracts = []
         for i in soup_fs:
@@ -180,15 +236,40 @@ class FlightStatsScraper:
     def __init__(self):
         self.extractor = FlightStatsExtractor()
 
+    def parse_query_for_flight_stats(self,flightID):
+        """ 
+        returns: tuple with IATA airline code and flight number
+            e.g: ('UA','4433')
+        """
+        # TODO search suggestion: 
+            # This func needs to be verified for parsing of regional ICAO to associated major IATA conversion and
+                # other ICAO to IATA like JBU to b6 and so on
+        qc = QueryClassifier()
+        parsed_flight_category = qc.parse_flight_query(flightID).get('value')
 
-    def scrape(self,airline_code="UA", flt_num=None, departure_date:str=None, return_bs4=False):
-        """ Returns clean scraped data or bs4 data if return_bs4 is True. Date format is YYYYMMDD.
-        flt_num_query is numberic only."""
+        code_type = parsed_flight_category.get('code_type')
+        IATA_airline_code = parsed_flight_category.get('IATA_airline_code') 
+        ICAO_airline_code = parsed_flight_category.get('ICAO_airline_code') 
+        flight_number = parsed_flight_category.get('flight_number') 
+
+        
+        if code_type and code_type == 'ICAO':
+            codes = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
+            if ICAO_airline_code in codes.keys():
+                associated_major_IATA_airline_code = codes.get(ICAO_airline_code)
+                return associated_major_IATA_airline_code, flight_number
+        else:
+            return IATA_airline_code, flight_number
+
+    def scrape(self,flightID, departure_date:str=None, return_bs4=False):
+        """ Returns clean scraped data or bs4 data if return_bs4 is True. Date format is YYYYMMDD """
+        
         rc=Root_class()
 
-        date = departure_date if departure_date else rc.date_time(raw=True)     # Root_class inheritance format yyyymmdd
+        IATA_airline_code, flt_num = self.parse_query_for_flight_stats(flightID)
+        date = departure_date if departure_date else rc.date_time(raw=True)     # date format yyyymmdd
         base_url = "https://www.flightstats.com/v2/flight-tracker"
-        flight_stats_url = f"{base_url}/{airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
+        flight_stats_url = f"{base_url}/{IATA_airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
 
         soup_fs = rc.request(flight_stats_url)
         self.soup = soup_fs

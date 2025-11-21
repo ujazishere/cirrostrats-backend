@@ -1,4 +1,5 @@
 import math
+import re
 from config.database import airport_bulk_collection_uj, collection_flights, collection_airports_cache_legacy, db_UJ
 from core.search.fuzz_find import fuzz_find
 from core.search.search_interface import ExhaustionCriteria, SearchInterface
@@ -72,69 +73,31 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         exhaust = ExhaustionCriteria()
         query_type = parsed_query.get('type')
         if query_type in ['flight', 'digits', 'nNumber']:
-            flightID = parsed_query.get('value')
-            return exhaust.backend_flight_query(flightID=flightID)
+            flight_category = parsed_query.get('value')
+            return exhaust.extended_flight_suggestions(flight_category)
         elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
             ICAO_airport_code = parsed_query.get('value')
-            print('ICAO_airport_code', ICAO_airport_code)
-            return exhaust.ICAO_airport_suggestions_format(ICAO_airport_code)
+            return exhaust.extended_ICAO_airport_suggestions(ICAO_airport_code)
         elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
-            # TODO search suggestions: need to abstract this to search interface?
-            airport_query = parsed_query.get('value')
-            print('airport_query', airport_query)
-            case_insensitive_regex_find = {'$regex':airport_query, '$options': 'i'}
-            
-            # Looking for the query in airportName, icao, iata from the aiport bulk collection.
-            airport_docs = list(airport_bulk_collection_uj.find({
-                "$or": [
-                    {"airport": case_insensitive_regex_find},
-                    {"icao": case_insensitive_regex_find},
-                    {"iata": case_insensitive_regex_find}
-                ],
-                "country_code": {"$in": ["US", "CA"]}
-            }).limit(10))
+            # nNumbers, airports and gates go here many a time
+            other_query = parsed_query.get('value')
+            print('other q', other_query)
 
-            suggestions_cache_doc = []
-            if not airport_docs:
-                print('No airport docs found in airport bulk collection for query',query)
-                return []
-            
-            for i in airport_docs:
-                print('i airport docs',i)
-                IATA_airport_code = i.get('iata')
-                ICAO_airport_code = i.get('icao')
-                airportName = i.get('airport')
+            gate_docs = exhaust.extended_gate_suggestions(gate_query=other_query)
+            if gate_docs:
+                return gate_docs
 
-                # All these cannot be nan/null/Nonect_code)
-                if not IATA_airport_code or not ICAO_airport_code or not airportName:
-                    print('Skipping airport doc because something is None')
-                    continue
-                    # Note: Some airport values have null/nan/None values and those are discarded. But what if we want to show them? for example iata: OTT has not ICAO code what if we want to show? but why? we cant even get weather for it if theres no ICAO,
-                suggestions_cache_doc.append({
-                    # 'referenceId': str(ObjectId()),
-                    'type': 'airport',
-                    'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
-                    'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
-                    'popularityScore': 1.0,
-                    'metadata': {
-                        'ICAO': ICAO_airport_code,
-                    }
-                })
-            return suggestions_cache_doc
+            airport_suggestions = exhaust.extended_airport_suggestions(airport_query=other_query)
+            if airport_suggestions:
+                print('airport sug', airport_suggestions)
+                return airport_suggestions
 
+            n_pattern = re.compile("^N[a-zA-Z0-9]{1,5}$")
+            if n_pattern.match(other_query):
+                print('N number found')
+                flightID = parsed_query.get('value')
+                return exhaust.extended_flight_suggestions(flightID)
 
-            # TODO search:
-            # if parsed_query is airport type then query US region airports from bulk airports?
-            # insert it in suggestions since that will set the unique _id for duplicate issues.
-            # But then theres 3 additional suggestions left --> check if these already exist in the search suggestion?
-            # If not then query then query FAA using airport_info_faa directly with the airport code
-                # Source_links_and_api().airport_info_faa(ICAO_airport_code)
-
-            # if found 
-    # else:         # originally this would be to return seriliazed suggestions to frontend.
-    #     print('Suggestions found in sic docs', len(suggestions_match))
-    #     serialized_suggestions_match = serialize_document_list(suggestions_match)
-    #     return serialized_suggestions_match
 
 async def track_search_service(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection

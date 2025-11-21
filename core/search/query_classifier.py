@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 from config.database import collection_airports_cache_legacy, collection_flights, db_UJ
 from core.api.source_links_and_api import Source_links_and_api
-from core.search.search_ranker import RealTimeSearchRanker       #TODO HP Feature.
+from core.search.search_ranker import RealTimeSearchRanker       #TODO VHP Feature. Integrated with dynamic suggestions cache popularityScore
 
 """ These Collections gets loaded up as soon as the server starts."""
 # search_index_collection = db_UJ['search_index']           # OG one
@@ -20,25 +20,9 @@ class QueryClassifier:
 
     """
     
-    def __init__(self, icao_file_path: Optional[str] = None):
-        """
-        Initialize the classifier with ICAO airline codes and regex pattern
-        Args:
-            icao_file_path: Path to the pickle file containing ICAO codes and their counts
-        """
+    def __init__(self):
+        """ Initialize the classifier for batch processing and normalization """
         self.classified_suggestions = {}
-        # TODO: These are IATA equivalent of the 3 char ICAO airline codes. Need them other way to convert them to ICAO for jms matching.
-
-        # Compile regex patterns for better performance
-        self.US_CANADIAN_ICAO_airport_code_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
-
-        # load mixture of airline codes - popular ICAO codes, IATA codes, and other common airline code lookups
-        popular_ICAO_airline_codes = Source_links_and_api().popular_ICAO_airline_codes()
-        IATA_airline_codes = "UA|AA|DL|FI|NK|B6|WN|AS|F9|HA|AC|WS|BA|5X|FX|K4|5Y|9S|"
-        base_airline_codes = "G7|GJS|UCA|UAX"
-        self.mixed_airline_codes = IATA_airline_codes + base_airline_codes + popular_ICAO_airline_codes  # Default common codes
-
-        self.flight_pattern = re.compile(rf"^({self.mixed_airline_codes})\s?(\d{{1,5}}[A-Z]?$)")
 
 
     def initialize_suggestions_cache_collection(self):
@@ -50,97 +34,75 @@ class QueryClassifier:
         return self.scc_docs
         # print('initialized.', self.sic_docs[:5])
 
+    def parse_flight_query(self, flight_query) -> Dict:
+        """ Used by parse_query to determine the type of flight query - ICAO/IATA with parsed flightID.""" 
+
+        ICAO_IATA_airline_codes = Source_links_and_api().ICAO_to_IATA_airline_code_mapping()
+        IATA_ICAO_airline_codes = Source_links_and_api().IATA_to_ICAO_airline_code_mapping()
+
+        ICAO_airline_codes = '|'.join(code for code in ICAO_IATA_airline_codes.keys() if code)
+        ICAO_flight_pattern = re.compile(rf"^({ICAO_airline_codes})\s?(\d{{1,5}}[A-Z]?$)")
+        ICAO_match = ICAO_flight_pattern.match(flight_query)
+        if ICAO_match:
+            ICAO_code = ICAO_match.group(1)
+            flight_number = ICAO_match.group(2)
+            return {'code_type':'ICAO',
+                    'ICAO_airline_code': ICAO_code,
+                    'IATA_airline_code': ICAO_IATA_airline_codes.get(ICAO_code),
+                    'flight_number': flight_number}
+
+        IATA_airline_codes = '|'.join(code for code in ICAO_IATA_airline_codes.values() if code)
+        IATA_flight_pattern = re.compile(rf"^({IATA_airline_codes})\s?(\d{{1,5}}[A-Z]?$)")
+        IATA_match = IATA_flight_pattern.match(flight_query)
+        if IATA_match:
+            IATA_code = IATA_match.group(1)
+            flight_number = IATA_match.group(2)
+            return {'code_type':'IATA',
+                    'IATA_airline_code': IATA_code,
+                    'ICAO_airline_code': IATA_ICAO_airline_codes.get(IATA_code),
+                    'flight_number': flight_number}
 
     def parse_query(self, query: str) -> Dict:
-        # TODO search sugggestions:
-            # Used at -  get_search_suggestions_service, prepare_flight_id_for_webscraping (flightStats), classify_batch (old bulk query classifier), 
-                        #  raw_submit_handler (frontend raw submit), aws_jms_service
-
         """
-        Parse and classify a single query.
+        Parse and classify a single query. Parses as `flight`, `airport`, 'digits' and 'other'
         
         Args:
             query: Search query string
         
         Returns:
-            Dictionary containing classified suggestions updated with this query
+            Dictionary containing classified query type and value
         """
-        if not query:
-            return self.classified_suggestions
+        # TODO search sugggestions:
+            # Used at -  get_search_suggestions_service, prepare_flight_id_for_webscraping (flightStats), classify_batch (old bulk query classifier), 
+                        #  raw_submit_handler (frontend raw submit), aws_jms_service
             
         query = query.strip().upper()
-        flight_match = self.flight_pattern.match(query)
-        US_CA_ICAO_airport_code_match = self.US_CANADIAN_ICAO_airport_code_pattern.match(query)
-        # Check if it's an airport code
+
+        flight_match = self.parse_flight_query(flight_query=query)
+
+        US_CANADIAN_ICAO_airport_code_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
+        US_CA_ICAO_airport_code_match = US_CANADIAN_ICAO_airport_code_pattern.match(query)
+
+        digits_matched = query.isdigit()
+
+        # NOTE: Here would be more appropriate to add fault zone detection if match was both airport and flightID?
+
         if US_CA_ICAO_airport_code_match:
             return {'type': 'airport', 'value': query}
         
         # Check if it's a flight number
-        elif flight_match:
-            airline_code = flight_match.group(1)
-            flight_number = flight_match.group(2)
-            flight_info = {'airline_code': airline_code, 'flight_number': flight_number}
-            return {'type': 'flight', 'value': flight_info}
+        if flight_match:
+            print('flight matched', flight_match)
+            return {'type': 'flight', 'value': flight_match}
 
-        elif query.isdigit():
+        if digits_matched:
             return {'type': 'digits', 'value': query}
-            # Following was the original logic for digits - sends GJS for digits in 4000s.
-            # TODO VHP: This is error prone such that these digits in 4000s can be mistaken for GJS.
-                # Best way to deal with this is to analyze digits using flightID from JMS `collection_flights` database,
-                # convert them to ints and classify all according to where they fall in the range.
-            # if query[0] == '4' and len(query) == 4:
-            #     airline_code = 'GJS'
-            #     flight_number = query
-            #     flight_info = {'airline_code': airline_code, 'flight_number': flight_number}
-            #     return {'type': 'flight', 'value': flight_info}
-            # else:
-            #     # TODO VHP Feature: Right now my basic concern is to make it work locally for UA and GJS only. Let digits go this direction for now.
-            #         # once the complexity increases more digits can be accounted for.
-            #     return {'type': 'digits', 'value': query}
 
-        elif self.temporary_n_number_parse_query(query=query):
-            return {'type': 'nNumber', 'value': query}
+        # TODO search suggestions: Two possiblities- suggestion exhaustion or raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
 
-        # TODO search suggestions:
-            # The reason you dont want this gate here is you dont know how to classify a gate query you dont know what it looks like.
-                # Two possiblities- suggestion exhaustion or raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
-        # elif for gate
-        #     return {'type': 'gate', 'value': query}
-        
-        # Other types of queries
-        else:
-            return {'type': 'other', 'value': query}
+        # Other types of queries - nNumbers, airports and gates go here many a time
+        return {'type': 'other', 'value': query}
     
-
-
-    def temporary_n_number_parse_query(self,query):
-        n_pattern = re.compile("^N[a-zA-Z0-9]{5}$")
-        
-        if n_pattern.match(query):
-            return {'type': 'nNumber', 'value': query}
-        
-
-    def prepare_flight_id_for_webscraping(self, flightID: str) -> Optional[Tuple[str, str]]:
-        """ Currently Only used at flightStats source - takes flightID, cleans up using parse query
-        and accounts for either GJS, UAL, UCA to make it UA, and DL,AA for delta or american since thats what flightstats takes for airline code.
-        
-        """
-        """Prepare a flight ID for webscraping by replacing 'UAL', 'GJS', and 'UCA' with 'UA'."""
-        parsed_query = self.parse_query(flightID)
-        if parsed_query.get("type") == "flight":
-            airline_code = parsed_query["value"]["airline_code"]
-            flightID_digits = parsed_query["value"]["flight_number"]
-            if airline_code in ["UAL", "GJS", "UCA"]:
-                airline_code = "UA"
-            elif airline_code == "DAL":
-                airline_code = "DL"
-            elif airline_code == "AAL":
-                airline_code = "AA"
-            print('airline_code in qc',airline_code)
-            return airline_code, flightID_digits
-        print("Error within qc_webscrape. parse_query failed to return categorized data")
-        return None,None
-
 
     def classify_batch(self, queries: List[Tuple]) -> Dict:
         """
@@ -167,7 +129,6 @@ class QueryClassifier:
                 q_val = (dict_form['airline_code']+dict_form['flight_number'])
             self.classified_suggestions.setdefault(q_cat, []).append((q_val,count))
 
-
     def data_cleaner(self):
         """ Classifier didnt account for duplicate flight numbers. this section takes care of it all.
             Converts tuple to dict as well. Safe and sound! :)) """
@@ -182,7 +143,6 @@ class QueryClassifier:
             o[i] = dict(ph)
         return o
 
-
     def compress_sigmoid(self, x, k=1/30, theta=100,cap_height=10):
         """Theta moves func left and right, k is the squeeze stretch spread on x. So higher the x range smaller you want your k to account for higher ranges
         for k=1/30 the func caps hight for vals x>300
@@ -196,7 +156,6 @@ class QueryClassifier:
         # return compressed_val
         return sigmoid_val
 
-
     def normalize(self):
         cc = self.classified_suggestions
         for cat,vals in cc.items():
@@ -205,6 +164,42 @@ class QueryClassifier:
                 sa[k] = self.compress_sigmoid(p_hit)
             cc[cat] = sa
         return cc
+
+
+    def temporary_n_number_parse_query(self,query):
+        # ********** DEPRECATED ********
+
+        # This is temporary. more robust one is needed.
+        print('N number query', query)
+        n_pattern = re.compile("^N[a-zA-Z0-9]{5}$")
+        
+        if n_pattern.match(query):
+            return {'type': 'nNumber', 'value': query}
+
+    def prepare_flight_id_for_webscraping(self, flightID: str) -> Optional[Tuple[str, str]]:
+        # ********** DEPRECATED **********
+
+        """ Currently Only used at flightStats source - takes flightID, cleans up using parse query
+        and accounts for either GJS, UAL, UCA to make it UA, and DL,AA for delta or american since thats what flightstats takes for airline code.
+        
+        """
+        """Prepare a flight ID for webscraping by replacing 'UAL', 'GJS', and 'UCA' with 'UA'."""
+        parsed_query = self.parse_query(flightID)
+        if parsed_query.get("type") == "flight":
+            airline_code = parsed_query["value"]["airline_code"]
+            flightID_digits = parsed_query["value"]["flight_number"]
+            if airline_code in ["UAL", "GJS", "UCA"]:
+                airline_code = "UA"
+            elif airline_code == "DAL":
+                airline_code = "DL"
+            elif airline_code == "AAL":
+                airline_code = "AA"
+            print('airline_code in qc',airline_code)
+            return airline_code, flightID_digits
+        print("Error within qc_webscrape. parse_query failed to return categorized data")
+        return None,None
+
+
         
 
 
@@ -434,6 +429,7 @@ class Trie_structure_WIP:
             icao = pickle.load(f)
         icaos = [icao for icao, count in icao.items()][1:29]
         
+        categorized_icao = defaultdict(list)
         # flattened flightID. List full of flightIDs - possibly just digits
         alll = []
         for y in [i for _,i in categorized_icao.items()]:
