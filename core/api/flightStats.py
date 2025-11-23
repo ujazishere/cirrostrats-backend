@@ -245,7 +245,7 @@ class FlightStatsScraper:
             # This func needs to be verified for parsing of regional ICAO to associated major IATA conversion and
                 # other ICAO to IATA like JBU to b6 and so on
         qc = QueryClassifier()
-        parsed_flight_category = qc.parse_flight_query(flightID).get('value')
+        parsed_flight_category = qc.parse_flight_query(flightID)
 
         code_type = parsed_flight_category.get('code_type')
         IATA_airline_code = parsed_flight_category.get('IATA_airline_code') 

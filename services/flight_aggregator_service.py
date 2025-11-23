@@ -19,6 +19,7 @@ logger = logging.getLogger()
 qc = QueryClassifier()
 
 async def aws_jms_service(flightID, mock=False):
+
     """ 
     This section parses the flightID to get the proper ICAO airline code and flight number for JMS fetching.
     Many frontend users are used to 2 char IATA airline designator code
@@ -42,21 +43,22 @@ async def aws_jms_service(flightID, mock=False):
         # What about part 91 repo flights? those show as UA but use flightStats?
     if flightID:
         # Whole point of this condition is to get associated ICAO using IATA
-        parsed_flight_category = qc.parse_flight_query(flightID).get('value')
+        parsed_flight_category = qc.parse_flight_query(flightID)
         code_type = parsed_flight_category.get('code_type')
         IATA_airline_code = parsed_flight_category.get('IATA_airline_code')         # Not sure yet how this is appropriate yet but seems like it is - one IATA with multiple regionals ICAO.
         ICAO_airline_code = parsed_flight_category.get('ICAO_airline_code') 
         flight_number = parsed_flight_category.get('flight_number') 
 
         flightID = ICAO_airline_code+flight_number          # This will account for UA, DL and AA along with all others
-        if code_type and code_type == 'ICAO':
-            codes = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
-            if ICAO_airline_code in codes.keys():
-                associated_major_IATA_airline_code = codes.get(ICAO_airline_code)
-                flightID = associated_major_IATA_airline_code + flight_number
+        if code_type and code_type == 'IATA':
+            codes = Source_links_and_api().IATA_to_ICAO_airline_code_mapping()
+            if IATA_airline_code in codes.keys():
+                ICAO_airline_code = codes.get(IATA_airline_code)
+                flightID = ICAO_airline_code + flight_number
     else:
         return
 
+    print('flightID ICAO', flightID)
 
 
 
