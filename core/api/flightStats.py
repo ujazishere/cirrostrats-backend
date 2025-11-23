@@ -252,7 +252,7 @@ class FlightStatsScraper:
         ICAO_airline_code = parsed_flight_category.get('ICAO_airline_code') 
         flight_number = parsed_flight_category.get('flight_number') 
 
-        
+
         if code_type and code_type == 'ICAO':
             codes = Source_links_and_api().regional_ICAO_to_associated_major_IATA()
             if ICAO_airline_code in codes.keys():
