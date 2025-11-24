@@ -275,7 +275,7 @@ class ExhaustionCriteria():
             return new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
         
         
-    def extended_ICAO_airport_suggestions(self, ICAO_airport_code):
+    def extended_ICAO_airport_suggestions_formatting(self, ICAO_airport_code):
         """ Takes in (possibly random) US/CA ICAO airports parsed through parse_query and formats them for suggestions collection insertion."""
         
         # Idea is if you found it insert it in airports cache,
@@ -299,8 +299,8 @@ class ExhaustionCriteria():
                 }
             }
 
-    def extended_flight_suggestions(self, parsed_flight_category: str|dict):
-        """ Extensive and impressive flight suggestions formatter for frontend delivery check comments for more details."""
+    def extended_flight_suggestions_formatting(self, parsed_flight_category: str|dict):
+        """ Extensive and impressive flightID suggestions formatting for frontend delivery check comments for more details."""
         # TODO search suggestion: 
                 # Currently only used for search suggestion
                 # For use in suggestions formating:

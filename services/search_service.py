@@ -74,10 +74,10 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         query_type = parsed_query.get('type')
         if query_type in ['flight', 'digits', 'nNumber']:
             flight_category = parsed_query.get('value')
-            return exhaust.extended_flight_suggestions(flight_category)
+            return exhaust.extended_flight_suggestions_formatting(flight_category)
         elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
             ICAO_airport_code = parsed_query.get('value')
-            return exhaust.extended_ICAO_airport_suggestions(ICAO_airport_code)
+            return exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code)
         elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
             # nNumbers, airports and gates go here many a time
             other_query = parsed_query.get('value')
@@ -96,7 +96,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             if n_pattern.match(other_query):
                 print('N number found')
                 flightID = parsed_query.get('value')
-                return exhaust.extended_flight_suggestions(flightID)
+                return exhaust.extended_flight_suggestions_formatting(flightID)
 
 
 async def track_search_service(data: SearchData):
