@@ -25,20 +25,15 @@ async def store_live_weather_service(
         This function is called at frontend request to update old data in mongo if it exists.
         """
 
-    # TODO weather: This whole 3 way to using mdbAirportReferenceId to get airport code from collection_airports_cache_legacy then getting associated airport code
-        # to get collection_weather_cache_legacy seems a bit redundant.
     print('r_id, as mdbAirportReferenceId, received in store_live_weather_service:', mdbAirportReferenceId )
     ICAO_airport_code_to_fetch = None           # I could use rawCode here but code wont be as readable.
     if mdbAirportReferenceId:
         # IATA to ICAO conversion
         av = AirportValidation()
-        # TODO VHP: multiple airports collection - one for cache and one with all airports 
-            # Big problem here is that the airport codes for IATA and ICAO are fetched from two separate collections
-                # collection_airports_cache_legacy = db['airports'] and airport_bulk_collection_uj = db_UJ['icao_iata']
         # This section uses both collections to get the ICAO code using mdbAirportReferenceId
             # mdbAirportReferenceId -> collection_airports_cache_legacy -> IATA code -> validate code using -> airport_bulk_collection_uj -> ICAO code
         IATA_airport_code, ICAO_airport_code_to_fetch = av.icao_iata_airport_code_validation(mdbAirportReferenceId)
-        # Old code that is currently being abstracted away to AirportValidation()
+        # Old code that is being abstracted away to AirportValidation()
         """
             # find_crit = {'_id': ObjectId(mdbAirportReferenceId)}
             # return_crit = {'code': 1}
@@ -109,15 +104,6 @@ async def get_mdb_airport_data_service(**kwargs):
     airportCacheReferenceId = kwargs.get('airportCacheReferenceId')
     # Determining find criteria for mongo collection- Airport code/bson id validation for find criteria
     if ICAOAirportCode:
-
-        # validate iata/icao code here and use it as find criteria
-        # TODO Weather: Refactor
-            # Check the usage and see if the IATA is used at all. if not then convert all to keys as icao instead of 'code' and appropriate value.
-            # Seems a lot more appropriate to do that and might just reduce unnecessary processing for
-            # validating the airport from root_class.validate_airport_code as that takes another collection to validate the airport code.
-        # av = AirportValidation()
-        # Since mdb takes iata code as airport_code, we need to validate the airport_code and return the iata code.
-        # airport_data = av.validate_airport_code(airport_id, iata_return=True, supplied_param_type='mdbAirportWeatherById Route')
         find_crit = {'ICAO': ICAOAirportCode}
     elif airportCacheReferenceId:
         # Check if airport_id is a valid ObjectId before using it

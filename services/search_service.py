@@ -54,6 +54,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
     """
     suggestions_match = fuzz_find(query=query, data=qc.scc_docs, qc=qc, limit=limit)
 
+    # TODO search suggestions: LAS - harry reid international airport isnt showing up when looking up `las` but shows up when looking up `harry reid`.
     if suggestions_match and len(query)<=3:
         serialized_suggestions_match = serialize_document_list(suggestions_match)
         return serialized_suggestions_match
@@ -77,7 +78,9 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
             return exhaust.extended_flight_suggestions_formatting(flight_category)
         elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
             ICAO_airport_code = parsed_query.get('value')
-            return exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code)
+            # TODO search suggestions: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
+                    #  e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont show up since it wont match Cyow query with yow display..
+            print(exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code))
         elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
             # nNumbers, airports and gates go here many a time
             other_query = parsed_query.get('value')

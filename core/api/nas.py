@@ -111,6 +111,8 @@ class NAS:
             nas_final_packet(airport='KJFK')  # Single airport
             nas_final_packet(departure='KJFK', destination='KLAX')  # Route
         """
+        airport_id = is_single_airport = None
+        departure_id = destination_id = None
 
         # Validate arguments
         valid_keys = {'airport', 'departure', 'destination'}

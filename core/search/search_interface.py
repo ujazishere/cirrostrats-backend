@@ -198,6 +198,7 @@ class ExhaustionCriteria():
                     parsed['regionName'] = value
                 elif key == 'Country':
                     parsed['countryCode'] = value
+                # TODO weather: Add elevation, runways, latitude and longitude to the airport_cache_collection?
                 # elif key == 'Elevation':
                 #     parsed['elevation'] = value
                 # elif key == 'Latitude':
@@ -209,7 +210,7 @@ class ExhaustionCriteria():
         return parsed
     
     
-    async def faa_airport_info_fetch(self, ICAO_airport_code):
+    async def faa_airport_info_fetch_w_weather(self, ICAO_airport_code):
         """ Suggestions cache format for airport search suggestions fetched directly from FAA for both airport info itself and weather """
 
         # TODO search: This probably doesn't belong here  maybe abstract this and faa fetch to some other file or maybe within searchInterface?
@@ -239,30 +240,34 @@ class ExhaustionCriteria():
         return update_doc
     
 
-    def airport_cache_insertion(self, ICAO_airport_code):
+    async def airport_cache_insertion(self, ICAO_airport_code):
         """ Inserts airport cache format doc into the new_airport_cache_collection
             currently only queries bulk collection for ICAO code and inserts into new_airport_cache_collection.
             # TODO search suggestions: This should only work for search submits and not for suggestions.
                 # Should this fetch using faa weather api and then insert that into bulk doc??
         """
 
-        bulk_doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
-        # What if the doc in this bulk collection is outdated? maybe we can catch each code on airport lookup and validate it?
-
-        if not bulk_doc:
-            print('No bulk doc found in airport bulk collection for ICAO', ICAO_airport_code)
-            return None
-        
-        IATA_airport_code = bulk_doc.get('iata')
-        airportName = bulk_doc.get('airport')
-        regionName = bulk_doc.get('region_name')
-        countryCode = bulk_doc.get('country_code')
-        
+        weather_doc = None
         # TODO search suggestions: New airport Cache collection is not accounted for in broad_test weather test. Need to change from legacy collection to new collection there.
         new_airport_cache_doc = new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
         if new_airport_cache_doc:
-            return new_airport_cache_doc
+            print('New airport cache doc found in new airport cache collection for ICAO', ICAO_airport_code)
+            weather_doc = new_airport_cache_doc
+
         else:
+            bulk_doc = airport_bulk_collection_uj.find_one({'icao': ICAO_airport_code})
+            # What if the doc in this bulk collection is outdated? maybe we can catch each code on airport lookup and validate it?
+
+            if not bulk_doc:
+                print('No bulk doc found for ICAO. Fetching from FAA weather API...', ICAO_airport_code)
+                # TODO weather: This is a fallback for when the bulk doc is not found.
+                weather_doc = await self.faa_airport_info_fetch_w_weather(ICAO_airport_code)
+        
+            IATA_airport_code = bulk_doc.get('iata')
+            airportName = bulk_doc.get('airport')
+            regionName = bulk_doc.get('region_name')
+            countryCode = bulk_doc.get('country_code')
+        
             new_airport_cache_doc = {
                 'IATA': IATA_airport_code,
                 'ICAO': ICAO_airport_code,       
@@ -271,10 +276,17 @@ class ExhaustionCriteria():
                 'countryCode': countryCode,
                 'weather': {}
             }
+            weather_doc = new_airport_cache_doc
+            # # TODO weather: Insert new airport cache doc into new airport cache collection if not already there.
             # new_airport_cache_collection.insert_one(new_airport_cache_doc)
-            return new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
+            # weather_doc = new_airport_cache_collection.find_one({'ICAO': ICAO_airport_code})
+            # # TODO weather: Add elevation, runways, latitude and longitude to the airport_cache_collection?
+            # # TODO weather: consider removing airports when going over certain threshold to keep it lean?
+
         
-        
+        return weather_doc
+
+
     def extended_ICAO_airport_suggestions_formatting(self, ICAO_airport_code):
         """ Takes in (possibly random) US/CA ICAO airports parsed through parse_query and formats them for suggestions collection insertion."""
         

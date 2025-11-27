@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 from config.database import collection_airports_cache_legacy, collection_flights, db_UJ
 from core.api.source_links_and_api import Source_links_and_api
-from core.search.search_ranker import RealTimeSearchRanker       #TODO VHP Feature. Integrated with dynamic suggestions cache popularityScore
+# from core.search.search_ranker import RealTimeSearchRanker       #TODO VHP Feature. Integrated with dynamic suggestions cache popularityScore
 
 """ These Collections gets loaded up as soon as the server starts."""
 # search_index_collection = db_UJ['search_index']           # OG one
@@ -347,12 +347,10 @@ class QC_base_popularity_hits(QueryClassifier):
         
         processed_airport_codes = [i[1:] for i in list(airports_p_hits.keys()) if i[0] == 'K']      # removing leading `K`
         # Fetch all matching airports in a single query by supplying a list of items to be matched
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
         cacodes = list(collection_airports_cache_legacy.find({'code': {'$in': processed_airport_codes}}, {'count':0}))         # collection airport codes
         
         airports_to_upload = []
         for doc in cacodes:
-            # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
             ph= airports_p_hits.get("K"+doc['code'])
             if doc.get('name'):
                 airports_to_upload.append({'r_id':doc['_id'],'airport_st':f"{doc['code']} - {doc['name']}", 'ph':ph})

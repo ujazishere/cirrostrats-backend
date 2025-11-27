@@ -271,6 +271,10 @@ class FlightStatsScraper:
         base_url = "https://www.flightstats.com/v2/flight-tracker"
         flight_stats_url = f"{base_url}/{IATA_airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
 
+        # TODO flight discrepancy: flightStats is returning no data for flight going out next day.
+            # This can be a simple fix by adding a day prior/post flight date using timedelta?
+            # This can assist in improving the accuracy of the data and prevent AJMS.flightAware data discrepancy.
+
         soup_fs = rc.request(flight_stats_url)
         self.soup = soup_fs
 

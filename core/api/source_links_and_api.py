@@ -15,7 +15,7 @@ class Source_links_and_api:
         return 'https://datis.clowd.io/api/stations'
 
     def airport_info_faa(self, ICAO_airport_code) -> str:
-        # TODO weather: This needs to be integrated with cache. mind uppercase for airportName.
+        # TODO weather: This needs to be integrated with new_airport_cache_collection and suggestions_cache_collection. mind uppercase for airportName.
         """ gives ICAO, IATA, airportName, lat,long, elevation, state, country, runways
         e.g - https://aviationweather.gov/api/data/airport?ids=KEWR
         """

@@ -61,7 +61,6 @@ class Bulk_weather_fetch:
     def bulk_weather_link_returns(self) -> None:
         # Returns weather links for all airports with code.
 
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
         all_mdb_airport_codes = [i['code'] for i in collection_airports_cache_legacy.find({},{'code':1})]
 
         all_datis_ICAO_airport_codes = self.all_datis_ICAO_airport_codes_list()
@@ -118,8 +117,6 @@ class Bulk_weather_fetch:
 
     def bulk_list_of_weather_links(self,type_of_weather,list_of_airport_codes):
         # Returns datis links from claud.ai and aviation weather links for metar and taf from aviationwather.gov
-        # TODO: collection_airports_cache_legacy code issue fix
-        # TODO weather: Fix IATA/ICAO issue - WIP -- collection_airports_cache_legacy documents gotta be migrated to uj collection with appropriate IATA/ICAO
         prepend = ""
         if type_of_weather == 'metar':
             prepend = "K"
