@@ -21,8 +21,8 @@ print('Suggestions Cache Collection initialized with documents:', len(qc.scc_doc
 
 
 async def get_search_suggestions_service(email: str, query: str, limit=500):  # Default page and page size
-    """Cached fuzzy search to improve performance for repeated queries.
-        The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 3500 sti) in suggestions and display only upto 5 in the drop-down.
+    """ Cached fuzzy search to improve performance for repeated queries.
+        The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 500 cached items curently) in suggestions and display only upto 5 in the drop-down.
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
         Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
 
@@ -32,15 +32,14 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
 
     # TODO VHP:
     """ 
-        The suggestions dont show(need it) canadian airports.
-        Primarily and necessicity:
+        Priority vs necessity:
             The frontend data structure that processes collections across flights, airports, gates, sic is flawed and inconsistent
             You need this to properly implement track search in its entirity-> match and track raw submits, integrate popularity hits,  
             caching and morphing search index collection.
 
         Additionally:
         data flow - use raw submit to *___ query the collection ___*  based on parseQuery:
-        save in search-index collection and send it to the frontend for fetching just like search suggestions dropdowns.
+        save in suggestions cache collection thén send it to the frontend for fetching just like search suggestions dropdowns.
             ***___ Minimize the ability for user to have raw searches- match all raw searches to appropriate item in collections ___***
 
             Current issue with search interface:
@@ -100,7 +99,6 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
                 print('N number found')
                 flightID = parsed_query.get('value')
                 return exhaust.extended_flight_suggestions_formatting(flightID)
-
 
 async def track_search_service(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection

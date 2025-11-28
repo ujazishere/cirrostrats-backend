@@ -1,3 +1,4 @@
+import re
 import requests
 from core.weather_fetch import Singular_weather_fetch
 from models.model import AirportCache
@@ -21,18 +22,37 @@ class SearchInterface(QueryClassifier):
             /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
             contain similar format with display field for display and search within fuzzfind"""
         parsed_query = self.parse_query(query=search)
-        query_field, query_val, query_type = self.query_type_frontend_conversion(doc=parsed_query)
+        exhaust = ExhaustionCriteria()
+        query_type = parsed_query.get('type')
+        if query_type in ['flight', 'digits', 'nNumber']:
+            flight_category = parsed_query.get('value')
+            return exhaust.extended_flight_suggestions_formatting(flight_category)
+        elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
+            ICAO_airport_code = parsed_query.get('value')
+            # TODO search suggestions: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
+                    #  e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont show up since it wont match Cyow query with yow display..
+            print(exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code))
+        elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
+            # nNumbers, airports and gates go here many a time
+            other_query = parsed_query.get('value')
+            print('other q', other_query)
 
-        formatted_data = { 
-            f"{query_field}":query_val,         # attempt to make a key field/property for an object in frontend.
-            'label': query_val,
-            'display': query_val,             # This is manipulated later hence the duplicate.
-            'type': query_type,
-            # 'fuzz_find_search_text': val.lower()
-            }
-        print('SUBMIT: Raw search submit:', 'search: ', search,'pq: ', parsed_query,'formatted-data', formatted_data)
-        return formatted_data
+            gate_docs = exhaust.extended_gate_suggestions(gate_query=other_query)
+            if gate_docs:
+                return gate_docs
 
+            airport_suggestions = exhaust.extended_airport_suggestions(airport_query=other_query)
+            if airport_suggestions:
+                print('airport sug', airport_suggestions)
+                return airport_suggestions
+
+            n_pattern = re.compile("^N[a-zA-Z0-9]{1,5}$")
+            if n_pattern.match(other_query):
+                print('N number found')
+                flightID = parsed_query.get('value')
+                return exhaust.extended_flight_suggestions_formatting(flightID)
+
+        
 
     def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):
 

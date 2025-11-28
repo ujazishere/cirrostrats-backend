@@ -78,6 +78,7 @@ class QueryClassifier:
             
         query = query.strip().upper()
 
+        print('query', query)
         flight_match = self.parse_flight_query(flight_query=query)
 
         US_CANADIAN_ICAO_airport_code_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
@@ -96,6 +97,7 @@ class QueryClassifier:
             return {'type': 'flight', 'value': flight_match}
 
         if digits_matched:
+            print('digits matched', query)
             return {'type': 'digits', 'value': query}
 
         # TODO search suggestions: Two possiblities- suggestion exhaustion or raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
