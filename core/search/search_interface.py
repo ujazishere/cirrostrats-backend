@@ -347,6 +347,8 @@ class ExhaustionCriteria():
         """ Parsing the flight category into a regex for flightID lookup """
         if isinstance(parsed_flight_category, str):       # accounts for type as nNumber,digits and internationals codes as fallback - value is string
             regex_flight_lookup = parsed_flight_category
+            if regex_flight_lookup.isdigit():           # accounts for digits as flightID for matching exact digits within flightID.
+                regex_flight_lookup = r'^[A-Z]{2,3}' + regex_flight_lookup + r'(?![0-9])[A-Z]?$'
         elif isinstance(parsed_flight_category, dict):        # type as flight - value is dicts for US based IATA and ICAO and major associated ICAO handling
             derived_code_type = parsed_flight_category.get('code_type') 
             IATA_airline_code = parsed_flight_category.get('IATA_airline_code') 
@@ -404,6 +406,7 @@ class ExhaustionCriteria():
                 }
             })
 
+        print('suggestions_cache from jms', suggestions_cache)
         return suggestions_cache
 
         
