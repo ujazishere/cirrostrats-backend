@@ -6,7 +6,7 @@ from core.root_class import AirportValidation
 from core.weather_parse import Weather_parse
 from typing import Optional
 
-from config.database import collection_airports_cache_legacy, collection_weather_cache_legacy, db_UJ
+from config.database import airport_bulk_collection_uj, collection_airports_cache_legacy, collection_weather_cache_legacy, db_UJ
 from services.notification_service import send_telegram_notification_service
 
 
@@ -101,10 +101,16 @@ async def get_mdb_airport_data_service(**kwargs):
         - Raises ValueError if the id is invalid.
     """
     ICAOAirportCode = kwargs.get('ICAOAirportCode')
+    IATAAirportCode = kwargs.get('IATAAirportCode')
     airportCacheReferenceId = kwargs.get('airportCacheReferenceId')
     # Determining find criteria for mongo collection- Airport code/bson id validation for find criteria
     if ICAOAirportCode:
         find_crit = {'ICAO': ICAOAirportCode}
+    elif IATAAirportCode:
+        return_crit = {'iata':1,'icao':1}
+        airport_doc = airport_bulk_collection_uj.find_one({'iata':IATAAirportCode})
+        ICAOAirportCode = airport_doc.get('icao')
+        find_crit = {'ICAO':ICAOAirportCode}
     elif airportCacheReferenceId:
         # Check if airport_id is a valid ObjectId before using it
         if not ObjectId.is_valid(airportCacheReferenceId):
@@ -134,19 +140,27 @@ async def get_mdb_airport_data_service(**kwargs):
 
         return new_airport_cache_doc
     elif not new_airport_cache_doc and ICAOAirportCode:       # New ICAO provided not found in mdb airport cache? fetch live abd aksi save it in airport cache?
-        weather = await liveAirportWeather_service(ICAO_code_to_fetch=ICAOAirportCode)
+        weather = await liveAirportWeather_service(ICAOAirportCode=ICAOAirportCode)
         if weather:
             # TODO insert into airport cache collection
             return weather
     
     
-async def liveAirportWeather_service(ICAO_code_to_fetch):
+async def liveAirportWeather_service(**kwargs):
     """ Airport code can be either icao or iata. If its iata it will be converted to icao.
         Fetches live weather from source using icao airport code and returns it."""
     # sleep(3)
     # TODO Test: - check if Datis is N/A for 76 of those big airports, if unavailable fire notifications. 
+
+    ICAOAirportCode = kwargs.get('ICAOAirportCode')
+    IATAAirportCode = kwargs.get('IATAAirportCode')
+    if IATAAirportCode:
+        return_crit = {'iata':1,'icao':1}
+        airport_doc = airport_bulk_collection_uj.find_one({'iata':IATAAirportCode}, return_crit)
+        ICAOAirportCode = airport_doc.get('icao')
+
     swf  = Singular_weather_fetch()
-    weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch=ICAO_code_to_fetch)
+    weather_dict = await swf.async_weather_dict(ICAO_code_to_fetch=ICAOAirportCode)
 
     wp = Weather_parse()
     weather_dict = wp.html_injected_weather(weather_raw=weather_dict)

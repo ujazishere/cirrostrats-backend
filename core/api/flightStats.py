@@ -176,7 +176,7 @@ class FlightStatsExtractor:
 
         delay_status = self.delay_status(soup_fs=soup_fs)
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
-
+        
         # # TODO flight discrepancy: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
         # multi_flight = soup_fs.select('[class*="past-upcoming-flights__TextHelper"]')           # returns a list of classes that matches..
         # for i in multi_flight:

@@ -9,15 +9,24 @@ async def store_live_weather(mdbAirportReferenceId: Optional[str] = None,
                             rawCode: Optional[str] = None):
     return await store_live_weather_service(mdbAirportReferenceId=mdbAirportReferenceId, rawCode=rawCode)
 
+
 @router.get('/mdbAirportWeatherById/{airportCacheReferenceId}')
 async def get_mdbAirportWeatherById(airportCacheReferenceId):
     return await get_mdb_airport_data_service(airportCacheReferenceId=airportCacheReferenceId)
 
-@router.get('/mdbAirportWeatherByAirportCode/{ICAOAirportCode}')
+
+@router.get('/mdbAirportWeatherByAirportCode/{airportCode}')
 # TODO Refactor: Check how you can refactor this airport_id to ICAO/IATA airport code
-async def get_mdbAirportWeatherByAirportCode(ICAOAirportCode):
-    return await get_mdb_airport_data_service(ICAOAirportCode=ICAOAirportCode)
+async def get_mdbAirportWeatherByAirportCode(airportCode):
+    if len(airportCode) == 4:
+        return await get_mdb_airport_data_service(ICAOAirportCode=airportCode)
+    elif len(airportCode)== 3:
+        return await get_mdb_airport_data_service(IATAAirportCode=airportCode)
+
 
 @router.get("/liveAirportWeather/{airportCode}")
 async def liveAirportWeather(airportCode):
-    return await liveAirportWeather_service(ICAO_code_to_fetch=airportCode)
+    if len(airportCode) == 4:
+        return await liveAirportWeather_service(ICAOAirportCode=airportCode)
+    elif len(airportCode)== 3:
+        return await liveAirportWeather_service(IATAAirportCode=airportCode)

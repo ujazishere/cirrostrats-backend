@@ -338,7 +338,7 @@ class ExhaustionCriteria():
         # TODO search suggestion: 
                 # Currently only used for search suggestion
                 # For use in suggestions formating:
-                    # display : ICAO/d (IATA/d) only known carriers - GJS, UCA, EDV, ENY, JIA, PDT
+                    # display : ICAO/d (IATA/d) only known US carriers - GJS, UCA, EDV, ENY, JIA, PDT and so on.
                         # e.g
                             # GJS4433 (UA4433) - G7
                             # UCA4938 (UA4938) - C5
@@ -408,7 +408,6 @@ class ExhaustionCriteria():
                 }
             })
 
-        print('suggestions_cache from jms', suggestions_cache)
         return suggestions_cache
 
         
