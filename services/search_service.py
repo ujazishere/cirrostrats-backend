@@ -7,9 +7,9 @@ from core.search.query_classifier import QueryClassifier
 from models.model import SearchData
 from bson import ObjectId
 from schema.schemas import serialize_document_list
-try:        # This is in order to keep going when collections are not available
-    from config.database import collection_airports_cache_legacy, collection_searchTrackUsers
-    from config.database import collection_flights, db_UJ
+try:
+    from config.database import collection_searchTrackUsers
+    from config.database import db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
@@ -19,14 +19,13 @@ qc.scc_docs = qc.initialize_suggestions_cache_collection()
 print('Suggestions Cache Collection initialized with documents:', len(qc.scc_docs))
 
 
-
 async def get_search_suggestions_service(email: str, query: str, limit=500):  # Default page and page size
     """ Cached fuzzy search to improve performance for repeated queries.
         The Idea is to have some sort of a cache that holds the initial popular fetches of upto 500 items(of the total 500 cached items curently) in suggestions and display only upto 5 in the drop-down.
         If the suggestions(display dropdown items) drop below 5 items then it should fetch the backend with the `latest query` to see if it returns any matches.
-        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the 3500 for this cache and return those to the frontend exhausting the 3500 items.
+        Current state: Upto 2nd alphabet from `latest query` can match upto maybe <10 items of the total cache collection for this cache and return those to the frontend exhausting all.
 
-        The interface is designed such that it has pre existing values from search index collection
+        The interface is designed such that it has pre existing values from suggestion_cache_collection
         these dont currently update with new raw submits. also older submits may be intensive on processing during /st route on frontend lookup
         """
 
@@ -35,21 +34,12 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         Priority vs necessity:
             The frontend data structure that processes collections across flights, airports, gates, sic is flawed and inconsistent
             You need this to properly implement track search in its entirity-> match and track raw submits, integrate popularity hits,  
-            caching and morphing search index collection.
+            caching and morphing suggestions cache collection.
 
         Additionally:
         data flow - use raw submit to *___ query the collection ___*  based on parseQuery:
-        save in suggestions cache collection thén send it to the frontend for fetching just like search suggestions dropdowns.
+        save in suggestions cache collection in the background(so it doesnt log data delivery) thén send it to the frontend for fetching just like search suggestions dropdowns.
             ***___ Minimize the ability for user to have raw searches- match all raw searches to appropriate item in collections ___***
-
-            Current issue with search interface:
-            Raw query submits cause and effect:
-
-            Solution: - This possibly is already account for in the frontend - but need same for backend in case top5 suggestions are exhausted/unavailable.
-                if raw submit matches flight number to its entirity then select the dropdown to send 
-                if raw submit matches airport code to its entirity then select the dropdown
-                    Feature: Currently Newark and chicago works but what if there are multiple airports in a city like chicago?
-                if raw submit partially matches flight number then do not send the first drop select
     """
     suggestions_match = fuzz_find(query=query, data=qc.scc_docs, qc=qc, limit=limit)
 

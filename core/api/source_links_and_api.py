@@ -154,14 +154,14 @@ class Source_links_and_api:
     def newark_airport(self):
         return "https://www.flightstats.com/airport/USKN/Newark"
 
-    def flight_stats_url(self,flight_number):
+    def flight_stats_url(self,IATAAirlineCode='UA', flight_number=None):
         # TODO refactor: FlightStats URL for pulling flight status. Use this function
         # local time zones. just needs flight number and date as input
         
         date = Root_class().date_time(raw=True)
         
         base_url = "https://www.flightstats.com/v2/flight-tracker/"
-        return f"{base_url}UA/{flight_number}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
+        return f"{base_url}{IATAAirlineCode}/{flight_number}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
 
     def aviation_stack(self,flightID):
         # Aviation Stack api call. 3000 requests per month

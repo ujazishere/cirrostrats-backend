@@ -20,7 +20,7 @@ class FlightStatsExtractor:
         - **Airport metadata**: code, city, airport name.
         - **Timing data**: scheduled time, estimated/actual time.
         - **Facility info**: terminal / gate and combined terminal-gate string.
-        - **Delay status**: high‑level status such as "On time", "Scheduled", "Cancelled".
+        - **Delay status**: status such as "On time", "Scheduled", "Cancelled".
         # TODO flightStats: This may not be working checkout models.py for validation of this status
 
         Network access is handled elsewhere (see `FlightStatsScraper`); this class
@@ -30,7 +30,7 @@ class FlightStatsExtractor:
     
     
     def delay_status(self,soup_fs) -> ScrapeStatus:
-        """Extract the high‑level delay / status label from the FlightStats header.
+        """Extract the delay / status label from the FlightStats header.
 
         The status is read from the ticket header section and is expected to be one of
         ``"On time"``, ``"Scheduled"`` or ``"Cancelled"``. If the HTML structure is
@@ -177,7 +177,7 @@ class FlightStatsExtractor:
         delay_status = self.delay_status(soup_fs=soup_fs)
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
 
-        # # TODO: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
+        # # TODO flight discrepancy: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
         # multi_flight = soup_fs.select('[class*="past-upcoming-flights__TextHelper"]')           # returns a list of classes that matches..
         # for i in multi_flight:
         #     # print(i.get_text())
@@ -267,12 +267,10 @@ class FlightStatsScraper:
         rc=Root_class()
 
         IATA_airline_code, flt_num = self.parse_query_for_flight_stats(flightID)
-        date = departure_date if departure_date else rc.date_time(raw=True)     # date format yyyymmdd
-        base_url = "https://www.flightstats.com/v2/flight-tracker"
-        flight_stats_url = f"{base_url}/{IATA_airline_code}/{flt_num}?year={date[:4]}&month={date[4:6]}&date={date[-2:]}"
+        flight_stats_url = Source_links_and_api().flight_stats_url(IATAAirlineCode=IATA_airline_code, flight_number=flt_num)
 
         # TODO flight discrepancy: flightStats is returning no data for flight going out next day.
-            # This can be a simple fix by adding a day prior/post flight date using timedelta?
+            # This can be a simple fix by adding a day prior/post flight date using timedelta? - careful with end of month day plus 1 same for beginning minus 1.
             # This can assist in improving the accuracy of the data and prevent AJMS.flightAware data discrepancy.
 
         soup_fs = rc.request(flight_stats_url)

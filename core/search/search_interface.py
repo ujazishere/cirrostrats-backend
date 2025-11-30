@@ -320,16 +320,18 @@ class ExhaustionCriteria():
         airportName = doc.get('airport')
 
         if doc:
-            return {
+            formatted_return = [{
                 # 'referenceId': str(ObjectId()),
                 'type': 'airport',
                 'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
                 'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
                 'popularityScore': 1.0,
                 'metadata': {
-                    'ICAO': ICAO_airport_code,
+                    'ICAOAirportCode': ICAO_airport_code,
                 }
-            }
+            }] 
+            print('formatted',formatted_return)
+            return formatted_return
 
     def extended_flight_suggestions_formatting(self, parsed_flight_category: str|dict):
         """ Extensive and impressive flightID suggestions formatting for frontend delivery check comments for more details."""
