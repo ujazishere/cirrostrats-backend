@@ -54,51 +54,20 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
     suggestions_match = fuzz_find(query=query, data=qc.scc_docs, qc=qc, limit=limit)
 
     # TODO search suggestions: LAS - harry reid international airport isnt showing up when looking up `las` but shows up when looking up `harry reid`.
-    if suggestions_match and len(query)<=3:
+    if suggestions_match:
         serialized_suggestions_match = serialize_document_list(suggestions_match)
         return serialized_suggestions_match
     # Exhaustion criteria:
-    elif not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters.
-        # TODO search suggestions: 
-                # Aggregate all the collections and search them all at once. found items upto 5 items only should be formatted for frontend.
-                # If more than 5 items are found then return the top 5 items only.
-                # But what about the airport code search with ICAO code prepended with K for USA and C for Canada?
-
-        print('suggestions running out with query length of', len(query), 'and is less than or equal to 3', len(suggestions_match))
-        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
+    elif not suggestions_match and len(query)>=3:        # Exhaustion criteria for query length that is at least 3 characters- to reduce backend load.
+        print('suggestions cache exhausted, running exhaustion criteria with query length of', len(query), 'and query is', query)
         parsed_query = qc.parse_query(query=query)
+        # At exhaustion it will search the extended collections(flight,airport,etc) based on the 'type of query as follows.
         # Attempt to parse the query and do dedicated formating to pass it again to the fuzz find since these collections will be different to search index collection.
         # query_type,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
 
-        exhaust = ExhaustionCriteria()
-        query_type = parsed_query.get('type')
-        if query_type in ['flight', 'digits', 'nNumber']:
-            flight_category = parsed_query.get('value')
-            return exhaust.extended_flight_suggestions_formatting(flight_category)
-        elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
-            ICAO_airport_code = parsed_query.get('value')
-            # TODO search suggestions: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
-                    #  e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont show up since it wont match Cyow query with yow display..
-            print(exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code))
-        elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
-            # nNumbers, airports and gates go here many a time
-            other_query = parsed_query.get('value')
-            print('other q', other_query)
+        si = SearchInterface()
+        return si.exhaustion_criteria_handler(parsed_query=parsed_query)
 
-            gate_docs = exhaust.extended_gate_suggestions(gate_query=other_query)
-            if gate_docs:
-                return gate_docs
-
-            airport_suggestions = exhaust.extended_airport_suggestions(airport_query=other_query)
-            if airport_suggestions:
-                print('airport sug', airport_suggestions)
-                return airport_suggestions
-
-            n_pattern = re.compile("^N[a-zA-Z0-9]{1,5}$")
-            if n_pattern.match(other_query):
-                print('N number found')
-                flightID = parsed_query.get('value')
-                return exhaust.extended_flight_suggestions_formatting(flightID)
 
 async def track_search_service(data: SearchData):
     """ Save searches to the DB for tracking and analytics. saves to search index collection

@@ -13,15 +13,8 @@ class SearchInterface(QueryClassifier):
         """ An interface for collection search suggestions and query submission and processing between frontend and backend."""
         super().__init__()
 
-
-    def raw_submit_handler(self, search):
-        # TODO search:
-            # This is remaining - to be integrated thru exhaustionCriteria for formatting instead of handeling formating here.
-
-        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
-            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
-            contain similar format with display field for display and search within fuzzfind"""
-        parsed_query = self.parse_query(query=search)
+    def exhaustion_criteria_handler(self, parsed_query):
+        
         exhaust = ExhaustionCriteria()
         query_type = parsed_query.get('type')
         if query_type in ['flight', 'digits', 'nNumber']:
@@ -31,7 +24,7 @@ class SearchInterface(QueryClassifier):
             ICAO_airport_code = parsed_query.get('value')
             # TODO search suggestions: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
                     #  e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont show up since it wont match Cyow query with yow display..
-            print(exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code))
+            return exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code)
         elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
             # nNumbers, airports and gates go here many a time
             other_query = parsed_query.get('value')
@@ -52,11 +45,20 @@ class SearchInterface(QueryClassifier):
                 flightID = parsed_query.get('value')
                 return exhaust.extended_flight_suggestions_formatting(flightID)
 
+    def raw_submit_handler(self, search):
+        # TODO search:
+            # This is remaining - to be integrated thru exhaustionCriteria for formatting instead of handeling formating here.
+
+        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
+            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
+            contain similar format with display field for display and search within fuzzfind"""
+
+        parsed_query = self.parse_query(query=search)
+        return self.exhaustion_criteria_handler(parsed_query=parsed_query)
         
 
-    def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):
-
-        # TODO search: used in raw submit, maybe this is not needed try using exhaustionCriteria instead?
+    def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):           # **** DEPRECATED ****
+        """ *****   DEPRECATED ****** """
 
         query_field = query_val = query_type = None
         if parsed_query_cat_field == 'airport':
@@ -87,10 +89,8 @@ class SearchInterface(QueryClassifier):
         return query_field, query_val, query_type
 
 
-    def query_type_frontend_conversion(self,doc):
-        # TODO search: used in raw submit, maybe this is not needed try using exhaustionCriteria instead?
-
-        """ suggestions delivery """
+    def query_type_frontend_conversion(self,doc):           # **** DEPRECATED ****
+        """ *****   DEPRECATED ****** """
 
         """
         Legacy:

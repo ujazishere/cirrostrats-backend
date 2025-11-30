@@ -78,7 +78,6 @@ class QueryClassifier:
             
         query = query.strip().upper()
 
-        print('query', query)
         flight_match = self.parse_flight_query(flight_query=query)
 
         US_CANADIAN_ICAO_airport_code_pattern = re.compile(r"^[KkCc][A-Za-z]{3}$")
@@ -103,6 +102,7 @@ class QueryClassifier:
         # TODO search suggestions: Two possiblities- suggestion exhaustion or raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
 
         # Other types of queries - nNumbers, airports and gates go here many a time
+        print('other query', query)
         return {'type': 'other', 'value': query}
     
 
