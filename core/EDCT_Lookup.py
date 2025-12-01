@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup
 class EDCT_LookUp:
     def __init__(self):
         # URL of the EDCT lookup page
-        self.url = "https://www.fly.faa.gov/edct/jsp/showEDCT.jsp"
+        self.url = "https://www.fly.faa.gov/edct/showEDCT"
+        # self.url = "https://www.fly.faa.gov/edct/jsp/showEDCT.jsp"
         
     def extract_edct(self, call_sign: str, origin: str, destination: str):
         # Form data
@@ -44,6 +45,7 @@ class EDCT_LookUp:
                                 "flightCancelled": flight_cancelled
                             })
             
+            print('edct collective', edct_collective)
             return edct_collective
         else:
             print(f"Request failed with status {response.status_code}")
