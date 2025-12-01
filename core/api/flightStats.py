@@ -1,6 +1,7 @@
-import logging
 from core.api.source_links_and_api import Source_links_and_api
 from core.root_class import Root_class
+from datetime import datetime
+import logging
 from typing import Literal
 
 from core.search.query_classifier import QueryClassifier
@@ -89,7 +90,6 @@ class FlightStatsExtractor:
             
         return flight_status
     
-
     def ticket_card_extracts(self, tc:list):
         """Parse the raw ticket‑card info sections into a structured mapping.
 
@@ -155,6 +155,58 @@ class FlightStatsExtractor:
         return returns
                
 
+    def multi_flight_comparison(self, dep_extracts, multiple_flights_soup_extracts):
+        
+        multi_date_format = '%A, %d-%b-%Y'
+        solo_date_format = '%d-%b-%Y'
+        
+        departure_date = datetime.strptime(dep_extracts['ScheduledDate'], solo_date_format)
+        
+        multi_extracts = []
+        for each_multi in multiple_flights_soup_extracts:
+            each_date = datetime.strptime(each_multi['date'], multi_date_format)
+            if each_date== departure_date:
+                multi_extracts.append(each_multi)
+                # print(each_date,departure_date)
+        if len(multi_extracts) >1:
+            return multi_extracts
+
+
+    def multi_flight_extracts(self, soup):
+        """ Extracts multiple flights based on dates """
+        multi_flight = soup.select('[class*="past-upcoming-flights__TextHelper"]')
+        flights_data = []
+        current_date = None
+        current_flight = []
+        
+        for element in multi_flight:
+            classes = element.get('class', [])
+            text = element.get_text(strip=True)
+            
+            if 'bTIClP' in classes and text.startswith('Flights for'):
+                current_date = text.replace('Flights for ', '')
+                continue
+            
+            if 'HeaderText' in ' '.join(classes):
+                continue
+            
+            if current_date:
+                if 'cUykul' in classes or 'cjETuy' in classes or 'diRMZq' in classes:
+                    current_flight.append(text)
+                    
+                    # When we have 6 items (dep_time, origin, origin_name, dest, dest_name, arr_time)
+                    if len(current_flight) == 6:
+                        flights_data.append({
+                            'date': current_date,
+                            'departure_time': current_flight[0],
+                            'origin': current_flight[1],
+                            'origin_name': current_flight[2],
+                            'destination': current_flight[3],
+                            'destination_name': current_flight[4],
+                            'arrival_time': current_flight[5]
+                        })
+                        current_flight = []
+        return flights_data
 
 
     def ticket_card(self, soup_fs):
@@ -176,13 +228,8 @@ class FlightStatsExtractor:
 
         delay_status = self.delay_status(soup_fs=soup_fs)
         Ticket_Card = soup_fs.select('[class*="TicketCard"]')           # returns a list of classes that matches..
+
         
-        # # TODO flight discrepancy: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
-        # multi_flight = soup_fs.select('[class*="past-upcoming-flights__TextHelper"]')           # returns a list of classes that matches..
-        # for i in multi_flight:
-        #     # print(i.get_text())
-        #     # print(i.get('class'), i.get_text())
-        #     pass
         
         if len(Ticket_Card) == 2:
             # if len of Ticket_card is 2 first one is dep second one is arrival
@@ -194,42 +241,22 @@ class FlightStatsExtractor:
         
             dep_extracts = self.ticket_card_extracts(fs_departure_info_section)
             arr_extracts = self.ticket_card_extracts(fs_arrival_info_section)
-            return {'fsDeparture': dep_extracts, 'fsArrival': arr_extracts, 'fsDelayStatus': delay_status}
+            base_fs_data =  {'fsDeparture': dep_extracts, 'fsArrival': arr_extracts, 'fsDelayStatus': delay_status}
+
+            # # TODO flight discrepancy: Can detect multiple flights using same flight number. but can only access new one. old one requires numeric flightid
+            multiple_flights_soup_extracts = self.multi_flight_extracts(soup_fs)
+            multiple_flights = self.multi_flight_comparison(dep_extracts, multiple_flights_soup_extracts)
+            if multiple_flights:
+                base_fs_data['multipleFlights'] = multiple_flights
+
+            return base_fs_data
         elif len(Ticket_Card) != 2:
-            # Save soup, flight number, datetime, etca  log error. Investigate later.
+            # TODO test: Save soup, flight number, datetime, etc and log error. Investigate later.
             print('flight not found')
             return 
     
     # VVI: There maybe multiple details of the flight belongiung to the same flight number.
     # tc(test_soups[0])
-
-
-    def ticket_card_extracts_v2(self, soup_fs):
-        """Return a flat list of text values from a ticket card section.
-
-        This is a more generic, order‑preserving extractor that simply collects
-        ``.text`` from each node in the provided sequence, while still enforcing a
-        minimum length to avoid index errors in downstream consumers.
-
-        Args:
-            soup_fs: Iterable of BeautifulSoup elements representing a ticket card
-                section (e.g. the contents of an `InfoSection`).
-
-        Returns:
-            A list of extracted text values, or ``None`` if fewer than 13 elements
-            are present.
-        """
-        extracts = []
-        for i in soup_fs:
-            extracts.append(i.text)
-        if len(extracts) < 13:
-            print('Validation failed: not enough data extracted from the ticket card. Continuation would result in index error.')
-            # Save soup, flight number, datetime, etca  log error. Investigate later.
-            print('flight not found')
-            logger.error('FlightStatsExtractor.tc_extracts: Not enough data extracted from the ticket card. required 13.')
-            logger.error(f"Extracted data: {extracts}")
-            return
-        return extracts    
 
 
 class FlightStatsScraper:
@@ -261,7 +288,8 @@ class FlightStatsScraper:
         else:
             return IATA_airline_code, flight_number
 
-    def scrape(self,flightID, departure_date:str=None, return_bs4=False):
+
+    def scrape(self,flightID, return_bs4=False):
         """ Returns clean scraped data or bs4 data if return_bs4 is True. Date format is YYYYMMDD """
         
         rc=Root_class()

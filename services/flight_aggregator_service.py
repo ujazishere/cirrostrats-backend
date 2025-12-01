@@ -58,7 +58,7 @@ async def aws_jms_service(flightID, mock=False):
     else:
         return
 
-    print('flightID ICAO', flightID)
+    # print('flightID ICAO', flightID)
 
 
 
@@ -79,6 +79,7 @@ async def aws_jms_service(flightID, mock=False):
             # This could be used to fetch data from collection_flights insteas of the jms API but it wont be as current.
             # data = collection_flights.find_one({'flightID':flightID})
             data = json.loads(data.text)
+        
         mongo,latest = data.get('mongo'),data.get('latest')
         # This is throughly sought! if mongo and latest both not availbale just return. if either is available just fix them!
         # Data is flowing in popularity increments - latest is the best, mongo is second best

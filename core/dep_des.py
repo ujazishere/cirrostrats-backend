@@ -18,6 +18,7 @@ class Pull_flight_info(Root_class):
         fss = FlightStatsScraper()
         fs_data = fss.scrape(flightID, return_bs4=return_bs4)
         
+        
         # use this for custom datetime instead 
         # fs_data = fss.scrape(airline_code="UA", flt_num_query="45", departure_date="20250717", return_bs4=False)
 
@@ -30,7 +31,6 @@ class Pull_flight_info(Root_class):
         # TODO Test: 
                 # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
         # TODO Test: If this is unavailable, which has been the case lately- May 2024, use the other source for determining scheduled and actual departure and arriavl times
-
         return {
             'flightStatsFlightID': flightID,
             'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
@@ -46,4 +46,7 @@ class Pull_flight_info(Root_class):
             # arrival times
             'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),        # Scheduled arrival time
             'flightStatsActualArrivalTime': arrival.get('ActualTime'),              # Actual arrival time
+            # Multiple flights for same day
+            # TODO flight descrepency: add a date befor eand date after as well.
+            'flightStatsMultipleFlights': fs_data.get('multipleFlights')
         }

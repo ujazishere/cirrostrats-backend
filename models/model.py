@@ -128,6 +128,7 @@ class FlightStatsResponse(BaseModel):
     # arrival times
     flightStatsScheduledArrivalTime: Optional[TimeFormat] = None
     flightStatsActualArrivalTime: Optional[TimeFormat] = None
+    flightStatsMultipleFlights: Optional[list] = None
 
 
 
