@@ -36,7 +36,6 @@ class NASExtracts:
         affected_airports = [i.text for i in root.iter('ARPT')]
         affected_airports = list(set(affected_airports))
         affected_airports.sort()
-        # print('dep_des.py nas_pre_processing. NAS affected airports:', affected_airports)
 
         airport_closures = []
         closure = root.iter('Airport_Closure_List')
@@ -70,7 +69,6 @@ class NASExtracts:
                     for a in x:
                         arr_dep_del_list.append([a.tag, a.text])
         
-        # print('dep_des.py Done NAS pull through nas_packet_pull')
         return {'update_time': update_time,
                 'affected_airports': affected_airports,
                 'ground_stop_packet': ground_stop_packet, 

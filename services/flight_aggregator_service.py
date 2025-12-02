@@ -1,11 +1,10 @@
 import json
 import logging
-from config.database import collection_flights
 from core.EDCT_Lookup import EDCT_LookUp
 import requests
+from core.api.flightStats import FlightStatsScraper
 from core.flight_aware_data_pull import Flight_aware_pull
 from core.tests.mock_test_data import Mock_data
-from core.dep_des import Pull_flight_info
 from core.flight_deets_pre_processor import response_filter
 from core.api.source_links_and_api import Source_links_and_api
 from core.root_class import Fetching_Mechanism
@@ -152,7 +151,7 @@ async def aws_jms_service(flightID, mock=False):
     return returns
 
 
-async def flight_stats_url_service(flightID):
+async def flight_stats_frontend_format_service(flightID, return_bs4=None):
     """
     Fetches and validates FlightStats data for a given flight ID.
 
@@ -175,21 +174,45 @@ async def flight_stats_url_service(flightID):
         - Falls back to error handling/reporting if the necessary data is unavailable.
     """
     flightID = flightID.upper()
-
-    flt_info = Pull_flight_info()
-    # TODO search suggestions: account for this in major icao_to_iata match
-            # For raw submits IATA goes to flightstats first. 
-                # UA4433 search digits related to United and united regionals - SKW, RPA, GJS, mesa or commuteair. compare flightstats airport returns with jms to determine
-                # What is the fallback?
     
-    fs_departure_arr_time_zone = flt_info.flightStats_data_frontend_format(flightID)
-    if fs_departure_arr_time_zone:
+    # flightStatsData = flt_info.flightStats_data_frontend_format(flightID)
+    fss = FlightStatsScraper()
+    fs_data = fss.scrape(flightID, return_bs4=return_bs4)
+    
+    if not fs_data:     # early return if data isnt found
+        return
+    
+    departure = fs_data.get('fsDeparture')
+    arrival = fs_data.get('fsArrival')
+
+    # TODO Test: If this is unavailable, which has been the case in - May 2024, use the other source for determining scheduled and actual departure and arriavl times
+    flightStatsData = {
+        'flightStatsFlightID': flightID,
+        'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
+        'flightStatsOrigin':departure.get('Code'),
+        'flightStatsDestination':arrival.get('Code'),
+        'flightStatsOriginGate': departure.get('TerminalGate'),
+        'flightStatsDestinationGate': arrival.get('TerminalGate'),
+        # departure date and time
+        'flightStatsScheduledDepartureDate': departure.get('ScheduledDate'),    # Date
+        'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),    # Scheduled Time
+        'flightStatsEstimatedDepartureTime': departure.get('EstimatedTime'),    # Estimated Time
+        'flightStatsActualDepartureTime': departure.get('ActualTime'),          # Actual Time
+        # arrival times
+        'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),        # Scheduled arrival time
+        'flightStatsActualArrivalTime': arrival.get('ActualTime'),              # Actual arrival time
+        # Multiple flights for same day
+        # TODO flight descrepency: add a date befor eand date after as well.
+        'flightStatsMultipleFlights': fs_data.get('multipleFlights')
+    }
+
+    if flightStatsData:
         try : 
-            validated_data = FlightStatsResponse(**fs_departure_arr_time_zone)
+            validated_data = FlightStatsResponse(**flightStatsData)
             return validated_data.model_dump()
         except Exception as e:
             # Accounting for Validation error in case Scheduled date or time is unavailable but most else is available.
-            message=f"Flightstats validation error: Flightstats necessary field data not found for {flightID}, Error: {e}, \n data: {fs_departure_arr_time_zone}"
+            message=f"Flightstats validation error: Flightstats necessary field data not found for {flightID}, Error: {e}, \n data: {flightStatsData}"
             send_telegram_notification_service(message=message)
             logger.error(message)
 

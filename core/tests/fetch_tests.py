@@ -1,20 +1,21 @@
+from services.flight_aggregator_service import flight_stats_frontend_format_service
+
+
 try:        # This is in order to keep going when collections are not available
     from config.database import collection_flights, db_UJ
 except Exception as e:
     print('Mongo collection(Luis) connection unsuccessful\n', e)
 
-def tests():
+async def tests():
     """
     TODO VHP Test: This is for testing to see the data returns from fv and fs are reliable. needs more work.
     """
 
     flt_nums = ['4418','4433','414','4546','362','213','1411','5555']
-    from core.dep_des import Pull_flight_info
-    flt_info = Pull_flight_info()
-    # flt_info.flight_view_gate_info(airline_code='UA',flt_num='4461')
+    
     for flt_number in flt_nums:
         flightID = 'UA'+flt_number
-        aa = flt_info.flightStats_data_frontend_format(flightID)
+        aa = await flight_stats_frontend_format_service(flightID)
         airport = aa['flightStatsOrigin'][1:]
         # print('treagfdsv',i)
         print(aa)

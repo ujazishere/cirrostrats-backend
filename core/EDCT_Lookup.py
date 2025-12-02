@@ -45,7 +45,6 @@ class EDCT_LookUp:
                                 "flightCancelled": flight_cancelled
                             })
             
-            print('edct collective', edct_collective)
             return edct_collective
         else:
             print(f"Request failed with status {response.status_code}")

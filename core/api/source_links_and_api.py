@@ -147,7 +147,7 @@ class Source_links_and_api:
         }
 
 
-    def ua_dep_dest_flight_status(self, flight_number):
+    def united_airlines_flight_status(self, flight_number):
         # reeturns a dictionay paid of departure and destination
         return f"https://united-airlines.flight-status.info/ua-{flight_number}"               # This web probably contains incorrect information.
 

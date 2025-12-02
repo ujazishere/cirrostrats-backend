@@ -90,6 +90,7 @@ class FlightStatsExtractor:
             
         return flight_status
     
+
     def ticket_card_extracts(self, tc:list):
         """Parse the raw ticket‑card info sections into a structured mapping.
 
@@ -255,8 +256,45 @@ class FlightStatsExtractor:
             print('flight not found')
             return 
     
-    # VVI: There maybe multiple details of the flight belongiung to the same flight number.
-    # tc(test_soups[0])
+    
+    def flightStats_data_frontend_format(self,flightID, return_bs4=False):
+        # TODO Refactor: This function can be refactored to FlightStatsScraper class in core/api
+        
+        fss = FlightStatsScraper()
+        fs_data = fss.scrape(flightID, return_bs4=return_bs4)
+        
+        
+        # use this for custom datetime instead 
+        # fs_data = fss.scrape(airline_code="UA", flt_num_query="45", departure_date="20250717", return_bs4=False)
+
+        if not fs_data:     # early retur if data isnt found
+            return
+        
+        departure = fs_data.get('fsDeparture')
+        arrival = fs_data.get('fsArrival')
+
+        # TODO Test: 
+                # Flow - return city from fs and fv , match with fuzz find on similarity scale if theyre both same fire up LLM 
+        # TODO Test: If this is unavailable, which has been the case lately- May 2024, use the other source for determining scheduled and actual departure and arriavl times
+        return {
+            'flightStatsFlightID': flightID,
+            'flightStatsDelayStatus': fs_data.get('fsDelayStatus'),
+            'flightStatsOrigin':departure.get('Code'),
+            'flightStatsDestination':arrival.get('Code'),
+            'flightStatsOriginGate': departure.get('TerminalGate'),
+            'flightStatsDestinationGate': arrival.get('TerminalGate'),
+            # departure date and time
+            'flightStatsScheduledDepartureDate': departure.get('ScheduledDate'),    # Date
+            'flightStatsScheduledDepartureTime': departure.get('ScheduledTime'),    # Scheduled Time
+            'flightStatsEstimatedDepartureTime': departure.get('EstimatedTime'),    # Estimated Time
+            'flightStatsActualDepartureTime': departure.get('ActualTime'),          # Actual Time
+            # arrival times
+            'flightStatsScheduledArrivalTime': arrival.get('ScheduledTime'),        # Scheduled arrival time
+            'flightStatsActualArrivalTime': arrival.get('ActualTime'),              # Actual arrival time
+            # Multiple flights for same day
+            # TODO flight descrepency: add a date befor eand date after as well.
+            'flightStatsMultipleFlights': fs_data.get('multipleFlights')
+        }
 
 
 class FlightStatsScraper:

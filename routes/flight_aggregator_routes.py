@@ -1,4 +1,4 @@
-from services.flight_aggregator_service import aws_jms_service,flight_stats_url_service,aviation_stack_service,flight_aware_w_auth_service,get_edct_info_service
+from services.flight_aggregator_service import aws_jms_service,flight_stats_frontend_format_service,aviation_stack_service,flight_aware_w_auth_service,get_edct_info_service
 
 from fastapi import APIRouter
 router = APIRouter()
@@ -13,7 +13,7 @@ async def aws_jms(flightID, mock=False):
 
 @router.get("/flightStatsTZ/{flightID}")
 async def flight_stats_url(flightID):
-    return await flight_stats_url_service(flightID)
+    return await flight_stats_frontend_format_service(flightID)
 
 
 @router.get("/aviationStack/{flight_number}")
