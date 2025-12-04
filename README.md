@@ -5,6 +5,8 @@ A FastAPI-based backend service for flight tracking and weather data aggregation
 
 ## Project Structure
 
+<!-- TODO: refac this to more relatable to a developer  -->
+
 ```text
 cirrostrats-backend/
 ├── core/                   # Core business logic

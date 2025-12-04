@@ -8,11 +8,13 @@ router = APIRouter()
 
 @router.get("/ajms/{flightID}")
 async def aws_jms(flightID, mock=False):
+    # return            # Simulating jms fail
     return await aws_jms_service(flightID,mock)
 
 
 @router.get("/flightStatsTZ/{flightID}")
 async def flight_stats_url(flightID):
+    # return            # Simluating flightStats fails
     return await flight_stats_frontend_format_service(flightID)
 
 
