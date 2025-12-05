@@ -1,4 +1,4 @@
-# from time import sleep
+from time import sleep
 from fastapi import APIRouter
 from models.model import SearchData
 from services.search_service import get_search_suggestions_service,track_search_service,get_search_timeline_service,get_all_searches_service,get_user_searches_service,raw_search_handler_service
@@ -33,5 +33,5 @@ async def get_user_searches(email):
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable but search already takes care of that.
 async def raw_search_handler(search: str = None):
-    # sleep(15)
+    # sleep(3           # similate raw query submit delay
     return await raw_search_handler_service(search)

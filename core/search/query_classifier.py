@@ -64,7 +64,10 @@ class QueryClassifier:
 
     def parse_query(self, query: str) -> Dict:
         """
-        Parse and classify a single query. Parses as `flight`, `airport`, 'digits' and 'other'
+        Parse and classify a single query. Parses as `flight`, `airport`, 'digits' and 'other' types.
+        NOTE: Two possiblities- 
+                1. suggestion exhaustion or 
+                2. raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
         
         Args:
             query: Search query string
@@ -72,9 +75,6 @@ class QueryClassifier:
         Returns:
             Dictionary containing classified query type and value
         """
-        # TODO search sugggestions:
-            # Used at -  get_search_suggestions_service, prepare_flight_id_for_webscraping (flightStats), classify_batch (old bulk query classifier), 
-                        #  raw_submit_handler (frontend raw submit), aws_jms_service
             
         query = query.strip().upper()
 
@@ -99,7 +99,6 @@ class QueryClassifier:
             print('digits matched', query)
             return {'type': 'digits', 'value': query}
 
-        # TODO search suggestions: Two possiblities- suggestion exhaustion or raw submit - multiple results on raw submit? show those mumtiple items on result and let user choose.
 
         # Other types of queries - nNumbers, airports and gates go here many a time
         print('other query', query)

@@ -306,9 +306,7 @@ class FlightStatsScraper:
         returns: tuple with IATA airline code and flight number
             e.g: ('UA','4433')
         """
-        # TODO search suggestion: 
-            # This func needs to be verified for parsing of regional ICAO to associated major IATA conversion and
-                # other ICAO to IATA like JBU to b6 and so on
+
         qc = QueryClassifier()
         parsed_flight_category = qc.parse_flight_query(flightID)
 
