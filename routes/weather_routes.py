@@ -17,8 +17,8 @@ async def get_mdbAirportWeatherById(airportCacheReferenceId):
 
 
 @router.get('/mdbAirportWeatherByAirportCode/{airportCode}')
-# TODO Refactor: Check how you can refactor this airport_id to ICAO/IATA airport code
 async def get_mdbAirportWeatherByAirportCode(airportCode):
+    # TODO weather: TODO airport weather, use this in the raw submits. Theres more to this I forgot I walked away from it.
     if len(airportCode) == 4:
         return await get_mdb_airport_data_service(ICAOAirportCode=airportCode)
     elif len(airportCode)== 3:

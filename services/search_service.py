@@ -56,7 +56,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         # query_type,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
 
         si = SearchInterface()
-        return si.exhaustion_criteria_handler(parsed_query=parsed_query)
+        return si.suggestions_exhaustion_handler(parsed_query=parsed_query)        
 
 
 async def track_search_service(data: SearchData):
@@ -155,4 +155,4 @@ async def raw_search_handler_service(search: str = None):
     """ handles the submit that is NOT the drop down suggestion. So just willy nilly taking
     the organic search submit handlling it here by converting to a form that is acceptable in details.jsx"""
     si = SearchInterface()
-    return si.raw_submit_handler(search=search)
+    return await si.raw_submit_handler(search=search)

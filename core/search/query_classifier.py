@@ -7,14 +7,24 @@ from typing import Dict, List, Optional, Tuple
 from config.database import collection_airports_cache_legacy, collection_flights, db_UJ
 from core.api.source_links_and_api import Source_links_and_api
 # from core.search.search_ranker import RealTimeSearchRanker       #TODO VHP Feature. Integrated with dynamic suggestions cache popularityScore
+# TODO search suggestions:
+    # Currently keeep it static and partially dynamic to some extent? airport not in bulk dont get saved in cache.
+    # if raw submit match is found in any db or faa airport fetch feed it into the suggestion cache along
+    # with submitTimestamp and if not in airport cache then add it there too.
+    # But this may interfere with testing of an airport that may not be available in airport cache.
+    # But how about do permutes and combs to fetch all possible airports from faa save as bulk and use that as suggestions format?
+    # inspect raw submits in rst and account for all submits to check if there are any possible matches and return `did you mean:`
 
 """ These Collections gets loaded up as soon as the server starts."""
 # search_index_collection = db_UJ['search_index']           # OG one
+# TODO search suggestions :
+    # Got to merge submits from search_index and raw submits to here and make a new one also consider constant backup of the db, every day backup?.
+    # have collections in dev as copies of prod to work on first. establish proof of concept then reintroduce the copy in production by some means?
 suggestions_cache_collection = db_UJ['suggestions-cache-test-refills']         # New tester
 
 class QueryClassifier:
     """
-    A class for classifying search queries into categories like Airports, Flights, etc.
+    A class for classifying search queries into categories like Airports, Flights, Gates etc.
     Will also categorize multiplpe queries with counts of each served as popularity count and spit out normalized output.
     Usage in base popularity hits and route.
 

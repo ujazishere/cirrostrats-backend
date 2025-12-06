@@ -6,24 +6,56 @@ from core.api.source_links_and_api import Source_links_and_api
 from core.search.query_classifier import QueryClassifier
 
 from config.database import airport_bulk_collection_uj, collection_flights, gate_rows_collection, new_airport_cache_collection
+from routes.weather_routes import get_mdbAirportWeatherByAirportCode
 
 class SearchInterface(QueryClassifier):
-    # TODO search: This class is not used anymore. It is should be deprecated or ExhaustionCriteria should be integrated into this class.
+
     def __init__(self):
         """ An interface for collection search suggestions and query submission and processing between frontend and backend."""
-        super().__init__()
+        super().__init__()          # get QueryClassifier as base for this class
 
-    def exhaustion_criteria_handler(self, parsed_query):
+
+    async def raw_submit_handler(self, search):
+        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
+            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
+            contain similar format with display field for display and search within fuzzfind"""
+
+        # TODO search suggestions: raw submit handler still needs to be accounted for - for now just replicate/duplicate whats being done for suggestions handler with single return.
+                # Worry later about the ambigous multiple results. check extended_flight_suggestions todo for abstraction and reusability
+        parsed_query = self.parse_query(query=search)
         
         exhaust = ExhaustionCriteria()
+
+        # fot exact matches return exact ones, for partial multiple matches return partial ones.
+        # for airport return dmb if found and update with live?
+        # or just return it as suggestion and navigate it to details?
+        query_type = parsed_query.get('type')
+        if query_type in ['flight', 'digits', 'nNumber']:
+            flight_category = parsed_query.get('value')
+        
+        # if type is airport:
+            # airport_weather = await get_mdbAirportWeatherByAirportCode(airportCode=ICAO_airport_code)
+            # if airport_weather:
+            #     return airport_weather
+        
+        
+        return self.suggestions_exhaustion_handler(parsed_query=parsed_query)
+        
+
+    def suggestions_exhaustion_handler(self, parsed_query):
+        
+        exhaust = ExhaustionCriteria()
+
         query_type = parsed_query.get('type')
         if query_type in ['flight', 'digits', 'nNumber']:
             flight_category = parsed_query.get('value')
             return exhaust.extended_flight_suggestions_formatting(flight_category)
         elif query_type == 'airport':       # only for US and Canadian ICAO airport codes.
             ICAO_airport_code = parsed_query.get('value')
-            # TODO search suggestions: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
-                    #  e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont show up since it wont match Cyow query with yow display..
+            # TODO search suggestions extension: This returns airport suggestions but with IATA code for display and wont show up in suggestions since query is ICAO.
+                    # e.g CYOW will return ottawa suggestion format from backend but frontend display is OTW - Ottawa hence dropdown wont
+                    # show up since it wont match Cyow query with yow display..
+            
             return exhaust.extended_ICAO_airport_suggestions_formatting(ICAO_airport_code)
         elif parsed_query.get('type') == 'other':       # for other queries we search airport collection.
             # nNumbers, airports and gates go here many a time
@@ -45,19 +77,8 @@ class SearchInterface(QueryClassifier):
                 flightID = parsed_query.get('value')
                 return exhaust.extended_flight_suggestions_formatting(flightID)
 
-    def raw_submit_handler(self, search):
-        # TODO search:
-            # This is remaining - to be integrated thru exhaustionCriteria for formatting instead of handeling formating here.
 
-        """ the raw submit is supposed to return frontend formatted reference_id, display and type for
-            /details.jsx to fetch appropriately based on the type formatting, whereas dropdown suggestions
-            contain similar format with display field for display and search within fuzzfind"""
-
-        parsed_query = self.parse_query(query=search)
-        return self.exhaustion_criteria_handler(parsed_query=parsed_query)
-        
-
-    def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):           # **** DEPRECATED ****
+    def qc_frontend_conversion(self, parsed_query_cat_field, pq_val):   # **** DEPRECATED ****
         """ *****   DEPRECATED ****** """
 
         query_field = query_val = query_type = None
@@ -89,7 +110,7 @@ class SearchInterface(QueryClassifier):
         return query_field, query_val, query_type
 
 
-    def query_type_frontend_conversion(self,doc):           # **** DEPRECATED ****
+    def query_type_frontend_conversion(self,doc):                       # **** DEPRECATED ****
         """ *****   DEPRECATED ****** """
 
         """
@@ -109,8 +130,6 @@ class SearchInterface(QueryClassifier):
         if parsed_query_type:
             query_field, query_val, query_type = self.qc_frontend_conversion(parsed_query_type,parsed_query_value)
 
-        # TODO search suggestions: These need to deliver frontend formatted data for suggestions collection insertion.
-        
         # gate = doc.get('metadata.gate') if query_type == 'gate' else None
         # ICAOAirportCode = doc.get('metadata.ICAO') if query_type == 'airport' else None
         # flightID = doc.get('metadata.flightID') if query_type == 'flight' else None
@@ -128,7 +147,7 @@ class SearchInterface(QueryClassifier):
         return query_field, query_val, query_type
 
 
-    def search_suggestion_frontned_format(self, c_docs):            # **** DEPRECATED ****
+    def search_suggestion_frontned_format(self, c_docs):                # **** DEPRECATED ****
         """ *****   DEPRECATED ****** """
         # This function is nolonger used it used to process docs from collections and parsed query and convert data structure for frontend use.
 
@@ -233,6 +252,8 @@ class ExhaustionCriteria():
     async def faa_airport_info_fetch_w_weather(self, ICAO_airport_code):
         """ Suggestions cache format for airport search suggestions fetched directly from FAA for both airport info itself and weather """
 
+        # TODO search suggestions: refac these top three functions away into weather files since its not supposed to be used in suggestions exhaustions or suggestions at all..
+                # since it only supposed to be used for suggestion submits and raw submits not for dropdown suggestions display format/
         # TODO search: This probably doesn't belong here  maybe abstract this and faa fetch to some other file or maybe within searchInterface?
             # Idea for it to ack as a fallback for airport cache collection and weather fetch when theres none available in bulk airport collection.
             # TODO extended: account for variations in lookup - 'airport info {ICAO}` `airport info {IATA}` `airport info {airportName}` `airport info {city, state, country}` etc.
@@ -254,9 +275,6 @@ class ExhaustionCriteria():
     
         AirportCache(**update_doc)
     
-        swf  = Singular_weather_fetch()
-        weather_dict = await swf.async_weather_dict(update_doc['ICAO'])
-        update_doc['weather'] = weather_dict
         return update_doc
     
 
@@ -282,6 +300,9 @@ class ExhaustionCriteria():
                 print('No bulk doc found for ICAO. Fetching from FAA weather API...', ICAO_airport_code)
                 # TODO weather: This is a fallback for when the bulk doc is not found.
                 weather_doc = await self.faa_airport_info_fetch_w_weather(ICAO_airport_code)
+                swf  = Singular_weather_fetch()
+                weather_dict = await swf.async_weather_dict(weather_doc['ICAO'])
+                weather_doc['weather'] = weather_dict
         
             IATA_airport_code = bulk_doc.get('iata')
             airportName = bulk_doc.get('airport')
@@ -334,17 +355,17 @@ class ExhaustionCriteria():
             return formatted_return
 
     def extended_flight_suggestions_formatting(self, parsed_flight_category: str|dict):
-        """ Extensive and impressive flightID suggestions formatting for frontend delivery check comments for more details."""
+        """ Extensive and impressive flightID suggestions formatting for frontend delivery check comments for more details.
+            User selects a dropdown - its ICAO matches straight with JMS
+            display format: ICAO/digits (Associated major IATA/digits) - IATA airline code only known US carriers - GJS, UCA, EDV, ENY, JIA, PDT and so on.
+                e.g
+                    GJS4433 (UA4433) - G7
+                    UCA4938 (UA4938) - C5
+                    EDV4628 (DL4628) - 9E
+        """
         # TODO search suggestion: 
-                # Currently only used for search suggestion
-                # For use in suggestions formating:
-                    # display : ICAO/d (IATA/d) only known US carriers - GJS, UCA, EDV, ENY, JIA, PDT and so on.
-                        # e.g
-                            # GJS4433 (UA4433) - G7
-                            # UCA4938 (UA4938) - C5
-                            # EDV4628 (DL4628) - 9E
-            # user selects dropdown its ICAO matches straight with JMS
-            # flightstats IATA  for all airlines e.g SKW9887 should go to UA, DL and AA altogether to compare dep and dest with times.
+            # flightstats IATA for all airlines e.g SKW9887 should go to UA, DL and AA altogether to compare dep and dest with times.
+            # code duplication alert - possibly could abstract some of it away and reuse it for raw_submits_handler.
 
         """ Parsing the flight category into a regex for flightID lookup """
         if isinstance(parsed_flight_category, str):       # accounts for type as nNumber,digits and internationals codes as fallback - value is string
@@ -372,6 +393,7 @@ class ExhaustionCriteria():
         }
         return_crit = {'flightID':1,'_id':0}
             # TODO search suggestions: See here we can add fields with ICAO/IATA airline codes as customary so for commuteair, gojet can do UA and endevor can do DL and so on?
+                # Skywest crit: Ua6000
 
         flight_docs = collection_flights.find(find_crit, return_crit).limit(5)
 
@@ -431,26 +453,53 @@ class ExhaustionCriteria():
         if not airport_docs:
             print('No airport docs found in airport bulk collection for query',airport_query)
             return []
-        
+            """
+            TODO search suggestion: This is an unneessary call to the faa api just for suggestion.
+                find a way to integrate this into raw submits and available matches. its gotta be integrated with key stroke submits eventually
+                to determine patterns and extend query classifier based on raw submits and key strokes.
+                Check query classifier's TODO search suggestions for more details.
+            # if len(airport_query) == 4:
+                # pass
+                airport_docs_faa_weather = await self.faa_airport_info_fetch_w_weather(ICAO_airport_code=airport_query)
+                if not airport_docs_faa_weather:
+                    print('No airport docs found in FAA weather API for query',airport_query)
+                    return []
+                IATA_airport_code = airport_docs_faa_weather.get('IATA') 
+                ICAO_airport_code = airport_docs_faa_weather.get('ICAO')
+                airportName = airport_docs_faa_weather.get('airportName')
+                # # To be used in case weather needs to be fetched for the airport.
+                # swf  = Singular_weather_fetch()
+                # weather_dict = await swf.async_weather_dict(ICAO_airport_code)
+                # airport_docs['weather'] = weather_dict
+                # a workaround to add the airport docs to the airport_docs list since this is the bulk collection format
+                airport_docs.append({
+                    'iata': IATA_airport_code,
+                    'icao': ICAO_airport_code,
+                    'airport': airportName,
+                    # 'weather': {}
+                })
+            """
+
         for i in airport_docs:
             print('i airport docs',i)
             IATA_airport_code = i.get('iata')
             ICAO_airport_code = i.get('icao')
             airportName = i.get('airport')
 
-            # All these cannot be nan/null/Nonect_code)
-            if not IATA_airport_code or not ICAO_airport_code or not airportName:
+            airportCode = IATA_airport_code if IATA_airport_code else ICAO_airport_code
+            # All these cannot be nan/null/None
+            if not airportCode or not airportName:
                 print('Skipping airport doc because something is None')
                 continue
                 # Note: Some airport values have null/nan/None values and those are discarded. But what if we want to show them? for example iata: OTT has not ICAO code what if we want to show? but why? we cant even get weather for it if theres no ICAO,
             suggestions_cache.append({
                 # 'referenceId': str(ObjectId()),
                 'type': 'airport',
-                'display': f"{IATA_airport_code} - {airportName}",        # Merge code and name for display
-                'displaySimilarity': [f"{IATA_airport_code} - {airportName}"],
+                'display': f"{airportCode} - {airportName}",        # Merge code and name for display
+                'displaySimilarity': [f"{airportCode} - {airportName}"],
                 'popularityScore': 1.0,
                 'metadata': {
-                    'ICAO': ICAO_airport_code,
+                    'ICAOAirportCode': ICAO_airport_code,
                 }
             })
         return suggestions_cache
