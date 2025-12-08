@@ -1,3 +1,13 @@
+## License
+
+This project is licensed under the **Elastic License 2.0 (ELv2)**.
+
+You may use, modify, and redistribute this software under the terms of the Elastic License 2.0.
+You may **not** provide this software to third parties as a hosted or managed service that exposes
+a substantial set of its features or functionality. See `LICENSE.txt` and
+https://www.elastic.co/licensing/elastic-license for full details.
+
+
 
 # Cirrostrats Backend
 
