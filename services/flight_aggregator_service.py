@@ -28,6 +28,30 @@ async def aws_jms_service(flightID, mock=False):
     So if flightID is UA1234, it will parse to  UAL1234 since
     data in JMS is saved with 3 char ICAO airline designator
     """
+    # TODO bug: investigate this it was throwing route error clearly route was changed and so timestamp was recorded for it to be in list form. This is deeply rooted jms data structure issue:
+        #  File "/app/routes/flight_aggregator_routes.py", line 12, in aws_jms
+            # return await aws_jms_service(flightID,mock)
+                #    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        #   File "/app/services/flight_aggregator_service.py", line 142, in aws_jms_service
+            # split_route = route.split('.')
+                        #   ^^^^^^^^^^^
+        # AttributeError: 'list' object has no attribute 'split'
+    """        AAL511
+            {'_id': ObjectId('693391a52f36c7d9de64f3e5'),
+        'timestamp': datetime.datetime(2025, 12, 6, 2, 12, 17, 162000),
+        'organization': 'AAL',
+        'aircraftType': 'A319',
+        'registration': 'N840AW',
+        'departure': 'KDFW',
+        'arrival': 'CYYC',
+        'arrivalAlternate': 'KGEG',
+        'route': [{'timestamp': '2025-12-06T02:12:17.162Z',
+            'value': 'KDFW./.3905N/09844W..KAWWA..NUXRO..KD84Y..SCOFY..KIXCO..GGW..BEVEL..VESDO..EBGAL.EBGAL7.CYYC/0455'},
+            {'timestamp': '2025-12-06T02:12:35.315838+00:00',
+            'value': 'KDFW./.3906N/09845W..GGW..BEVEL..VESDO..EBGAL.EBGAL7.CYYC/0455'}],
+        'assignedAltitude': '34000.0',
+        'currentBeacon': '2663',
+    """
     # TODO reliability: ***CAUTION values of the dictionary may not be a string. it may be returned in a dict form {'ts':ts,'value':value}. This is due to jms redis duplcates anomaly
             # still needs work to address dict returns and arrival and destinationAirport mismatch within JMS.
     # TODO Test: Mock testing and data validation is crucial. Match it with pattern matching at source such that outlaws are detected and addressed using possibly notifications.
@@ -40,6 +64,7 @@ async def aws_jms_service(flightID, mock=False):
         # One way to present multiple result is through scroll right below the searchbar for multiple digits.
             # if found more than one flightID then let user select the correct one from multiple chouse on search submit.
         # What about part 91 repo flights? those show as UA but use flightStats?
+    
     if flightID:
         # Whole point of this condition is to get associated ICAO using IATA
         parsed_flight_category = qc.parse_flight_query(flightID)

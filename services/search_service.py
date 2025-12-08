@@ -56,7 +56,7 @@ async def get_search_suggestions_service(email: str, query: str, limit=500):  # 
         # query_type,query_val,query_type = sint.query_type_frontend_conversion(doc=parsed_query)
 
         si = SearchInterface()
-        return si.suggestions_exhaustion_handler(parsed_query=parsed_query)        
+        return await si.suggestions_exhaustion_handler(parsed_query=parsed_query)        
 
 
 async def track_search_service(data: SearchData):

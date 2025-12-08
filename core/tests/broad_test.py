@@ -1,6 +1,5 @@
 from datetime import datetime, timezone, timedelta
 import logging
-import re
 from core.tests.weather_test import Weather_test
 from routes.flight_aggregator_routes import flight_stats_url
 from services.notification_service import send_telegram_notification_service

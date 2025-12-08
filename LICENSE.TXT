@@ -1,7 +1,7 @@
 Elastic License 2.0 (ELv2)
 
 Licensed Work: Cirrostrats Platform (frontend, backend, APIs)
-Licensor: Cirrostrats
+Licensor: Cirrostrats INC
 
 This software is licensed under the Elastic License 2.0.
 See https://www.elastic.co/licensing/elastic-license for details.

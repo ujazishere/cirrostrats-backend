@@ -33,5 +33,5 @@ async def get_user_searches(email):
 @router.get('/query')       
 # @router.get('/query/{passed_variable}')       # This can be used to get the passed variable but search already takes care of that.
 async def raw_search_handler(search: str = None):
-    # sleep(3)           # similate raw query submit delay
+    # sleep(5)           # similate raw query submit delay
     return await raw_search_handler_service(search)
